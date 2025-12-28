@@ -1,7 +1,6 @@
 #include "../includes/ft_webserver.hpp"
 
-int main(void)
-{
-	std::cout << "Sbouaa" << std::endl;
-	return 0;
+int main(void) {
+  std::cout << "Kiraje Init" << std::endl;
+  return 0;
 }
