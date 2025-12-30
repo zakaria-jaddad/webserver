@@ -18,7 +18,7 @@ void startSocket() {
 	recv(clientSocket, buffer, sizeof(buffer), 0);
 	std::cout << "Recvd: " << buffer << std::endl;
 	const char* txt = "CP_Z3R0{eezzzz_fl4G_F0r_u}";
-	send(clientSocket, txt, 6, 0);
+	send(clientSocket, txt, 26, 0);
 	close(serverSocket);
 	close(clientSocket);
 }
