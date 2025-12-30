@@ -3,7 +3,11 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 class server {
 	/* server class depends on 'config' class with the following getters:
@@ -12,6 +16,9 @@ class server {
 	*/
 	private:
 		//config *conf;
+	public:
+		//int startSocket(config *conf);
+
 		
 
 
