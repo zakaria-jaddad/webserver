@@ -13,6 +13,8 @@ OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 all: $(NAME)
 
+test: $(SRC_DIR)/minimal_test_server.cpp
+	$(CXX) $(CXXFLAGS) $< -o $(NAME)
 $(NAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
