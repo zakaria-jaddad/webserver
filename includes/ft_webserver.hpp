@@ -8,8 +8,10 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/epoll.h>
+#include <vector>
 
-class server {
+class Server {
 	/* server class depends on 'config' class with the following getters:
 		- getListeningPairs() //get interface:port pairs on which the server will listen to.
 			(type of return : map of 'int key' (interface) and 'int value' (port) )
@@ -17,10 +19,7 @@ class server {
 	private:
 		//config *conf;
 	public:
-		//int startSocket(config *conf);
-
-		
-
-
+		void startServer(); // TODO: change it to take config *conf instead
+		//vector<int> & getServerFds(config &c);
 };
 #endif
