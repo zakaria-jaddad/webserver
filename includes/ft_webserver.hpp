@@ -10,6 +10,11 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <vector>
+#include <map>
+#include <arpa/inet.h>
+
+typedef struct epoll_event epoll_event_t;
+#define MAX_EVENTS 100
 
 class Server {
 	/* server class depends on 'config' class with the following getters:
@@ -17,9 +22,10 @@ class Server {
 			(type of return : map of 'int key' (interface) and 'int value' (port) )
 	*/
 	private:
-		//config *conf;
+		//config &conf = configObject;
 	public:
 		void startServer(); // TODO: change it to take config *conf instead
-		//vector<int> & getServerFds(config &c);
+		std::vector<int> setupServerFds();// TODO: change it to take config *conf instead
+		//int setup_epoll(config &conf);
 };
 #endif
