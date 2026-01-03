@@ -6,7 +6,7 @@ CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
 INCLUDES	= -I includes
 
 SRC_DIR		= src
-SRC			= $(SRC_DIR)/ft_webserver.cpp
+SRC			= $(SRC_DIR)/ft_webserver.cpp $(SRC_DIR)/Server.cpp
 
 OBJ_DIR		= obj
 OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
