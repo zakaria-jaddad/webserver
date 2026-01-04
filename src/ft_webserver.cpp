@@ -2,6 +2,8 @@
 
 int main(void)
 {
-	std::cout << "Sbouaa" << std::endl;
+	Server s;
+
+	s.startServer();
 	return 0;
 }

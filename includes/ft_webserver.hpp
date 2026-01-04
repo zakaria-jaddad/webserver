@@ -3,5 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
+#include "Server.hpp"
 
 #endif
