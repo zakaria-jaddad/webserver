@@ -1,0 +1,12 @@
+Language: Cpp
+# Base standard
+Standard: Cpp11
+
+SpacesInAngles: Leave
+SpaceBeforeParens: ControlStatements
+
+BreakBeforeBraces: Stroustrup
+AllowShortIfStatementsOnASingleLine: false
+
+ColumnLimit: 100
+IndentWidth: 4
