@@ -25,11 +25,15 @@ class Server {
 	private:
 		//config &conf = configObject;
 		int epoll_fd;
+		std::vector<int> serverFds;
+		std::vector<int> clientFds;
 	public:
-		void startServer(); // TODO: change it to take config *conf instead
-		std::vector<int> setupServerFds();// TODO: change it to take config *conf instead
+		int startServer(); // TODO: change it to take config *conf instead
+		void setupServerFds();// TODO: change it to take config *conf instead
 		int addToEpoll(int fd, uint32_t flag);
 		int switchEpollMode(int clientSocket, uint32_t flag);
+		int checkForServerFd(epoll_event *events, int i);
+		int checkForClientFd(epoll_event *events, int i);
 		//int setup_epoll(config &conf);
 };
 #endif
