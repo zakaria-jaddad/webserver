@@ -22,7 +22,7 @@ void Server::setupServerFds() {
 		setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 		bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 		listen(serverSocket, 10); //TODO: update later to get it from conf
-		std::cout << "added socker fd : " << serverSocket << std::endl;
+		//std::cout << "added socker fd : " << serverSocket << std::endl;
 		serverFds.push_back(serverSocket);
 	}
 }
@@ -61,12 +61,12 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 
 	for (std::vector<int>::iterator it = serverFds.begin(); it != serverFds.end(); it++) {
 		if (events[i].data.fd == *it) {
-			std::cout << "the fd is : " << *it << std::endl;
+			//std::cout << "the fd is : " << *it << std::endl;
 			clientSocket = accept(*it, NULL, NULL);
 			if (addToEpoll(clientSocket, EPOLLIN))
 				std::cerr << "failed to add to epoll" << std::endl;
 			clientFds.push_back(clientSocket);
-			std::cout << "got the clientSocket = " << clientSocket << std::endl;
+			//std::cout << "got the clientSocket = " << clientSocket << std::endl;
 			break;
 		}
 	}
@@ -86,11 +86,13 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); it++) {
 		if (events[i].data.fd == *it) {
 			clientSocket = *it;
-			std::cout << "already in map clientSocket = " << clientSocket << std::endl;
+			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
 			if (events[i].events == EPOLLIN) { // we can read from socket
 				b = recv(clientSocket, req, sizeof(req), 0);
 				req[b] = 0;
+				std::cout << "----------------------start of request--------------------" << std::endl;
 				std::cout << req;
+				std::cout << "----------------------end of request--------------------" << std::endl;
 				//TODO: check if the req ended
 				//i'll assume the request has ended for now
 				switchEpollMode(clientSocket, EPOLLOUT);
@@ -123,12 +125,13 @@ int Server::startServer() {
 	}
 
 	while (1) {
+		std::cout << "Listening..." << std::endl;
 		event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 30000);
 		if (event_count == -1) {
 			std::cerr << "epoll_wait Failed!" << std::endl;
 			return (1);
 		}
-		std::cout << "event_count = " << event_count << std::endl;
+		//std::cout << "event_count = " << event_count << std::endl;
 		for (int i = 0; i < event_count; i++) {
 			clientSocket = checkForServerFd(events, i);
 			if (clientSocket != -1) //found fd in serverFds
