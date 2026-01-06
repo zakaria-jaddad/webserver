@@ -6,8 +6,10 @@
 
 class Config{
   
+    std::vector<ServerConfig> servers;
   public:
-    std::vector<ServerConfig> servers;  
+    void LoadServers( std::string );
+
 };
 
 
