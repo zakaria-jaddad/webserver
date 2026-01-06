@@ -3,8 +3,8 @@
 std::string helloRoute = "HTTP/1.1 200 OK\r\nContent-Type: "
                          "text/html\r\nContent-Length: 21\r\n\r\n<h1>Hello, World</h1>";
 
-std::string foo = "HTTP/1.1 200 OK\r\nContent-Type: "
-                  "text/html\r\nContent-Length: 21\r\n\r\n<h1>............</h1>";
+std::string errorRoute = "HTTP/1.1 200 OK\r\nContent-Type: "
+                         "text/html\r\nContent-Length: 21\r\n\r\n<h1>.Error.Mess.</h1>";
 
 void Server::startServer()
 {
@@ -38,12 +38,10 @@ void Server::startServer()
 
             std::cout << req;
             HttpParser parser;
-            httpResult res = parser.parseHttpRequest(req);
-            if (res != HTTP_RES_OK) {
-                /* TODO: Add correct return */
-                /* something happened while parsing ignored for now */
+            HttpParser::httpResult res = parser.parseHttpRequest(req);
+            if (res != HttpParser::HTTP_RES_OK) {
 
-                send(clientSocket, foo.c_str(), foo.size(), 0);
+                send(clientSocket, errorRoute.c_str(), errorRoute.size(), 0);
             }
             else {
                 send(clientSocket, helloRoute.c_str(), helloRoute.size(), 0);

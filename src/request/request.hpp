@@ -1,6 +1,5 @@
 #ifndef __REQUEST_HPP__
 #define __REQUEST_HPP__
-
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -32,33 +31,111 @@ inline std::string trim(const std::string &str)
     return str.substr(start, end - start + 1);
 }
 
-typedef enum {
-    /* Server Errors */
-    /* 500 Internal Server Error */
-    /* 501 Not Implemented */
-    /* 502 Bad Gateway */
-    /* 503 Service Unavailable */
-    /* 504 Gateway Timeout */
-    /* 505 HTTP Version Not Supported */
-    HTTP_RES_OK = 200,
-    HTTP_RES_INTERNAL_SERVER_ERROR = 500,
-    HTTP_RES_BAD_REQUEST = 400,
-    HTTP_RES_NOT_IMPLEMENTED = 501,
-} httpResult;
-
-typedef enum {
-    GET,
-    POST,
-    DELETE,
-    UNKNOWN,
-} requestType;
-
+/*
+ *
+ * The syntax of an "HTTP message" is defined:
+ *
+ * HTTP-message = start-line CRLF
+ *                *( field-line CRLF )
+ *                CRLF
+ *                [ message-body ]
+ *
+ * TODO: Refactor Field Line Parser
+ *
+ */
 class HttpParser {
 
+  public:
+    HttpParser() : __state(REQUEST_LINE)
+    {
+        this->_requestType = "";
+        this->_requestURI = "";
+        this->_requestVersion = "";
+        this->_type = UNKNOWN;
+    }
+
+    ~HttpParser() {}
+
+    /* Server Errors */
+    typedef enum {
+        HTTP_VERSION_NOT_SUPPORTED = 505,
+        HTTP_RES_OK = 200,
+        HTTP_RES_INTERNAL_SERVER_ERROR = 500,
+        HTTP_RES_BAD_REQUEST = 400,
+        HTTP_RES_NOT_IMPLEMENTED = 501,
+    } httpResult;
+
+    typedef enum {
+        GET,
+        POST,
+        DELETE,
+        UNKNOWN,
+    } requestType;
+
+    httpResult parseHttpRequest(std::string rawData)
+    {
+
+        httpResult res;
+
+        if (this->__state == REQUEST_LINE) {
+
+            std::string requestLine = rawData.substr(0, rawData.find(CRLF));
+            rawData.erase(0, requestLine.size() + strlen(CRLF));
+
+            /* parse Request-Line ... */
+            res = _parseRequestLine(requestLine);
+            if (res != HTTP_RES_OK)
+                return res;
+
+            this->__state = HEADERS;
+        }
+
+        if (this->__state == HEADERS) {
+
+            std::string headerLines;
+
+            size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
+            if (doubleCrlfPos != std::string::npos) {
+                headerLines = rawData.substr(0, doubleCrlfPos);
+                rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
+                this->__state = BODY;
+            }
+
+            res = _parseRequestHeaders(headerLines);
+            if (res != HTTP_RES_OK)
+                return res;
+        }
+
+        if (this->__state == BODY) {
+
+            /*
+             * TODO:
+             * Parse Request Body
+             */
+
+            /* return HTTP_RES_OK */
+        }
+
+        return HTTP_RES_OK;
+    };
+
+    requestType getType() const { return this->_type; }
+    std::string getRequestType() const { return this->_requestType; }
+    std::string getRequestURI() const { return this->_requestURI; }
+    std::string getRequestVersion() const { return this->_requestVersion; }
+    std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
+
   private:
-    bool __isNewObject;
+    typedef enum {
+        REQUEST_LINE,
+        HEADERS,
+        BODY,
+    } parserState;
+
+  private:
+    parserState __state;
     requestType _type;
-    std::string _requestType;
+    std::string _requestType; /* _requestType = token */
     std::string _requestURI;
     std::string _requestVersion;
     std::map<std::string, std::string> __headers;
@@ -100,6 +177,7 @@ class HttpParser {
         if (tokens.size() != 3) {
             return HTTP_RES_BAD_REQUEST;
         }
+
         this->_requestType = tokens[0];
         this->_requestURI = tokens[1];
         this->_requestVersion = tokens[2];
@@ -107,6 +185,7 @@ class HttpParser {
         if (this->_type == UNKNOWN) {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
+
         return HTTP_RES_OK;
     }
 
@@ -160,14 +239,8 @@ class HttpParser {
      * Header-Field = field-name ":" OWS field-value OWS
      * OWS = *( SP / HTAB ) optional whitespace either ' ' or '\t'
      *
-     * field-name     = token
-     * field-value    = *( field-content / obs-fold )
-     * field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-     * field-vchar    = VCHAR / obs-text
-     *
-     * obs-fold       = CRLF 1*( SP / HTAB )
-     *                ; obsolete line folding
-     *                ; see Section 3.2.4
+     * field-name     = token                         | Paresed
+     * field-value    = *( field-content / obs-fold ) | Not Parsed
      *
      * No whitespace is allowed between the header field-name and colon
      *
@@ -217,61 +290,6 @@ class HttpParser {
         }
         return HTTP_RES_OK;
     }
-
-  public:
-    HttpParser() : __isNewObject(true)
-    {
-        this->_requestType = "";
-        this->_requestURI = "";
-        this->_requestVersion = "";
-        this->_type = UNKNOWN;
-    }
-
-    ~HttpParser() {}
-
-    httpResult parseHttpRequest(std::string rawData)
-    {
-
-        httpResult res;
-        size_t doubleCrlfPos;
-        std::string headerLines;
-
-        if (__isNewObject == true) {
-            __isNewObject = false;
-
-            /* parse Request-Line ... */
-            /* return HTTP_RES_OK; */
-        }
-
-        std::string requestLine = rawData.substr(0, rawData.find(CRLF));
-        rawData.erase(0, requestLine.size() + strlen(CRLF));
-
-        res = _parseRequestLine(requestLine);
-        if (res != HTTP_RES_OK)
-            return res;
-
-        doubleCrlfPos = rawData.find(DOUBLE_CRLF);
-        if (doubleCrlfPos != std::string::npos) {
-            headerLines = rawData.substr(0, doubleCrlfPos);
-            rawData.erase(0, requestLine.size() + strlen(DOUBLE_CRLF));
-        }
-        res = _parseRequestHeaders(headerLines);
-        if (res != HTTP_RES_OK)
-            return res;
-
-        std::map<std::string, std::string>::iterator it;
-        for (it = this->__headers.begin(); it != this->__headers.end(); it++) {
-            std::cout << "{ '" << it->first << "' : '" << it->second << "' }" << std::endl;
-        }
-        return HTTP_RES_OK;
-    };
-
-    requestType getType() const { return this->_type; }
-    std::string getRequestType() const { return this->_requestType; }
-    std::string getRequestURI() const { return this->_requestURI; }
-    std::string getRequestVersion() const { return this->_requestVersion; }
-
-    std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
 };
 
 #endif // !__REQUEST_HPP__
