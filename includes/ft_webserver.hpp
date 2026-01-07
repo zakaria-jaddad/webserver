@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include "Server.hpp"
-#include "../src/server/server.hpp"
+#include "../src/server/Server.hpp"
 
 #endif

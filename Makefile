@@ -3,15 +3,12 @@ CFLAGS = -Wall -Werror -Wextra -std=c++98
 
 SRC_DIR		= src
 SRC		= 	$(SRC_DIR)/ft_webserver.cpp \
-					$(SRC_DIR)/server/Server.cpp \
+			$(SRC_DIR)/server/Server.cpp 
 OBJ = $(SRC:.cpp=.o)
 
 CXX = c++
 
 all: $(NAME)
-
-test: $(SRC_DIR)/minimal_test_server.cpp
-	$(CXX) $(CXXFLAGS) $< -o $(NAME)
 
 $(NAME): $(OBJ)
 	$(CXX) $(CFLAGS) $(OBJ) -o $(NAME)
@@ -29,3 +26,4 @@ fclean: clean
 
 .PHONY: clean
 -include $(OBJ:.o=.d)
+
