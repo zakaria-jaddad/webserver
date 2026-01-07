@@ -17,6 +17,9 @@ class ServerConfig{
   std::size_t                 max_body;
   int                         port;
   //std::vector<LocationConfig> location;
+  
+public:
+  void parseBlock( std::vector<std::string>, size_t& );
 };
 
 #endif
