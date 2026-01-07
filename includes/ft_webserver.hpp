@@ -5,5 +5,6 @@
 #include <string>
 #include <cstring>
 #include "Server.hpp"
+#include "../src/server/server.hpp"
 
 #endif
