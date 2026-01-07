@@ -20,7 +20,7 @@ $(NAME): $(OBJ)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ -MMD
 
 clean:
 	rm -rf $(OBJ_DIR)
@@ -30,4 +30,5 @@ fclean: clean
 
 re: fclean all
 
+-include $(OBJ:$(OBJ_DIR)/%.o=$(OBJ_DIR)/%.d)
 .PHONY: all clean fclean re

@@ -6,8 +6,8 @@ void Server::setupServerFds() {
 	//TODO:iterate over ip:port pairs in conf and do the following to each pair:
 	//for now i'll use the following two
 	std::map<const char *, int> listeningPairs;
-	listeningPairs["10.12.0.0"] = 8067;
-	listeningPairs["0.0.0.0"] = 8067;
+	listeningPairs["10.12.6.4"] = 8069;
+	listeningPairs["0.0.0.0"] = 8080;
 
 	int serverSocket;
 	int opt = 1;
@@ -18,9 +18,12 @@ void Server::setupServerFds() {
 
 		serverAddr.sin_family = AF_INET;
 		serverAddr.sin_port = htons(it->second);
-		inet_pton(AF_INET, it->first, &serverAddr.sin_addr);
-		setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-		bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+		if (inet_pton(AF_INET, it->first, &serverAddr.sin_addr) != 1)
+			std::cerr << "error inet_pton " << it->first << std::endl;
+		if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+			std::cerr << "error setsockopt " << it->first << std::endl;
+		if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1)
+			std::cerr << "error binding " << it->first << std::endl;
 		listen(serverSocket, 10); //TODO: update later to get it from conf
 		//std::cout << "added socker fd : " << serverSocket << std::endl;
 		serverFds.push_back(serverSocket);
