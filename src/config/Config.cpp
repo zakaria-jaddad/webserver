@@ -1,4 +1,5 @@
 #include "../../includes/config/Config.hpp"
+#include "../../includes/config/ServerConfig.hpp"
 
 #include <fstream>
 #include <string>
@@ -76,15 +77,20 @@ void Config::loadServers()
 
   while (i < tokens.size())
   {
-    if (tokens[i] == "server")
-    {
+    try {
       ServerConfig server;
       server.parseBlock(tokens, i);
       servers.push_back(server);
     }
-    else
+    catch(std::exception &e) {
+      std::cout << "Parsing error : " << e.what() << std::endl;
+      break ;
+    }
+    while(tokens[i] == "}")//don't forget to remove it
+      i++;
+    /*else
     {
       throw std::runtime_error("Unexpected token: " + tokens[i]);
-    }
+    }*/
   }
 }

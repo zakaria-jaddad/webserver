@@ -18,8 +18,21 @@ class ServerConfig{
   int                         port;
   //std::vector<LocationConfig> location;
   
+  typedef void (ServerConfig::*Parser)(std::vector<std::string>&, size_t&);
+  std::map<std::string, Parser> serverParsers;
+
 public:
-  void parseBlock( std::vector<std::string>, size_t& );
+  ServerConfig();
+
+  void buildServerParsers( void );
+
+  void parseBlock( std::vector<std::string>&, size_t& );
+  void parseName( std::vector<std::string>&, size_t& );
+  void parseListen( std::vector<std::string>&, size_t& );
+  void parseIndex( std::vector<std::string>&, size_t& );
+  void parseError( std::vector<std::string>&, size_t& );
+  void parseSize( std::vector<std::string>&, size_t& );
+  void parseRoot( std::vector<std::string>&, size_t& );
 };
 
 #endif
