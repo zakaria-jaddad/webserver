@@ -101,9 +101,11 @@ class HttpParser {
                 this->__state = BODY;
             }
 
+            /*BUG: Fix the headerLines passed without CRLF */
             res = _parseRequestHeaders(headerLines);
-            if (res != HTTP_RES_OK)
+            if (res != HTTP_RES_OK) {
                 return res;
+            }
         }
 
         if (this->__state == BODY) {
@@ -151,7 +153,8 @@ class HttpParser {
             tokens.push_back(token);
             line.erase(0, pos + delimiter.length());
         }
-        tokens.push_back(line);
+        if (line.empty() == false)
+            tokens.push_back(line);
         return tokens;
     }
 
@@ -279,6 +282,10 @@ class HttpParser {
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);
+        if (headers.empty() == true) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
         size_t size = headers.size();
         httpResult res;
 
