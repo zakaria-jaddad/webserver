@@ -4,7 +4,7 @@ NAME := config
 
 flags := -Wall -Werror -Wextra
 
-SRCS := test.cpp Config.cpp ServerConfig.cpp LocationConfig.cpp
+SRCS := test.cpp Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
 
 OBJS := $(addprefix objs/, $(SRCS:.cpp=.o))
 

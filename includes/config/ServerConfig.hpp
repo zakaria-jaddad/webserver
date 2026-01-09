@@ -27,12 +27,21 @@ public:
   void buildServerParsers( void );
 
   void parseBlock( std::vector<std::string>&, size_t& );
+
   void parseName( std::vector<std::string>&, size_t& );
+  
   void parseListen( std::vector<std::string>&, size_t& );
+  void parseIpOnly( const std::string& );
+  void parseIpPort( const std::string& );
+  void parsePortOnly( const std::string& );
+
+
   void parseIndex( std::vector<std::string>&, size_t& );
   void parseError( std::vector<std::string>&, size_t& );
   void parseSize( std::vector<std::string>&, size_t& );
   void parseRoot( std::vector<std::string>&, size_t& );
+
+  std::map<std::string, int> getListeningPairs( void );
 };
 
 #endif
