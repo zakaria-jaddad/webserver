@@ -46,7 +46,7 @@ inline std::string trim(const std::string &str)
 class HttpParser {
 
   public:
-    HttpParser() : __state(REQUEST_LINE)
+    HttpParser() : _phase(REQUEST_LINE)
     {
         this->_requestType = "";
         this->_requestURI = "";
@@ -77,7 +77,7 @@ class HttpParser {
 
         httpResult res;
 
-        if (this->__state == REQUEST_LINE) {
+        if (this->_phase == REQUEST_LINE) {
 
             std::string requestLine = rawData.substr(0, rawData.find(CRLF));
             rawData.erase(0, requestLine.size() + strlen(CRLF));
@@ -87,18 +87,18 @@ class HttpParser {
             if (res != HTTP_RES_OK)
                 return res;
 
-            this->__state = HEADERS;
+            this->_phase = HEADERS;
         }
 
-        if (this->__state == HEADERS) {
+        if (this->_phase == HEADERS) {
 
             std::string headerLines = rawData;
 
             size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
             if (doubleCrlfPos != std::string::npos) {
-                headerLines = rawData.substr(0, doubleCrlfPos);
+                headerLines = rawData.substr(0, doubleCrlfPos + 2);
                 rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
-                this->__state = BODY;
+                this->_phase = BODY;
             }
 
             res = _parseRequestHeaders(headerLines);
@@ -107,13 +107,13 @@ class HttpParser {
             }
         }
 
-        if (this->__state == BODY) {
+        if (this->_phase == BODY) {
 
             /*
              * TODO:
              * Parse Request Body
              */
-
+            this->_phase = COMPLETE;
             /* return HTTP_RES_OK */
         }
 
@@ -126,15 +126,18 @@ class HttpParser {
     std::string getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
 
+    bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
+
   private:
     typedef enum {
         REQUEST_LINE,
         HEADERS,
         BODY,
-    } parserState;
+        COMPLETE,
+    } parserPhase;
 
   private:
-    parserState __state;
+    parserPhase _phase;
     requestType _type;
     std::string _requestType; /* _requestType = token */
     std::string _requestURI;
@@ -233,7 +236,6 @@ class HttpParser {
                 return false;
             }
         }
-
         return true;
     }
 
