@@ -92,7 +92,7 @@ class HttpParser {
 
         if (this->__state == HEADERS) {
 
-            std::string headerLines;
+            std::string headerLines = rawData;
 
             size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
             if (doubleCrlfPos != std::string::npos) {
@@ -101,7 +101,6 @@ class HttpParser {
                 this->__state = BODY;
             }
 
-            /*BUG: Fix the headerLines passed without CRLF */
             res = _parseRequestHeaders(headerLines);
             if (res != HTTP_RES_OK) {
                 return res;
