@@ -10,10 +10,10 @@
 class ServerConfig{
   
   std::map<int, std::string>  error_pages;
+  std::vector<std::string>    index;
   std::string                 ip;
   std::string                 server_name;
   std::string                 root;
-  std::string                 index;
   std::size_t                 max_body;
   int                         port;
   //std::vector<LocationConfig> location;
@@ -29,7 +29,8 @@ public:
   void parseBlock( std::vector<std::string>&, size_t& );
 
   void parseName( std::vector<std::string>&, size_t& );
-  
+  void checkServerName( const std::string& );
+
   void parseListen( std::vector<std::string>&, size_t& );
   void parseIpOnly( const std::string& );
   void parseIpPort( const std::string& );
@@ -42,6 +43,8 @@ public:
   void parseRoot( std::vector<std::string>&, size_t& );
 
   std::map<std::string, int> getListeningPairs( void );
+  std::string getServerName( void );
+  std::string getRoot( void );
 };
 
 #endif

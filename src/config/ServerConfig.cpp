@@ -11,7 +11,7 @@ ServerConfig::ServerConfig()
     ip("0.0.0.0"),
     server_name(""),
     root(""),
-    index(""),
+    index(),
     max_body(0),
     port(80),
     serverParsers()
@@ -48,6 +48,7 @@ void ServerConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
   }
   i++;
 }
+
 
 //listen directive parsing
 void ServerConfig::parseIpOnly( const std::string& value)
@@ -118,59 +119,144 @@ void ServerConfig::parseListen( std::vector<std::string>& tokens, size_t& i)
 
 
 //hostname directive parsing
-void ServerConfig::parseName( std::vector<std::string>& tokens, size_t& i)
+void ServerConfig::checkServerName( const std::string& name )
 {
-  while (tokens[i] != ";")
+  std::string val;
+
+  for (size_t i = 0; i < name.size(); ++i)
   {
-    std::cout << tokens[i] << std::endl;
-    i++;
+    unsigned char c = static_cast<unsigned char>(name[i]);
+
+    if (!std::isalnum(c) && c != '-' && c != '.')
+      throw std::runtime_error("Invalid server name : " + name);
+
+    val.push_back(std::tolower(c));
   }
-  i++;
+
+  this->server_name = val;
 }
 
+void ServerConfig::parseName( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+  
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+  
+  std::string value = tokens[i];
+  
+  //skip the value token
+  i++;
+
+  if (tokens[i] != ";")
+    throw std::runtime_error("Invalid number of argumenst in \"server_name\" directive");
+
+  //skip the closing ';'
+  i++;
+  
+  checkServerName(value);
+}
+
+
+//parsing root directive
+void ServerConfig::parseRoot( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+  
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+  
+  std::string value = tokens[i];
+  
+  //skip the value token
+  i++;
+
+  if (tokens[i] != ";")
+    throw std::runtime_error("Invalid number of argumenst in \"root\" directive");
+
+  //skip the closing ';'
+  i++;
+  
+  for (size_t i = 0; i < value.size(); ++i)
+  {
+    if (!std::isalnum(value[i]) && value[i] != '-' && value[i] != '.' && value[i] != '/' && value[i] != '_')
+      throw std::runtime_error("Invalid root directory : " + value);
+  }
+  this->root = value;
+}
+
+
+//parsing index directive
 void ServerConfig::parseIndex( std::vector<std::string>& tokens, size_t& i)
 {
-  while (tokens[i] != ";")
+  //skip the directive name token
+  i++;
+
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+  int j = 0;
+  while(tokens[i] != ";")
   {
-    std::cout << tokens[i] << std::endl;
+    std::string value = tokens[i];
+    for (size_t y = 0; y < value.size(); y++)
+    {
+      if (!std::isalnum(value[y]) && value[y] != '-' && value[y] != '.' && value[y] != '_')
+        throw std::runtime_error("Invalid index  : " + value);
+    }
+    this->index[j++] = value;//check for a segv here 
     i++;
   }
-  i++;
 }
 
 void ServerConfig::parseError( std::vector<std::string>& tokens, size_t& i)
 {
-  while (tokens[i] != ";")
-  {
-    std::cout << tokens[i] << std::endl;
-    i++;
-  }
-  i++;
 }
 
-void ServerConfig::parseRoot( std::vector<std::string>& tokens, size_t& i)
-{
-  while (tokens[i] != ";")
-  {
-    std::cout << tokens[i] << std::endl;
-    i++;
-  }
-  i++;
-}
 
 void ServerConfig::parseSize( std::vector<std::string>& tokens, size_t& i)
 {
-  while (tokens[i] != ";")
-  {
-    std::cout << tokens[i] << std::endl;
-    i++;
-  }
+  //skip the directive name token
   i++;
+
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+  std::string value = tokens[i];
+  //skip the value token
+  i++;
+
+  if (tokens[i] != ";")
+    throw std::runtime_error("Invalid number of argumenst in \"client_max_body_size\" directive");
+
+  //skip the closing ';'
+  i++;
+
+  for (size_t i = 0; i < value.size(); i++)
+  {
+    if (!std::isdigit(value[i]))
+      throw std::runtime_error("Unexpected value for \"client_max_body_size\" : " + value);
+  }
+  this->max_body = std::atoi(value.c_str());
 }
 
+
+//getters
 std::map<std::string, int> ServerConfig::getListeningPairs()
 {
   std::map<std::string, int> m;
   m[this->ip] = this->port;
   return m;
+}
+
+std::string ServerConfig::getServerName( void )
+{
+  return server_name;
+}
+
+std::string ServerConfig::getRoot( void )
+{
+  return root;
 }
