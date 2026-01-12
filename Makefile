@@ -14,7 +14,10 @@ SRC           = $(MAIN_SRC) $(PROJECT_SRC)
 OBJ 					= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ   = $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-TEST_SRC      = $(TEST_DIR)/request_test.cpp
+TEST_SRC      = $(TEST_DIR)/request_line_test.cpp \
+								$(TEST_DIR)/test.cpp \
+
+
 TEST_OBJ      = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 GTEST_DIR     = external/googletest
