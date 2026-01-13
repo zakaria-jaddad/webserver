@@ -46,12 +46,12 @@ inline std::string trim(const std::string &str)
 class HttpParser {
 
   public:
-    HttpParser() : __state(REQUEST_LINE)
+    HttpParser() : _phase(REQUEST_LINE)
     {
-        this->_requestType = "";
         this->_requestURI = "";
-        this->_requestVersion = "";
-        this->_type = UNKNOWN;
+        this->_requestVersion[0] = 0;
+        this->_requestVersion[1] = 0;
+        this->_requestType = UNKNOWN;
     }
 
     ~HttpParser() {}
@@ -77,7 +77,7 @@ class HttpParser {
 
         httpResult res;
 
-        if (this->__state == REQUEST_LINE) {
+        if (this->_phase == REQUEST_LINE) {
 
             std::string requestLine = rawData.substr(0, rawData.find(CRLF));
             rawData.erase(0, requestLine.size() + strlen(CRLF));
@@ -87,57 +87,59 @@ class HttpParser {
             if (res != HTTP_RES_OK)
                 return res;
 
-            this->__state = HEADERS;
+            this->_phase = HEADERS;
         }
 
-        if (this->__state == HEADERS) {
+        if (this->_phase == HEADERS) {
 
-            std::string headerLines;
+            std::string headerLines = rawData;
 
             size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
             if (doubleCrlfPos != std::string::npos) {
-                headerLines = rawData.substr(0, doubleCrlfPos);
+                headerLines = rawData.substr(0, doubleCrlfPos + 2);
                 rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
-                this->__state = BODY;
+                this->_phase = BODY;
             }
 
             res = _parseRequestHeaders(headerLines);
-            if (res != HTTP_RES_OK)
+            if (res != HTTP_RES_OK) {
                 return res;
+            }
         }
 
-        if (this->__state == BODY) {
+        if (this->_phase == BODY) {
 
             /*
              * TODO:
              * Parse Request Body
              */
-
+            this->_phase = COMPLETE;
             /* return HTTP_RES_OK */
         }
 
         return HTTP_RES_OK;
     };
 
-    requestType getType() const { return this->_type; }
-    std::string getRequestType() const { return this->_requestType; }
+    requestType getRequestType() const { return this->_requestType; }
     std::string getRequestURI() const { return this->_requestURI; }
-    std::string getRequestVersion() const { return this->_requestVersion; }
+    const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
+
+    bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
 
   private:
     typedef enum {
         REQUEST_LINE,
         HEADERS,
         BODY,
-    } parserState;
+        COMPLETE,
+    } parserPhase;
 
   private:
-    parserState __state;
-    requestType _type;
-    std::string _requestType; /* _requestType = token */
+    parserPhase _phase;
+    requestType _requestType;
     std::string _requestURI;
-    std::string _requestVersion;
+    int _requestVersion[2];
     std::map<std::string, std::string> __headers;
     std::map<std::string, std::vector<std::string> > _headers;
 
@@ -151,7 +153,8 @@ class HttpParser {
             tokens.push_back(token);
             line.erase(0, pos + delimiter.length());
         }
-        tokens.push_back(line);
+        if (line.empty() == false)
+            tokens.push_back(line);
         return tokens;
     }
 
@@ -172,20 +175,56 @@ class HttpParser {
      */
     httpResult _parseRequestLine(std::string requestLine)
     {
+        std::string requestVersion;
+        std::string requestType;
 
         std::vector<std::string> tokens = _getTokens(requestLine, " ");
         if (tokens.size() != 3) {
             return HTTP_RES_BAD_REQUEST;
         }
 
-        this->_requestType = tokens[0];
+        requestType = tokens[0];
+        if (_isValidToken(requestType) == false) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
         this->_requestURI = tokens[1];
-        this->_requestVersion = tokens[2];
-        this->_type = _getRequestTypeFromString(this->_requestType);
-        if (this->_type == UNKNOWN) {
+        requestVersion = tokens[2];
+
+        this->_requestType = _getRequestTypeFromString(requestType);
+        if (this->_requestType == UNKNOWN) {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
+        if (this->_requestURI.size() == 0) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
+        /*
+         * request versiong parsing
+         * HTTP/<major>.<minor>
+         */
+        std::vector<std::string> requestVersiongTokens = _getTokens(requestVersion, "/");
+        if (requestVersiongTokens.size() != 2) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+        if (requestVersiongTokens[0] != "HTTP") {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
+        std::vector<std::string> majorMinor = _getTokens(requestVersiongTokens[1], ".");
+        if (majorMinor.size() == 1) {
+            this->_requestVersion[0] = std::atoi(majorMinor[0].c_str());
+            return HTTP_RES_OK;
+        }
+        if (majorMinor.size() == 2) {
+            this->_requestVersion[0] = std::atoi(majorMinor[0].c_str());
+            this->_requestVersion[1] = std::atoi(majorMinor[1].c_str());
+            return HTTP_RES_OK;
+        }
+        if (majorMinor.size() != 2) {
+            return HTTP_RES_BAD_REQUEST;
+        }
         return HTTP_RES_OK;
     }
 
@@ -231,7 +270,6 @@ class HttpParser {
                 return false;
             }
         }
-
         return true;
     }
 
@@ -279,6 +317,10 @@ class HttpParser {
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);
+        if (headers.empty() == true) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
         size_t size = headers.size();
         httpResult res;
 

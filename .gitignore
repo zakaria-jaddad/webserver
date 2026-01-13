@@ -43,3 +43,4 @@
 # Project specific
 ft_webserver
 obj/
+external/googletest/
