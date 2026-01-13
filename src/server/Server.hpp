@@ -13,6 +13,8 @@
 #include <map>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <cerrno>
+#include "../request/request.hpp"
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
@@ -26,7 +28,8 @@ class Server {
 		//config &conf = configObject;
 		int epoll_fd;
 		std::vector<int> serverFds;
-		std::vector<int> clientFds;
+		//std::vector<int> clientFds;
+		std::map<int, HttpParser *> clientFds;
 	public:
 		int startServer(); // TODO: change it to take config *conf instead
 		void setupServerFds();// TODO: change it to take config *conf instead

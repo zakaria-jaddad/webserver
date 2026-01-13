@@ -24,7 +24,8 @@ void Server::setupServerFds() {
 			std::cerr << "error setsockopt " << it->first << std::endl;
 		if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1)
 			std::cerr << "error binding " << it->first << std::endl;
-		listen(serverSocket, 10); //TODO: update later to get it from conf
+		if (listen(serverSocket, 10) == -1) //TODO: update later to get it from conf
+			std::cerr << "on listen " << it->first << std::endl;
 		//std::cout << "added socker fd : " << serverSocket << std::endl;
 		serverFds.push_back(serverSocket);
 	}
@@ -61,14 +62,18 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 	//This method is just to look for fd in serverFds
 	// in case it is a serverFd it accepts and gets clientSocket and adds it to epoll & clientFds for next connection
 	int clientSocket = -1;
+	HttpParser *obj;
 
 	for (std::vector<int>::iterator it = serverFds.begin(); it != serverFds.end(); it++) {
 		if (events[i].data.fd == *it) {
 			//std::cout << "the fd is : " << *it << std::endl;
 			clientSocket = accept(*it, NULL, NULL);
+			if (clientSocket == -1)
+				std::cerr << "failed to accept" << std::endl;
 			if (addToEpoll(clientSocket, EPOLLIN))
 				std::cerr << "failed to add to epoll" << std::endl;
-			clientFds.push_back(clientSocket);
+			obj = new HttpParser();
+			clientFds.insert(std::make_pair(clientSocket, obj));
 			//std::cout << "got the clientSocket = " << clientSocket << std::endl;
 			break;
 		}
@@ -86,24 +91,34 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 	char req[1024] = {0};
 	int b;
 
-	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); it++) {
-		if (events[i].data.fd == *it) {
-			clientSocket = *it;
+	for (std::map<int, HttpParser *>::iterator it = clientFds.begin(); it != clientFds.end(); it++) {
+		if (events[i].data.fd == it->first) {
+			clientSocket = it->first;
 			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
 			if (events[i].events == EPOLLIN) { // we can read from socket
-				b = recv(clientSocket, req, sizeof(req), 0);
+				b = recv(clientSocket, req, sizeof(req) - 1, 0);
+				if (b == -1) {
+					std::cerr << "failed to read" << std::endl;
+					break;
+				}
 				req[b] = 0;
 				std::cout << "----------------------start of request--------------------" << std::endl;
 				std::cout << req;
+				it->second->parseHttpRequest(req);
 				std::cout << "----------------------end of request--------------------" << std::endl;
 				//TODO: check if the req ended
 				//i'll assume the request has ended for now
 				switchEpollMode(clientSocket, EPOLLOUT);
 			}
 			else if (events[i].events == EPOLLOUT) { // we can write to socket
-				send(clientSocket, resp, strlen(resp), 0);
+				if (send(clientSocket, resp, strlen(resp), 0) == -1) {
+					std::cerr << "failed to send" << std::endl;
+					break;
+					//maybe close connection on error
+				}
 				//TODO: check if the response has ended
 				//assuming again that the resp has ended
+				//check if connection close or keep alive to know whether to close or in case of keep alive clear data buff falgs etc..
 				switchEpollMode(clientSocket, EPOLLIN);
 			}
 			break;
