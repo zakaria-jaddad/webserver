@@ -88,7 +88,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 
 	const char* resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBruh hh";
 	int clientSocket = -1;
-	char req[1024] = {0};
+	char req[20] = {0};
 	int b;
 
 	for (std::map<int, HttpParser *>::iterator it = clientFds.begin(); it != clientFds.end(); it++) {
@@ -104,11 +104,11 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 				req[b] = 0;
 				std::cout << "----------------------start of request--------------------" << std::endl;
 				std::cout << req;
-				it->second->parseHttpRequest(req);
 				std::cout << "----------------------end of request--------------------" << std::endl;
+				it->second->parseHttpRequest(req);
 				//TODO: check if the req ended
-				//i'll assume the request has ended for now
-				switchEpollMode(clientSocket, EPOLLOUT);
+				if (it->second->isComplete())
+					switchEpollMode(clientSocket, EPOLLOUT);
 			}
 			else if (events[i].events == EPOLLOUT) { // we can write to socket
 				if (send(clientSocket, resp, strlen(resp), 0) == -1) {
