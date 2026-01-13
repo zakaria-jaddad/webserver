@@ -1,4 +1,10 @@
-TEST(Request, MissingPath)
+#include "../includes/ft_webserver.hpp"
+#include <gtest/gtest.h>
+#include <iostream>
+
+using namespace std;
+
+TEST(RequestHeader, MissingPath)
 {
     string requestLine = "GET HTTP/1.1\r\nHost: localhost\r\n\r\n";
     HttpParser par;
@@ -6,19 +12,22 @@ TEST(Request, MissingPath)
     ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
 }
 
-TEST(Request, ValidRequestWithLongPathAndParams)
+TEST(RequestHeader, ValidRequestWithLongPathAndParams)
 {
     string requestLine =
         "GET /path/with/query?param=value&param=123 HTTP/1.1\r\nHost: localhost\r\n\r\n";
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-    ASSERT_EQ(par.getRequestType(), "GET");
+    ASSERT_EQ(par.getRequestType(), HttpParser::GET);
     ASSERT_EQ(par.getRequestURI(), "/path/with/query?param=value&param=123");
-    ASSERT_EQ(par.getRequestVersion(), "HTTP/1.1");
+
+    const int *version = par.getRequestVersion();
+    ASSERT_EQ(version[0], 1);
+    ASSERT_EQ(version[1], 1);
 }
 
-TEST(Request, VTabBeforeCooln)
+TEST(RequestHeader, VTabBeforeColn)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost\t: localhost\r\n\r\n";
     HttpParser par;
@@ -26,7 +35,7 @@ TEST(Request, VTabBeforeCooln)
     ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
 }
 
-TEST(Request, SpaceBeforeFieldValue)
+TEST(RequestHeader, SpaceBeforeFieldValue)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost:                localhost\r\n\r\n";
     HttpParser par;
@@ -34,7 +43,7 @@ TEST(Request, SpaceBeforeFieldValue)
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
 }
 
-TEST(Request, SpaceAfterFieldValue)
+TEST(RequestHeader, SpaceAfterFieldValue)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost: localhost               \r\n\r\n";
     HttpParser par;
@@ -42,7 +51,7 @@ TEST(Request, SpaceAfterFieldValue)
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
 }
 
-TEST(Request, SpaceBeforeAndAfterFieldValue)
+TEST(RequestHeader, SpaceBeforeAndAfterFieldValue)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost:                 localhost \r\n\r\n";
     HttpParser par;
@@ -50,7 +59,7 @@ TEST(Request, SpaceBeforeAndAfterFieldValue)
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
 }
 
-TEST(Request, NoSpaceAfterCooln)
+TEST(RequestHeader, NoSpaceAfterColn)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost:localhost\r\n\r\n";
     HttpParser par;
@@ -58,7 +67,7 @@ TEST(Request, NoSpaceAfterCooln)
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
 }
 
-TEST(Request, NoDoubleCRLFAfterHeaders)
+TEST(RequestHeader, NoDoubleCRLFAfterHeaders)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost: localhost\r\n";
     HttpParser par;
@@ -66,18 +75,21 @@ TEST(Request, NoDoubleCRLFAfterHeaders)
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
 }
 
-TEST(Request, ValidRequest)
+TEST(RequestHeader, ValidRequest)
 {
     string requestLine = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-    ASSERT_EQ(par.getRequestType(), "GET");
+    ASSERT_EQ(par.getRequestType(), HttpParser::GET);
     ASSERT_EQ(par.getRequestURI(), "/");
-    ASSERT_EQ(par.getRequestVersion(), "HTTP/1.1");
+
+    const int *version = par.getRequestVersion();
+    ASSERT_EQ(version[0], 1);
+    ASSERT_EQ(version[1], 1);
 }
 
-TEST(Request, SpaceBeforeFieldName)
+TEST(RequestHeader, SpaceBeforeFieldName)
 {
     string requestLine = "GET / HTTP/1.1\r\n Host: localhost\r\n\r\n";
     HttpParser par;

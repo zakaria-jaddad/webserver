@@ -1,5 +1,6 @@
 #include "../includes/ft_webserver.hpp"
 #include <gtest/gtest.h>
+#include <iostream>
 
 using namespace std;
 

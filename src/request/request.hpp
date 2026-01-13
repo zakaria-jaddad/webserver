@@ -177,6 +177,7 @@ class HttpParser {
     {
         std::string requestVersion;
         std::string requestType;
+        std::string requestURI;
 
         std::vector<std::string> tokens = _getTokens(requestLine, " ");
         if (tokens.size() != 3) {
@@ -184,21 +185,25 @@ class HttpParser {
         }
 
         requestType = tokens[0];
+        requestURI = tokens[1];
+        requestVersion = tokens[2];
+
         if (_isValidToken(requestType) == false) {
             return HTTP_RES_BAD_REQUEST;
         }
-
-        this->_requestURI = tokens[1];
-        requestVersion = tokens[2];
 
         this->_requestType = _getRequestTypeFromString(requestType);
         if (this->_requestType == UNKNOWN) {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
-        if (this->_requestURI.size() == 0) {
+        /*
+         * TODO: Request URL Parsing
+         */
+        if (requestURI.size() == 0) {
             return HTTP_RES_BAD_REQUEST;
         }
+        this->_requestURI = requestURI;
 
         /*
          * request versiong parsing
