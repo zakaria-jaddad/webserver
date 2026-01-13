@@ -86,11 +86,5 @@ void Config::loadServers()
       std::cout << "Parsing error : " << e.what() << std::endl;
       break ;
     }
-    //while(tokens[i] == "}")//don't forget to remove it
-      //i++;
-    /*else
-    {
-      throw std::runtime_error("Unexpected token: " + tokens[i]);
-    }*/
   }
 }

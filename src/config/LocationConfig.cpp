@@ -5,10 +5,9 @@
 
 void LocationConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
 {
-  i+=2;
-  while (tokens[i] != "}")
+  while(tokens[i] != "}")
   {
-    std::cout << tokens[i] << std::endl;
+    std::cout << "parsing location directive : " << tokens[i] << std::endl;
     i++;
   }
   i++;

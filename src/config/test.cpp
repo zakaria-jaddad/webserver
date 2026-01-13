@@ -16,8 +16,22 @@ int main()
 
   //printinf server name
   std::cout << "server name : " << conf.servers[0].getServerName() << std::endl;
-  
 
+  //printing root directory
   std::cout << "root : " << conf.servers[0].getRoot() << std::endl;
+  
+  //printing index
+  const std::vector<std::string>& indexes = conf.servers[0].getIndex();
+  std::vector<std::string>::const_iterator id_it = indexes.begin();
+  for (; id_it != indexes.end(); id_it++)
+    std::cout << "index : " << *id_it << std::endl;
 
+  //printing size
+  std::cout << "Size : " << conf.servers[0].getSize() << std::endl;
+
+  //printing errorpages
+  const std::map<int, std::string>& errors = conf.servers[0].getErrorPages();
+  std::map<int, std::string>::const_iterator it = errors.begin();
+  for (; it != errors.end(); ++it)
+    std::cout << "error " << it->first << " -> " << it->second << std::endl;
 }

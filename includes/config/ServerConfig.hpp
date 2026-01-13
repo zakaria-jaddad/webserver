@@ -11,12 +11,12 @@ class ServerConfig{
   
   std::map<int, std::string>  error_pages;
   std::vector<std::string>    index;
+  std::vector<LocationConfig> location;
   std::string                 ip;
   std::string                 server_name;
   std::string                 root;
   std::size_t                 max_body;
   int                         port;
-  //std::vector<LocationConfig> location;
   
   typedef void (ServerConfig::*Parser)(std::vector<std::string>&, size_t&);
   std::map<std::string, Parser> serverParsers;
@@ -42,9 +42,12 @@ public:
   void parseSize( std::vector<std::string>&, size_t& );
   void parseRoot( std::vector<std::string>&, size_t& );
 
-  std::map<std::string, int> getListeningPairs( void );
-  std::string getServerName( void );
-  std::string getRoot( void );
+  std::map<std::string, int>  getListeningPairs( void );
+  std::map<int, std::string>  getErrorPages( void );
+  std::vector<std::string>    getIndex( void );
+  std::size_t                 getSize( void );
+  std::string                 getServerName( void );
+  std::string                 getRoot( void );
 };
 
 #endif
