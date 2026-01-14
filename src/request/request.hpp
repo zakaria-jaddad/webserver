@@ -55,7 +55,7 @@ class HttpParser {
   public:
     HttpParser() : _phase(REQUEST_LINE)
     {
-        this->_requestURI = NULL;
+        this->_requestURI.path = "";
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -128,12 +128,13 @@ class HttpParser {
     };
 
     requestType getRequestType() const { return this->_requestType; }
-    t_reqURI *getRequestURI() const { return this->_requestURI; }
+    std::string getRequestURIPath() const { return this->_requestURI.path; }
+    std::map<std::string, std::string> getRequestURIParams() const { return this->_requestURI.params; }
     const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
-    t_reqURI *parseRequestURI(std::string uri);
+    int parseRequestURI(t_reqURI& req, std::string uri);
 
   private:
     typedef enum {
@@ -146,7 +147,7 @@ class HttpParser {
   private:
     parserPhase _phase;
     requestType _requestType;
-    t_reqURI *_requestURI;
+    t_reqURI _requestURI;
     int _requestVersion[2];
     std::map<std::string, std::string> __headers;
     std::map<std::string, std::vector<std::string> > _headers;
@@ -206,8 +207,7 @@ class HttpParser {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
-	this->_requestURI = parseRequestURI(requestURI);
-        if (this->_requestURI == NULL) {
+        if (parseRequestURI(this->_requestURI, requestURI)) {
             return HTTP_RES_BAD_REQUEST;
         }
 

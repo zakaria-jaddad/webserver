@@ -37,22 +37,26 @@ std::string urlDecode(std::string &str) {
 	return (dec);
 }
 
-t_reqURI *HttpParser::parseRequestURI(std::string uri) {
-	t_reqURI *reqURI = new t_reqURI;
+int HttpParser::parseRequestURI(t_reqURI& reqURI, std::string uri) {
+	//t_reqURI *reqURI = new t_reqURI;
 	std::stringstream ss(uri);
 	std::string param;
 	std::string key;
 	std::string val;
 
-	getline(ss, reqURI->path, '?');
+	getline(ss, reqURI.path, '?');
 	while (getline(ss, param, '&')) {
 		key = "";
 		val = "";
 		std::stringstream paramStream(param);
 		getline(paramStream, key, '=');
 		paramStream >> val;
-		reqURI->params[key] = val;
+		reqURI.params[key] = val;
+		std::cout << "-------------------" << std::endl;
+		std::cout << "key : " << key << std::endl;
+		std::cout << "val : " << val << std::endl;
+		std::cout << "-------------------" << std::endl;
 	}
-	reqURI->path = urlDecode(reqURI->path);
-	return (reqURI);
+	reqURI.path = urlDecode(reqURI.path);
+	return (0);
 }
