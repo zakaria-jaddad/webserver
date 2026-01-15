@@ -1,5 +1,18 @@
 #include "../../includes/config/parseHelpers.hpp"
 
+bool isAbsolutePath(std::string path)
+{
+  if (path[0] != '/')
+    return false;
+
+  for (size_t j = 0; j < path.size(); j++)
+  {
+    if (!std::isalnum(path[j]) && path[j] != '-' && path[j] != '.' && path[j] != '/' && path[j] != '_')
+      return false;
+  }
+  return true;
+}
+
 bool isNumber(const std::string& s)
 {
   if (s.empty())

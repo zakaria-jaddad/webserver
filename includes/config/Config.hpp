@@ -7,7 +7,7 @@
 #include <vector>
 
 class Config{
- 
+
   public:
     std::vector<ServerConfig> servers;//don't forget to make it private
     std::vector<std::string> tokens;//dont forget to make it private
@@ -15,6 +15,5 @@ class Config{
     void loadServers( void );
 
 };
-
 
 #endif

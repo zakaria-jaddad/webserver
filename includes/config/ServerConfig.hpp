@@ -11,7 +11,6 @@ class ServerConfig{
   
   std::map<int, std::string>  error_pages;
   std::vector<std::string>    index;
-  std::vector<LocationConfig> location;
   std::string                 ip;
   std::string                 server_name;
   std::string                 root;
@@ -20,8 +19,9 @@ class ServerConfig{
   
   typedef void (ServerConfig::*Parser)(std::vector<std::string>&, size_t&);
   std::map<std::string, Parser> serverParsers;
-
-public:
+  
+  public:
+  std::vector<LocationConfig> location;
   ServerConfig();
 
   void buildServerParsers( void );
@@ -38,8 +38,11 @@ public:
 
 
   void parseIndex( std::vector<std::string>&, size_t& );
+  
   void parseError( std::vector<std::string>&, size_t& );
+  
   void parseSize( std::vector<std::string>&, size_t& );
+  
   void parseRoot( std::vector<std::string>&, size_t& );
 
   std::map<std::string, int>  getListeningPairs( void );
