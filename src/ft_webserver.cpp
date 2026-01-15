@@ -1,9 +1,14 @@
 #include "../includes/ft_webserver.hpp"
 
-int main(void)
+int main(int argc, char **argv)
 {
-	Server s;
+	std::string file;
+	if (argc == 1)
+		file = "src/config/configExample.conf";
+	else
+		file = argv[1];
 
+	Server s(file);
 	s.startServer();
 	return 0;
 }

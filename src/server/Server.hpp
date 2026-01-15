@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <cerrno>
 #include "../request/request.hpp"
+#include "../../includes/config/Config.hpp"
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
@@ -25,14 +26,15 @@ class Server {
 			(type of return : map of 'int key' (interface) and 'int value' (port) )
 	*/
 	private:
-		//config &conf = configObject;
+		Config conf;
 		int epoll_fd;
 		std::vector<int> serverFds;
 		//std::vector<int> clientFds;
 		std::map<int, HttpParser *> clientFds;
 	public:
-		int startServer(); // TODO: change it to take config *conf instead
-		void setupServerFds();// TODO: change it to take config *conf instead
+		Server(std::string &file);
+		int startServer();
+		void setupServerFds();
 		int addToEpoll(int fd, uint32_t flag);
 		int switchEpollMode(int clientSocket, uint32_t flag);
 		int checkForServerFd(epoll_event *events, int i);

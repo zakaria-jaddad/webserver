@@ -8,7 +8,7 @@ OBJ_DIR		= obj
 TEST_DIR	= test
 
 MAIN_SRC      = $(SRC_DIR)/ft_webserver.cpp
-PROJECT_SRC   = $(SRC_DIR)/server/Server.cpp
+PROJECT_SRC   = $(SRC_DIR)/server/Server.cpp $(SRC_DIR)/config/Config.cpp $(SRC_DIR)/config/ServerConfig.cpp $(SRC_DIR)/config/LocationConfig.cpp $(SRC_DIR)/config/parseHelpers.cpp
 SRC           = $(MAIN_SRC) $(PROJECT_SRC)
 
 OBJ 					= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

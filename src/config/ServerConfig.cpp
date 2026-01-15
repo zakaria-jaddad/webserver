@@ -10,10 +10,10 @@
 
 ServerConfig::ServerConfig()
   : error_pages(),
+    index(),
     ip("0.0.0.0"),
     server_name(""),
     root(""),
-    index(),
     max_body(1024),
     port(80),
     serverParsers()

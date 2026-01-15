@@ -1,7 +1,10 @@
 #include "./Server.hpp"
 #include <sstream>
 
-
+Server::Server(std::string &path) {
+	this->conf.tokenize(path);
+	this->conf.loadServers();
+}
 void Server::setupServerFds() {
 	//TODO:iterate over ip:port pairs in conf and do the following to each pair:
 	//for now i'll use the following two

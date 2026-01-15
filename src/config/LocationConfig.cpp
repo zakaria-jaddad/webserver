@@ -7,12 +7,12 @@
 #include <algorithm>
 
 LocationConfig::LocationConfig()
-    : directory_listing(false),
-      root(""),
-      index(),
+    :  index(),
       methods_accepted(),
       redir(),
-      upload_path("")
+      root(""),
+      upload_path(""),
+     directory_listing(false)
 {
     buildLocationParsers();
 }
