@@ -1,24 +1,24 @@
 #include "../../includes/config/ServerConfig.hpp"
 #include "../../includes/config/parseHelpers.hpp"
 
-#include <cctype>
-#include <cstddef>
-#include <iostream>
-#include <map>
-#include <stdexcept>
-#include <vector>
+// #include <cctype>
+// #include <cstddef>
+// #include <iostream>
+// #include <map>
+// #include <stdexcept>
+// #include <vector>
 
 ServerConfig::ServerConfig()
-  : error_pages(),
-    index(),
-    ip("0.0.0.0"),
-    server_name(""),
-    root(""),
-    max_body(1024),
-    port(80),
-    serverParsers()
+: error_pages(),
+  index(),
+  ip("0.0.0.0"),
+  server_name(""),
+  root(""),
+  max_body(1024),
+  port(80),
+  serverParsers()
 {
-    buildServerParsers();
+  buildServerParsers();
 }
 
 void ServerConfig::buildServerParsers()

@@ -1,5 +1,16 @@
 #include "../../includes/config/parseHelpers.hpp"
 
+std::string readFile(const std::string& path)
+{
+  std::ifstream file(path.c_str());
+  if (!file)
+    throw std::runtime_error("Cannot open file");
+
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  return buffer.str();
+}
+
 bool isAbsolutePath(std::string path)
 {
   if (path[0] != '/')

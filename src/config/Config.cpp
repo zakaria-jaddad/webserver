@@ -1,30 +1,12 @@
 #include "../../includes/config/Config.hpp"
-#include "../../includes/config/ServerConfig.hpp"
-
-#include <fstream>
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-
-std::string readFile(const std::string& path)
-{
-  std::ifstream file(path.c_str());
-  if (!file)
-    throw std::runtime_error("Cannot open file");
-
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  return buffer.str();
-}
+#include "../../includes/config/parseHelpers.hpp"
 
 void Config::tokenize(const std::string& path)
 {
   std::string input = readFile(path);
   std::string current;
   bool in_comment = false;
+  int in = 0;
 
   for (size_t i = 0; i < input.size(); ++i)
   {
@@ -54,6 +36,10 @@ void Config::tokenize(const std::string& path)
 
     if (c == '{' || c == '}' || c == ';') 
     {
+      if (c == '{')
+        in++;
+      if (c == '}')
+        in--;
       if (!current.empty()) 
       {
         tokens.push_back(current);
@@ -67,6 +53,12 @@ void Config::tokenize(const std::string& path)
     current += c;
   }
 
+  if (in > 0)
+    throw std::runtime_error("Unmatched \'{\'");
+
+  if (in < 0)
+    throw std::runtime_error("Unmatched \'}\'");
+
   if (!current.empty())
     tokens.push_back(current);
 }
@@ -77,14 +69,8 @@ void Config::loadServers()
 
   while (i < tokens.size())
   {
-    try {
-      ServerConfig server;
-      server.parseBlock(tokens, i);
-      servers.push_back(server);
-    }
-    catch(std::exception &e) {
-      std::cout << "Parsing error : " << e.what() << std::endl;
-      break ;
-    }
+    ServerConfig server;
+    server.parseBlock(tokens, i);
+    servers.push_back(server);
   }
 }
