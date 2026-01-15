@@ -2,10 +2,6 @@
 # define SERVERCONFIG_HPP
 
 #include "LocationConfig.hpp"
-#include <cstddef>
-#include <map>
-#include <string>
-#include <vector>
 
 class ServerConfig{
   
@@ -20,14 +16,15 @@ class ServerConfig{
   typedef void (ServerConfig::*Parser)(std::vector<std::string>&, size_t&);
   std::map<std::string, Parser> serverParsers;
   
-  public:
-  std::vector<LocationConfig> location;
+public:
+  std::vector<LocationConfig> location;//don't forget to make it private
   ServerConfig();
 
   void buildServerParsers( void );
 
   void parseBlock( std::vector<std::string>&, size_t& );
 
+  //directive parsing
   void parseName( std::vector<std::string>&, size_t& );
   void checkServerName( const std::string& );
 
@@ -35,7 +32,6 @@ class ServerConfig{
   void parseIpOnly( const std::string& );
   void parseIpPort( const std::string& );
   void parsePortOnly( const std::string& );
-
 
   void parseIndex( std::vector<std::string>&, size_t& );
   
@@ -45,6 +41,8 @@ class ServerConfig{
   
   void parseRoot( std::vector<std::string>&, size_t& );
 
+
+  //getters
   std::map<std::string, int>  getListeningPairs( void );
   std::map<int, std::string>  getErrorPages( void );
   std::vector<std::string>    getIndex( void );
