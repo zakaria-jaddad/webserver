@@ -4,17 +4,29 @@ TEST_NAME = ft_webserver_test
 CFLAGS = -Wall -Werror -Wextra -std=c++17
 
 SRC_DIR		= src
+CONF_DIR	= config
+SRV_DIR		= server
+REQ_DIR		= request
+RSP_DIR		= response
 OBJ_DIR		= obj
 TEST_DIR	= test
 
-MAIN_SRC      = $(SRC_DIR)/ft_webserver.cpp
-PROJECT_SRC   = $(SRC_DIR)/server/Server.cpp $(SRC_DIR)/config/Config.cpp $(SRC_DIR)/config/ServerConfig.cpp $(SRC_DIR)/config/LocationConfig.cpp $(SRC_DIR)/config/parseHelpers.cpp
-SRC           = $(MAIN_SRC) $(PROJECT_SRC)
+CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
+SRV_SRC		= Server.cpp
+REQ_SRC		= request.cpp
+MAIN_SRC	= ft_webserver.cpp
 
-OBJ 					= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-PROJECT_OBJ   = $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-TEST_SRC      = $(TEST_DIR)/request_line_test.cpp \
+PROJECT_SRC	=	$(addprefix $(SRC_DIR)/$(SRV_DIR)/, $(SRV_SRC)) \
+				$(addprefix $(SRC_DIR)/$(CONF_DIR)/, $(CONF_SRC)) \
+				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC))
+
+SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)
+
+OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+
+TEST_SRC	= $(TEST_DIR)/request_line_test.cpp \
 								$(TEST_DIR)/test.cpp \
 
 

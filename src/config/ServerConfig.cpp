@@ -432,7 +432,7 @@ LocationConfig* ServerConfig::matchLocation( const std::string& uri )
   LocationConfig* best = NULL;
   std::size_t     bestlen = 0;
 
-  for (int i = 0; i < location.size(); i++)
+  for (size_t i = 0; i < location.size(); i++)
   {
     std::string loc = location[i].getLocationPath();
     
