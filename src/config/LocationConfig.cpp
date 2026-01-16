@@ -47,7 +47,6 @@ void LocationConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
       throw std::runtime_error("Unknown directive: " + tokens[i]);
 
     Parser parser = it->second;
-    std::cout << "parsing : " << it->first << std::endl;
     (this->*parser)(tokens, i);
   }
   i++;

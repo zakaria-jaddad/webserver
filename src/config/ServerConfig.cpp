@@ -54,7 +54,6 @@ void ServerConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
         throw std::runtime_error("Unknown directive: " + tokens[i]);
 
       Parser parser = it->second;
-      std::cout << "parsing : " << it->first << std::endl;
       (this->*parser)(tokens, i);
     }
   }
@@ -330,7 +329,31 @@ void ServerConfig::parseSize( std::vector<std::string>& tokens, size_t& i)
 //utility methods
 LocationConfig* ServerConfig::matchLocation( const std::string& uri )
 {
-  
+  //Method used to match uri to the best matching location block
+  //it returns a pointetr to a location object if a match was found or NULL otherwise
+
+
+  LocationConfig* best = NULL;
+  std::size_t     bestlen = 0;
+
+  for (int i = 0; i < location.size(); i++)
+  {
+    std::string loc = location[i].getLocationPath();
+    
+    if (uri.compare(0, loc.size(), loc) == 0)
+    {
+      if (loc.size() == uri.size() || uri[loc.size()] == '/')
+      {
+        if (loc.size() > bestlen)
+        {
+          bestlen = loc.size();
+          best = &location[i];
+        }
+      }
+    }
+  }
+
+  return best;
 }
 
 

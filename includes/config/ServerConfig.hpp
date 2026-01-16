@@ -54,7 +54,7 @@ public:
   std::string                 getServerName( void );
   std::string                 getRoot( void );
   std::string                 getIP( void );
-  int			      getPort( void );
+  int			                    getPort( void );
 };
 
 #endif
