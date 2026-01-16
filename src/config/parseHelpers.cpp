@@ -1,5 +1,10 @@
 #include "../../includes/config/parseHelpers.hpp"
 
+bool isRedirectCode(int num)
+{
+  return (num == 301 || num == 302 || num == 303 || num == 307 || num == 308);
+}
+
 std::string readFile(const std::string& path)
 {
   std::ifstream file(path.c_str());

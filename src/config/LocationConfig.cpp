@@ -7,12 +7,13 @@
 #include <algorithm>
 
 LocationConfig::LocationConfig()
-    :  index(),
-      methods_accepted(),
-      redir(),
-      root(""),
-      upload_path(""),
-     directory_listing(false)
+: index(),
+  methods_accepted(),
+  redir(),
+  root(""),
+  upload_path(""),
+  location_path(""),
+  directory_listing(false)
 {
     buildLocationParsers();
 }
@@ -108,7 +109,7 @@ void LocationConfig::parseIndex( std::vector<std::string>& tokens, size_t& i)
 }
 
 
-//parsing index directive
+//parsing autoindex directive
 void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
 {
   //skip the directive name token
@@ -138,7 +139,7 @@ void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
 }
 
 
-//parsing index directive
+//parsing allow directive
 void LocationConfig::parseMethods( std::vector<std::string>& tokens, size_t& i)
 {
   //skip the directive name token
@@ -191,11 +192,6 @@ void LocationConfig::parsePath( std::vector<std::string>& tokens, size_t& i)
 
 
 //parsing index directive
-bool isRedirectCode(int num)
-{
-  return (num == 301 || num == 302 || num == 303 || num == 307 || num == 308);
-}
-
 void LocationConfig::parseRedir( std::vector<std::string>& tokens, size_t& i)
 {
   //skip the directive name token

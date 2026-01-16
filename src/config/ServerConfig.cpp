@@ -11,6 +11,9 @@
 ServerConfig::ServerConfig()
 : error_pages(),
   index(),
+  methods_accepted(),
+  redir(),
+  directory_listing(false),
   ip("0.0.0.0"),
   server_name(""),
   root(""),
@@ -29,6 +32,9 @@ void ServerConfig::buildServerParsers()
   serverParsers["index"] = &ServerConfig::parseIndex;
   serverParsers["error_page"] = &ServerConfig::parseError;
   serverParsers["client_max_body_size"] = &ServerConfig::parseSize;
+	serverParsers["autoindex"] = &ServerConfig::parseListing;
+	serverParsers["return"] = &ServerConfig::parseRedir;
+	serverParsers["allow"] = &ServerConfig::parseMethods;
 }
 
 
@@ -57,6 +63,96 @@ void ServerConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
       (this->*parser)(tokens, i);
     }
   }
+  i++;
+}
+
+
+//parsing autoindex directive
+void ServerConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+  std::string value = tokens[i];
+
+  //skips value
+  i++;
+  
+  if (tokens[i] != ";")
+    throw std::runtime_error("Invalid number of argumenst in \"autoindex\" directive");
+
+  //skips closing ;
+  i++;
+
+  if (value == "on")
+    this->directory_listing = true;
+  else if (value == "off")
+    this->directory_listing = false;
+  else
+    throw std::runtime_error("Invalid value for : \"autoindex\" directive : " + value);
+
+}
+
+
+//parsing allow directive
+void ServerConfig::parseMethods( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+  std::string methods[] = {"GET", "POST", "DELETE", "HEAD", "PUT", "OPTIONS" ,"TRACE", "CONNECT"};
+
+  while(tokens[i] != ";")
+  {
+    std::string value = tokens[i];
+    if (std::find(methods, methods + 8, value) == (methods + 8))
+      throw std::runtime_error("Found an unexpected method : " + value);
+    this->methods_accepted.push_back(value);
+    i++;
+  }
+
+  //skip closing ;
+  i++;
+}
+
+
+//return directive parsing
+void ServerConfig::parseRedir( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+
+  std::string value = tokens[i];
+
+  //skipping value
+  i++;
+
+  if (value == ";" || value == "{" || value == "}" ||
+      tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + value);
+
+  std::string path = tokens[i];
+
+  //skipping path
+  i++;
+
+  if (!isNumber(value) || value.size() != 3 || !isRedirectCode(std::atoi(value.c_str())))
+    throw std::runtime_error("Invalid return code");
+
+  if (!isAbsolutePath(path))
+    throw std::runtime_error("Invalid redirection path");
+  
+  int number = std::atoi(value.c_str());
+  
+  this->redir[number] = path;
+
+  //skip closing ;
   i++;
 }
 
@@ -396,4 +492,19 @@ std::string ServerConfig::getIP ( void ) {
 
 int ServerConfig::getPort ( void ) {
 	return port;
+}
+
+bool  ServerConfig::getDirectoyListing( void )
+{
+  return directory_listing;
+}
+
+std::vector<std::string>	ServerConfig::getAcceptedMethods( void )
+{
+  return methods_accepted;
+}
+
+std::map<int, std::string>	ServerConfig::getRedir( void )
+{
+  return redir;
 }

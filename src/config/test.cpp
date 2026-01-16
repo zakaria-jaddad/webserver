@@ -14,7 +14,7 @@ int main()
     std::map<std::string, int>::iterator m = conf.servers[0].getListeningPairs().begin();
     std::cout << "ip: " <<  m->first << " port : " << m->second << std::endl;
 
-    //printinf server name
+    //printing server name
     std::cout << "server name : " << conf.servers[0].getServerName() << std::endl;
 
     //printing root directory
@@ -28,6 +28,11 @@ int main()
 
     //printing size
     std::cout << "Size : " << conf.servers[0].getSize() << std::endl;
+
+    const std::vector<std::string>& me_indexes = conf.servers[0].getAcceptedMethods();
+    std::vector<std::string>::const_iterator me_it = me_indexes.begin();
+    for (; me_it != me_indexes.end(); me_it++)
+      std::cout << "allowed : " << *me_it << std::endl;
 
     //printing error pages
     const std::map<int, std::string>& errors = conf.servers[0].getErrorPages();
