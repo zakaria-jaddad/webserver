@@ -51,6 +51,8 @@ class ServerConfig{
   std::size_t                 getSize( void );
   std::string                 getServerName( void );
   std::string                 getRoot( void );
+  std::string                 getIP( void );
+  int			      getPort( void );
 };
 
 #endif

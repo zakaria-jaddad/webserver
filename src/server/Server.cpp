@@ -6,31 +6,25 @@ Server::Server(std::string &path) {
 	this->conf.loadServers();
 }
 void Server::setupServerFds() {
-	//TODO:iterate over ip:port pairs in conf and do the following to each pair:
-	//for now i'll use the following two
-	std::map<const char *, int> listeningPairs;
-	listeningPairs["10.12.6.4"] = 8069;
-	listeningPairs["0.0.0.0"] = 8080;
-
 	int serverSocket;
 	int opt = 1;
 
-	for (std::map<const char *, int>::iterator it = listeningPairs.begin(); it != listeningPairs.end(); it++) {
+	for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin(); it != this->conf.servers.end(); it++) {
 		serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 		sockaddr_in serverAddr;
 
 		serverAddr.sin_family = AF_INET;
-		serverAddr.sin_port = htons(it->second);
-		if (inet_pton(AF_INET, it->first, &serverAddr.sin_addr) != 1)
-			std::cerr << "error inet_pton " << it->first << std::endl;
+		serverAddr.sin_port = htons(it->getPort());
+		if (inet_pton(AF_INET, it->getIP().c_str(), &serverAddr.sin_addr) != 1)
+			std::cerr << "error inet_pton " << it->getIP() << std::endl;
 		if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-			std::cerr << "error setsockopt " << it->first << std::endl;
+			std::cerr << "error setsockopt " << it->getIP() << std::endl;
 		if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1)
-			std::cerr << "error binding " << it->first << std::endl;
+			std::cerr << "error binding " << it->getIP() << std::endl;
 		if (listen(serverSocket, 10) == -1) //TODO: update later to get it from conf
-			std::cerr << "on listen " << it->first << std::endl;
+			std::cerr << "on listen " << it->getIP() << std::endl;
 		//std::cout << "added socker fd : " << serverSocket << std::endl;
-		serverFds.push_back(serverSocket);
+		this->vServers[serverSocket] = &(*it);
 	}
 }
 
@@ -66,18 +60,20 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 	// in case it is a serverFd it accepts and gets clientSocket and adds it to epoll & clientFds for next connection
 	int clientSocket = -1;
 	HttpParser *obj;
+	t_client client;
 
-	for (std::vector<int>::iterator it = serverFds.begin(); it != serverFds.end(); it++) {
-		if (events[i].data.fd == *it) {
-			//std::cout << "the fd is : " << *it << std::endl;
-			clientSocket = accept(*it, NULL, NULL);
+	for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin(); it != this->vServers.end(); it++) {
+		if (events[i].data.fd == it->first) {
+			clientSocket = accept(it->first, NULL, NULL);
 			if (clientSocket == -1)
 				std::cerr << "failed to accept" << std::endl;
 			if (addToEpoll(clientSocket, EPOLLIN))
 				std::cerr << "failed to add to epoll" << std::endl;
 			obj = new HttpParser();
-			clientFds.insert(std::make_pair(clientSocket, obj));
-			//std::cout << "got the clientSocket = " << clientSocket << std::endl;
+			client.fd = clientSocket;
+			client.config = it->second;
+			client.request = obj;
+			Clients.push_back(client);
 			break;
 		}
 	}
@@ -91,12 +87,12 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 
 	const char* resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBruh hh";
 	int clientSocket = -1;
-	char req[20] = {0};
+	char req[1024] = {0}; 
 	int b;
 
-	for (std::map<int, HttpParser *>::iterator it = clientFds.begin(); it != clientFds.end(); it++) {
-		if (events[i].data.fd == it->first) {
-			clientSocket = it->first;
+	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++) {
+		if (events[i].data.fd == it->fd) {
+			clientSocket = it->fd;
 			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
 			if (events[i].events == EPOLLIN) { // we can read from socket
 				b = recv(clientSocket, req, sizeof(req) - 1, 0);
@@ -105,12 +101,11 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 					break;
 				}
 				req[b] = 0;
-				std::cout << "----------------------start of request--------------------" << std::endl;
+				std::cout << "--------------start of request----------------" << std::endl;
 				std::cout << req;
-				std::cout << "----------------------end of request--------------------" << std::endl;
-				it->second->parseHttpRequest(req);
-				//TODO: check if the req ended
-				if (it->second->isComplete())
+				std::cout << "--------------end of request------------------" << std::endl;
+				it->request->parseHttpRequest(req);
+				if (it->request->isComplete())
 					switchEpollMode(clientSocket, EPOLLOUT);
 			}
 			else if (events[i].events == EPOLLOUT) { // we can write to socket
@@ -121,7 +116,8 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 				}
 				//TODO: check if the response has ended
 				//assuming again that the resp has ended
-				//check if connection close or keep alive to know whether to close or in case of keep alive clear data buff falgs etc..
+				//check if connection close or keep alive to know
+				//whether to close or in case of keep alive clear data buff falgs etc..
 				switchEpollMode(clientSocket, EPOLLIN);
 			}
 			break;
@@ -131,7 +127,6 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 }
 
 int Server::startServer() {
-	//(void *)conf;
 
 	setupServerFds();
 	int clientSocket;
@@ -140,19 +135,18 @@ int Server::startServer() {
 	epoll_fd = epoll_create1(0);
 	epoll_event_t events[MAX_EVENTS];
 
-	for (std::vector<int>::iterator it = serverFds.begin(); it != serverFds.end(); it++) {
-		if (addToEpoll(*it, EPOLLIN))
+	for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin(); it != this->vServers.end(); it++) {
+		if (addToEpoll(it->first, EPOLLIN))
 			return (1);
 	}
 
 	while (1) {
-		std::cout << "Listening..." << std::endl;
 		event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 30000);
 		if (event_count == -1) {
 			std::cerr << "epoll_wait Failed!" << std::endl;
 			return (1);
 		}
-		//std::cout << "event_count = " << event_count << std::endl;
+		std::cout << "event_count = " << event_count << std::endl;
 		for (int i = 0; i < event_count; i++) {
 			clientSocket = checkForServerFd(events, i);
 			if (clientSocket != -1) //found fd in serverFds

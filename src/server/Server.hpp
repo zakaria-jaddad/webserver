@@ -20,6 +20,12 @@
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
 
+typedef struct {
+	int fd;
+	ServerConfig *config;
+	HttpParser *request;
+} t_client;
+
 class Server {
 	/* server class depends on 'config' class with the following getters:
 		- getListeningPairs() //get interface:port pairs on which the server will listen to.
@@ -28,9 +34,11 @@ class Server {
 	private:
 		Config conf;
 		int epoll_fd;
-		std::vector<int> serverFds;
+		//std::vector<int> serverFds;
+		std::map<int, ServerConfig *> vServers;
 		//std::vector<int> clientFds;
-		std::map<int, HttpParser *> clientFds;
+		//std::map<int, HttpParser *> clientFds;
+		std::vector<t_client> Clients;
 	public:
 		Server(std::string &file);
 		int startServer();

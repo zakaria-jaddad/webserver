@@ -359,3 +359,11 @@ std::size_t ServerConfig::getSize( void )
 {
   return max_body;
 }
+
+std::string ServerConfig::getIP ( void ) {
+	return ip;
+}
+
+int ServerConfig::getPort ( void ) {
+	return port;
+}
