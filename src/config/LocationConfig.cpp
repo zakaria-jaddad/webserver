@@ -32,8 +32,12 @@ void LocationConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
   //skip location token
   i++;
 
-  if (tokens[i++].find('/') == std::string::npos || tokens[i++] != "{")
+  std::string loc_path = tokens[i];
+  
+  if (!isAbsolutePath(tokens[i++]) || tokens[i++] != "{")
     throw std::runtime_error("Incorrect location block");
+
+  this->location_path = loc_path;
 
   while (tokens[i] != "}")
   {
@@ -256,4 +260,9 @@ std::string LocationConfig::getUploadPath( void )
 bool  LocationConfig::getDirectoyListing( void )
 {
   return directory_listing;
+}
+
+std::string LocationConfig::getLocationPath( void )
+{
+  return location_path;
 }

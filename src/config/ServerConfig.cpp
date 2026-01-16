@@ -327,6 +327,13 @@ void ServerConfig::parseSize( std::vector<std::string>& tokens, size_t& i)
 }
 
 
+//utility methods
+LocationConfig* ServerConfig::matchLocation( const std::string& uri )
+{
+  
+}
+
+
 //getters
 std::map<std::string, int> ServerConfig::getListeningPairs()
 {

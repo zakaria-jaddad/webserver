@@ -41,6 +41,9 @@ int main()
 
   std::cout << "location directive" << std::endl;
   //printing index
+  
+  std::cout << "location path : " << loc.getLocationPath() << std::endl;
+
   const std::vector<std::string>& loc_indexes = loc.getIndex();
   std::vector<std::string>::const_iterator loc_it = loc_indexes.begin();
   for (; loc_it != loc_indexes.end(); loc_it++)

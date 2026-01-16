@@ -42,6 +42,10 @@ public:
   void parseRoot( std::vector<std::string>&, size_t& );
 
 
+  //utility methods
+
+  LocationConfig* matchLocation( const std::string& );
+
   //getters
   std::map<std::string, int>  getListeningPairs( void );
   std::map<int, std::string>  getErrorPages( void );
@@ -54,3 +58,6 @@ public:
 };
 
 #endif
+// request line GET /index.html?afdf HTTP/1.1\r\n 
+// headers \r\n\r\n
+// body
