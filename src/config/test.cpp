@@ -7,9 +7,9 @@ int main()
 {
   Config conf;
 
-  conf.tokenize("configExample.conf");
-  conf.loadServers();
-
+  try{
+    conf.tokenize("configExample.conf");
+    conf.loadServers();
   //printing ip:port
   std::map<std::string, int>::iterator m = conf.servers[0].getListeningPairs().begin();
   std::cout << "ip: " <<  m->first << " port : " << m->second << std::endl;
@@ -61,4 +61,8 @@ int main()
   std::map<int, std::string>::const_iterator red_it = red.begin();
   for (; red_it != red.end(); ++red_it)
     std::cout << "error " << red_it->first << " -> " << red_it->second << std::endl;
+  }
+  catch(std::exception &e) {
+    std::cout << "Parsing error : " << e.what() << std::endl;
+  }
 }

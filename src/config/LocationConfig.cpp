@@ -130,7 +130,7 @@ void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
   else if (value == "off")
     this->directory_listing = false;
   else
-    throw std::runtime_error("Invalid value for : \"autoindex\" directive");
+    throw std::runtime_error("Invalid value for : \"autoindex\" directive : " + value);
 
 }
 
@@ -143,7 +143,6 @@ void LocationConfig::parseMethods( std::vector<std::string>& tokens, size_t& i)
 
   if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
     throw std::runtime_error("Found an unexpected : " + tokens[i]);
-
 
   std::string methods[] = {"GET", "POST", "DELETE", "HEAD", "PUT", "OPTIONS" ,"TRACE", "CONNECT"};
 
