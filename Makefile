@@ -8,7 +8,10 @@ OBJ_DIR		= obj
 TEST_DIR	= test
 
 MAIN_SRC      = $(SRC_DIR)/ft_webserver.cpp
-PROJECT_SRC   = $(SRC_DIR)/server/server.cpp
+PROJECT_SRC   = $(SRC_DIR)/server/server.cpp \
+								$(SRC_DIR)/request/request.cpp
+
+
 SRC           = $(MAIN_SRC) $(PROJECT_SRC)
 
 OBJ 					= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)

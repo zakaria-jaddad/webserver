@@ -5,12 +5,18 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #define CRLF "\r\n"
 #define DOUBLE_CRLF "\r\n\r\n"
 
+// requestURI struct
+typedef struct s_requestURI {
+    std::string path;
+    std::map<std::string, std::string> params;
+} t_reqURI;
 /* inline only for development */
 inline std::string trim(const std::string &str)
 {
@@ -48,7 +54,7 @@ class HttpParser {
   public:
     HttpParser() : _phase(REQUEST_LINE)
     {
-        this->_requestURI = "";
+        this->_requestURI.path = "";
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -121,11 +127,16 @@ class HttpParser {
     };
 
     requestType getRequestType() const { return this->_requestType; }
-    std::string getRequestURI() const { return this->_requestURI; }
+    std::string getRequestURIPath() const { return this->_requestURI.path; }
+    std::map<std::string, std::string> getRequestURIParams() const
+    {
+        return this->_requestURI.params;
+    }
     const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
+    int parseRequestURI(t_reqURI &req, std::string uri);
 
   private:
     typedef enum {
@@ -138,7 +149,7 @@ class HttpParser {
   private:
     parserPhase _phase;
     requestType _requestType;
-    std::string _requestURI;
+    t_reqURI _requestURI;
     int _requestVersion[2];
     std::map<std::string, std::string> __headers;
     std::map<std::string, std::vector<std::string> > _headers;
@@ -197,13 +208,9 @@ class HttpParser {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
-        /*
-         * TODO: Request URL Parsing
-         */
-        if (requestURI.size() == 0) {
+        if (parseRequestURI(this->_requestURI, requestURI)) {
             return HTTP_RES_BAD_REQUEST;
         }
-        this->_requestURI = requestURI;
 
         /*
          * request versiong parsing
