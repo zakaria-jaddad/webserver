@@ -1,6 +1,9 @@
 #ifndef FT_WEBSERVER_HPP
 #define FT_WEBSERVER_HPP
 
-#include "../src/server/server.hpp"
+#include <iostream>
+#include <string>
+#include <cstring>
+#include "./server/Server.hpp"
 
 #endif
