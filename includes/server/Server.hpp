@@ -14,8 +14,8 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <cerrno>
-#include "./src/request/request.hpp"
-#include "../config/Config.hpp"
+#include "includes/request/request.hpp"
+#include "includes/config/Config.hpp"
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100

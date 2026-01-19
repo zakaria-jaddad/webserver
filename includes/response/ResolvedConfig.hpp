@@ -18,6 +18,12 @@ class ResolvedConfig{
 public:
 	ResolvedConfig( const std::string&, ServerConfig* ); //passes the uri as a param using the getUriPath
 
+	std::map<int, std::string>  getErrorPages( void );
+	std::map<int, std::string>	getRedir( void );
+  std::vector<std::string>    getIndex( void );
+  std::vector<std::string>    getAcceptedMethods( void );
+  std::string                 getRoot( void );
+	bool 						            getDirectoyListing( void );
 };
 
 #endif

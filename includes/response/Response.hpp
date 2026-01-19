@@ -6,10 +6,13 @@
 
 class Response{
 
-	ResolvedConfig conf;
+	ResolvedConfig	conf;
+	HttpParser			request;
 
 public:
 	Response( const t_client* );
+
+	HttpParser::httpResult	checkMethod( void );
 
 };
 

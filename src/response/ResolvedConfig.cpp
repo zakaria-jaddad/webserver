@@ -25,3 +25,33 @@ ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
     }
     this->error_pages = srvr->getErrorPages();
 }
+
+std::string ResolvedConfig::getRoot( void )
+{
+  return root;
+}
+
+std::map<int, std::string> ResolvedConfig::getErrorPages( void )
+{
+  return error_pages;
+}
+
+std::vector<std::string> ResolvedConfig::getIndex( void )
+{
+  return index;
+}
+
+bool  ResolvedConfig::getDirectoyListing( void )
+{
+  return directory_listing;
+}
+
+std::vector<std::string>	ResolvedConfig::getAcceptedMethods( void )
+{
+  return methods_accepted;
+}
+
+std::map<int, std::string>	ResolvedConfig::getRedir( void )
+{
+  return redir;
+}
