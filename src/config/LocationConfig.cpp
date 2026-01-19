@@ -7,12 +7,13 @@
 #include <algorithm>
 
 LocationConfig::LocationConfig()
-    :  index(),
-      methods_accepted(),
-      redir(),
-      root(""),
-      upload_path(""),
-     directory_listing(false)
+: index(),
+  methods_accepted(),
+  redir(),
+  root(""),
+  upload_path(""),
+  location_path(""),
+  directory_listing(false)
 {
     buildLocationParsers();
 }
@@ -32,8 +33,12 @@ void LocationConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
   //skip location token
   i++;
 
-  if (tokens[i++].find('/') == std::string::npos || tokens[i++] != "{")
+  std::string loc_path = tokens[i];
+  
+  if (!isAbsolutePath(tokens[i++]) || tokens[i++] != "{")
     throw std::runtime_error("Incorrect location block");
+
+  this->location_path = loc_path;
 
   while (tokens[i] != "}")
   {
@@ -43,7 +48,6 @@ void LocationConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)
       throw std::runtime_error("Unknown directive: " + tokens[i]);
 
     Parser parser = it->second;
-    std::cout << "parsing : " << it->first << std::endl;
     (this->*parser)(tokens, i);
   }
   i++;
@@ -105,7 +109,7 @@ void LocationConfig::parseIndex( std::vector<std::string>& tokens, size_t& i)
 }
 
 
-//parsing index directive
+//parsing autoindex directive
 void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
 {
   //skip the directive name token
@@ -135,7 +139,7 @@ void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
 }
 
 
-//parsing index directive
+//parsing allow directive
 void LocationConfig::parseMethods( std::vector<std::string>& tokens, size_t& i)
 {
   //skip the directive name token
@@ -188,11 +192,6 @@ void LocationConfig::parsePath( std::vector<std::string>& tokens, size_t& i)
 
 
 //parsing index directive
-bool isRedirectCode(int num)
-{
-  return (num == 301 || num == 302 || num == 303 || num == 307 || num == 308);
-}
-
 void LocationConfig::parseRedir( std::vector<std::string>& tokens, size_t& i)
 {
   //skip the directive name token
@@ -256,4 +255,9 @@ std::string LocationConfig::getUploadPath( void )
 bool  LocationConfig::getDirectoyListing( void )
 {
   return directory_listing;
+}
+
+std::string LocationConfig::getLocationPath( void )
+{
+  return location_path;
 }

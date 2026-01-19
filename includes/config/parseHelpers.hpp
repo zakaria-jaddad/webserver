@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 
+bool isRedirectCode(int num);
 std::string readFile(const std::string& path);
 bool isAbsolutePath(std::string path);
 bool isNumber(const std::string& s);

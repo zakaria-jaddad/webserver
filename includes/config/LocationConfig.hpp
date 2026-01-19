@@ -13,6 +13,7 @@ class LocationConfig{
 	std::map<int, std::string>  redir; //don't forget to check if this is how it should be handled
 	std::string                 root;
 	std::string                 upload_path;
+	std::string                 location_path;
 	bool                        directory_listing;//only a fallback when index is not specified
 
 	typedef void (LocationConfig::*Parser)(std::vector<std::string>&, size_t&);
@@ -38,6 +39,7 @@ public:
 	std::string 				getRoot( void );
 	std::string 				getUploadPath( void );
 	bool 						getDirectoyListing( void );
+	std::string					getLocationPath( void );
 
 };
 

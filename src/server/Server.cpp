@@ -1,4 +1,4 @@
-#include "./Server.hpp"
+#include "../../includes/server/Server.hpp"
 #include <sstream>
 
 Server::Server(std::string &path) {

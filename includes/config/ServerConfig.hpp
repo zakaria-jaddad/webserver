@@ -7,6 +7,9 @@ class ServerConfig{
   
   std::map<int, std::string>  error_pages;
   std::vector<std::string>    index;
+	std::vector<std::string>	methods_accepted;
+	std::map<int, std::string>  redir; //don't forget to check if this is how it should be handled
+	bool                        directory_listing;//only a fallback when index is not specified
   std::string                 ip;
   std::string                 server_name;
   std::string                 root;
@@ -41,6 +44,13 @@ public:
   
   void parseRoot( std::vector<std::string>&, size_t& );
 
+  void parseListing( std::vector<std::string>&, size_t& );
+	void parseRedir( std::vector<std::string>&, size_t& );
+	void parseMethods( std::vector<std::string>&, size_t& );
+
+  //utility methods
+
+  LocationConfig* matchLocation( const std::string& );
 
   //getters
   std::map<std::string, int>  getListeningPairs( void );
@@ -50,7 +60,11 @@ public:
   std::string                 getServerName( void );
   std::string                 getRoot( void );
   std::string                 getIP( void );
-  int			      getPort( void );
+  int			                    getPort( void );
+	bool 						            getDirectoyListing( void );
+  std::vector<std::string>    getAcceptedMethods( void );
+	std::map<int, std::string>	getRedir( void );
+
 };
 
 #endif
