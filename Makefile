@@ -15,7 +15,7 @@ TEST_DIR	= test
 MAIN_SRC	= ft_webserver.cpp
 CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
 SRV_SRC		= Server.cpp
-REQ_SRC		= request.cpp
+REQ_SRC		= Request.cpp
 RSP_SRC		= ResolvedConfig.cpp Response.cpp
 
 ## project srcs : here you add the prefix and boom compiled ;p
@@ -29,7 +29,7 @@ OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 TEST_SRC	= $(TEST_DIR)/request_line_test.cpp \
-								$(TEST_DIR)/test.cpp \
+								$(TEST_DIR)/test.cpp 
 
 
 TEST_OBJ      = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)

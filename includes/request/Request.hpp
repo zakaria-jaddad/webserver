@@ -1,5 +1,7 @@
 #ifndef __REQUEST_HPP__
 #define __REQUEST_HPP__
+
+#include "../config/Config.hpp"
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -52,12 +54,22 @@ inline std::string trim(const std::string &str)
 class HttpParser {
 
   public:
-    HttpParser() : _phase(REQUEST_LINE)
+    HttpParser(void) : _phase(REQUEST_LINE)
     {
         this->_requestURI.path = "";
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
+        this->_config = NULL; // tmp
+    }
+
+    HttpParser(const Config *config) : _phase(REQUEST_LINE)
+    {
+        this->_requestURI.path = "";
+        this->_requestVersion[0] = 0;
+        this->_requestVersion[1] = 0;
+        this->_requestType = UNKNOWN;
+        this->_config = config;
     }
 
     ~HttpParser() {}
@@ -69,12 +81,18 @@ class HttpParser {
         HTTP_RES_INTERNAL_SERVER_ERROR = 500,
         HTTP_RES_BAD_REQUEST = 400,
         HTTP_RES_NOT_IMPLEMENTED = 501,
+        HTTP_REST_METHOD_NOT_ALLOWED = 405,
     } httpResult;
 
     typedef enum {
         GET,
         POST,
         DELETE,
+        HEAD,
+        PUT,
+        OPTIONS,
+        TRACE,
+        CONNECT,
         UNKNOWN,
     } requestType;
 
@@ -151,6 +169,7 @@ class HttpParser {
     requestType _requestType;
     t_reqURI _requestURI;
     int _requestVersion[2];
+    const Config *_config;
     std::map<std::string, std::string> __headers;
     std::map<std::string, std::vector<std::string> > _headers;
 
@@ -177,6 +196,16 @@ class HttpParser {
             return POST;
         if (_requestType == "DELETE")
             return DELETE;
+        if (_requestType == "PUT")
+            return PUT;
+        if (_requestType == "HEAD")
+            return HEAD;
+        if (_requestType == "OPTIONS")
+            return OPTIONS;
+        if (_requestType == "TRACE")
+            return TRACE;
+        if (_requestType == "CONNECT")
+            return CONNECT;
         return UNKNOWN;
     }
 
@@ -205,6 +234,11 @@ class HttpParser {
 
         this->_requestType = _getRequestTypeFromString(requestType);
         if (this->_requestType == UNKNOWN) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
+        if ((this->_requestType == GET || this->_requestType == POST ||
+             this->_requestType == DELETE) == false) {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
