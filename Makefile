@@ -11,12 +11,14 @@ RSP_DIR		= response
 OBJ_DIR		= obj
 TEST_DIR	= test
 
+## src files (just add their plain names don't write their paths)
+MAIN_SRC	= ft_webserver.cpp
 CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
 SRV_SRC		= Server.cpp
 REQ_SRC		= request.cpp
-MAIN_SRC	= ft_webserver.cpp
+RSP_SRC		= ResolvedConfig.cpp Response.cpp
 
-
+## project srcs : here you add the prefix and boom compiled ;p
 PROJECT_SRC	=	$(addprefix $(SRC_DIR)/$(SRV_DIR)/, $(SRV_SRC)) \
 				$(addprefix $(SRC_DIR)/$(CONF_DIR)/, $(CONF_SRC)) \
 				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC))

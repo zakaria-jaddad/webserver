@@ -11,9 +11,9 @@ class ResolvedConfig{
 	std::map<int, std::string>  redir;
 	std::vector<std::string>		methods_accepted;
   std::vector<std::string>		index;
-	// std::string									upload_path;
   std::string									root;
 	bool												directory_listing;
+	// std::string									upload_path;
 
 public:
 	ResolvedConfig( const std::string&, ServerConfig* ); //passes the uri as a param using the getUriPath
