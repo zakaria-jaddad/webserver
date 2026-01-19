@@ -40,6 +40,10 @@ int main()
     for (; it != errors.end(); ++it)
       std::cout << "error " << it->first << " -> " << it->second << std::endl;
 
+    const std::map<std::string, std::string>& cgi = conf.servers[0].getCgi();
+    std::map<std::string, std::string>::const_iterator cgi_it = cgi.begin();
+    for (; cgi_it != cgi.end(); ++cgi_it)
+      std::cout << "cgi " << cgi_it->first << " -> " << cgi_it->second << std::endl;
     
     //printing location directives
     LocationConfig loc =  conf.servers[0].location[0];

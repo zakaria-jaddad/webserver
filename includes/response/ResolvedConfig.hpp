@@ -8,6 +8,7 @@
 
 class ResolvedConfig{
 	std::map<int, std::string>  error_pages;
+	std::map<std::string, std::string>  cgi_info;
 	std::map<int, std::string>  redir;
 	std::vector<std::string>		methods_accepted;
   std::vector<std::string>		index;
@@ -24,6 +25,7 @@ public:
   std::vector<std::string>    getAcceptedMethods( void );
   std::string                 getRoot( void );
 	bool 						            getDirectoyListing( void );
+	std::map<std::string, std::string>           getCgi( void );
 };
 
 #endif

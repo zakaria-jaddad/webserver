@@ -10,16 +10,17 @@
 
 ServerConfig::ServerConfig()
 : error_pages(),
+  redir(),
+  cgi_info(),
   index(),
   methods_accepted(),
-  redir(),
-  directory_listing(false),
+  serverParsers(),
   ip("0.0.0.0"),
-  server_name(""),
   root(""),
+  server_name(""),
   max_body(1024),
-  port(80),
-  serverParsers()
+  directory_listing(false),
+  port(80)
 {
   buildServerParsers();
 }
@@ -35,6 +36,7 @@ void ServerConfig::buildServerParsers()
 	serverParsers["autoindex"] = &ServerConfig::parseListing;
 	serverParsers["return"] = &ServerConfig::parseRedir;
 	serverParsers["allow"] = &ServerConfig::parseMethods;
+	serverParsers["cgi"] = &ServerConfig::parseCgi;
 }
 
 
@@ -422,6 +424,41 @@ void ServerConfig::parseSize( std::vector<std::string>& tokens, size_t& i)
 }
 
 
+//parsing cgi directive
+void ServerConfig::parseCgi( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+//cgi .php /usr/bin/php-cgi
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+  std::string extension = tokens[i];
+  i++;
+  
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+  
+  std::string cgi_path = tokens[i];
+
+  //skipping path
+  i++;
+
+  if (tokens[i] != ";")
+    throw std::runtime_error("Found an unexpected : '" + tokens[i] + "' When expecting ';'");
+
+  i++;
+  
+  if (extension != ".php" && extension != ".py")
+    throw std::runtime_error("Invalid extension : " + extension);
+  
+  if (!isAbsolutePath(cgi_path))
+    throw std::runtime_error("Invalid path : " + cgi_path);
+
+  this->cgi_info[extension] = cgi_path;
+}
+
+
 //utility methods
 LocationConfig* ServerConfig::matchLocation( const std::string& uri )
 {
@@ -507,4 +544,9 @@ std::vector<std::string>	ServerConfig::getAcceptedMethods( void )
 std::map<int, std::string>	ServerConfig::getRedir( void )
 {
   return redir;
+}
+
+std::map<std::string, std::string>	ServerConfig::getCgi( void )
+{
+  return cgi_info;
 }
