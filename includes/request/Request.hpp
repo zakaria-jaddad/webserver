@@ -96,6 +96,11 @@ class HttpParser {
         UNKNOWN,
     } requestType;
 
+    std::vector<std::string> _tokenizeHeaderValue(const std::string &fieldValue)
+    {
+        // TODO:
+    }
+
     httpResult parseHttpRequest(std::string rawData)
     {
 

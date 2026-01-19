@@ -1,6 +1,7 @@
 #include "../includes/ft_webserver.hpp"
 #include <gtest/gtest.h>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -188,4 +189,19 @@ TEST(RequestLine, RequestTypeNotImplemented)
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_NOT_IMPLEMENTED);
+}
+
+TEST(RequestLine, simpleTest)
+{
+    HttpParser par;
+    std::vector<std::string> tokens = par._tokenizeHeaderValue("hello, world");
+    ASSERT_EQ(tokens[0], "hello");
+    ASSERT_EQ(tokens[1], "world");
+}
+
+TEST(RequestLine, siimmmpletest)
+{
+    HttpParser par;
+    std::vector<std::string> tokens = par._tokenizeHeaderValue("'hello, world'");
+    ASSERT_EQ(tokens[0], "hello, world");
 }

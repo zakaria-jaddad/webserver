@@ -1,4 +1,4 @@
-#include "../../includes/request/request.hpp"
+#include "../../includes/request/Request.hpp"
 
 char hexToChar(std::string hex)
 {
