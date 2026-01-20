@@ -25,6 +25,9 @@ ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
         // this->upload_path = srvr->getUploadPath();
 
     }
+    this->ip = srvr->getIP();
+    this->port = srvr->getPort();
+    this->server_name = srvr->getServerName();
     this->error_pages = srvr->getErrorPages();
 }
 
@@ -61,4 +64,19 @@ std::map<int, std::string>	ResolvedConfig::getRedir( void )
 std::map<std::string, std::string>	ResolvedConfig::getCgi( void )
 {
   return cgi_info;
+}
+
+std::string ResolvedConfig::getServerName( void )
+{
+  return server_name;
+}
+
+std::string ResolvedConfig::getIp( void )
+{
+  return ip;
+}
+
+int ResolvedConfig::getPort( void )
+{
+  return port;
 }

@@ -2,29 +2,102 @@
 #include <unistd.h>
 #include <sys/wait.h> 
 
-// void cgiHandler( std::map<std::string, std::string>& cgi, HttpParser& req )
-// {
-//     std::map<std::string, std::string>::iterator it_cgi = cgi.begin();
 
-
-
-// }
-
-char** cgiEnvBuilder()
+//constructor/destructor
+Cgi::Cgi()
 {
-	std::map<std::string, std::string> env;
+	this->envBuilder();
+}
+
+Cgi::~Cgi()
+{
+	delete [] env;//to check
+}
+
+
+//env building
+std::string	Cgi::joinHeaderValues(std::vector<std::string>& field_value)
+{
+	std::string	env_val;
 	
-	env["SCRIPT_NAME"] = "/test.php";
-	env["REQUEST_METHOD"] = "GET";
-	env["QUERY_STRING"] = "";
+	for (int i = 0; i < field_value.size(); i++)
+	{
+		env_val += field_value[i] + ", ";
+	}
+
+	return env_val;
+}
+
+std::string Cgi::normalizeHeaderName(const std::string& name)
+{
+	std::string header = "HTTP_" + name;
+
+	for (int i = 0; i < header.length(); i++)
+	{
+		char c = header[i];
+
+		if (c == '-')
+			header[i] = '_';
+		if (std::isalpha(c))
+			header[i] = std::toupper(c);
+	}
+
+	return header;
+}
+
+void Cgi::headerEnvBuilder( std::map<std::string, std::string>& env, std::map<std::string, std::vector<std::string>>& header )
+{
+	std::map<std::string, std::vector<std::string>>::iterator it = header.begin();
+
+	for (; it != header.end(); it++)
+	{
+		std::string	field_value = joinHeaderValues(it->second);
+		std::string	field_name = normalizeHeaderName(it->first);
+		env[field_name] = field_value;
+	}
+}
+
+std::map<std::string, std::vector<std::string>> createDummyHeader()
+{
+	std::map<std::string, std::vector<std::string>> header;
+
+	// Single-value header
+	header["Host"].push_back("example.com");
+
+	// Multi-value header (repeated field-name)
+	header["Accept"].push_back("text/html");
+	header["Accept"].push_back("application/json");
+
+	// Another multi-value header
+	header["Cache-Control"].push_back("no-cache");
+	header["Cache-Control"].push_back("no-store");
+
+	// Header with comma already inside a value
+	header["X-Forwarded-For"].push_back("203.0.113.1");
+	header["X-Forwarded-For"].push_back("198.51.100.42");
+
+	// Header you may want to skip in CGI
+	header["Content-Type"].push_back("text/plain");
+
+	return header;
+}
+
+std::map<std::string, std::string> Cgi::mapEnvBuilder()
+{
+	std::map<std::string, std::vector<std::string>> header = request->getHeaders();
+	std::map<std::string, std::string> 							env;
+
+	env["SCRIPT_NAME"]		= "/test.php";
+	env["REQUEST_METHOD"]	= "GET";
+	env["QUERY_STRING"]		= "";
 	
 	//some cgi needed? bs
-	env["GATEWAY_INTERFACE"] = "CGI/1.1";
-	env["SERVER_NAME"] = "localhost";
-	env["SERVER_PROTOCOL"] = "HTTP/1.1";
-	env["SERVER_SOFTWARE"]   = "myserver/1.0";
-	env["SERVER_PORT"]       = "8080";
-	env["REMOTE_ADDR"] = "127.0.0.1";
+	env["GATEWAY_INTERFACE"]	= "CGI/1.1";
+	env["SERVER_NAME"]				= conf->getServerName();
+	env["SERVER_PORT"]				=	conf->getPort();
+	env["SERVER_PROTOCOL"]		= "HTTP/1.1";
+	env["SERVER_SOFTWARE"]		= "myserver/1.0";
+	env["REMOTE_ADDR"]				= "127.0.0.1";//get from anas
 
 	//bs needed to run on terminal
 	env["REDIRECT_STATUS"] = "200";
@@ -35,7 +108,14 @@ char** cgiEnvBuilder()
 
 	//so far, allegedly, missing header variables
 
+	std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
+	headerEnvBuilder(env, dummy_header);
 
+	return env;
+}
+
+char** Cgi::charEnvBuilder(std::map<std::string, std::string> env)
+{
 	char **envp = new char *[env.size() + 1];
 
 	std::map<std::string, std::string>::iterator it = env.begin();
@@ -50,11 +130,16 @@ char** cgiEnvBuilder()
 	return envp;
 }
 
-void cgiExecutor()
+void Cgi::envBuilder()
+{
+	this->env = charEnvBuilder(mapEnvBuilder());
+}
+
+
+//execution
+void Cgi::executor( void )
 {
 	std::string cgi_path = "/usr/bin/php-cgi";
-	char** env = cgiEnvBuilder();
-
 
 	char *argv[2] = {"/usr/bin/php-cgi", NULL};
 	pid_t child = fork();
@@ -71,11 +156,17 @@ void cgiExecutor()
 		close(fds[1]);
 		close(fds[0]);
 		waitpid(child, &status, 0);
+		delete env;
 	}
-
 }
 
 int main()
 {
-	cgiExecutor();
+	Cgi cgi;
+	cgi.executor();
+
+	// std::string key = "X-forwarded-For";
+	// std::vector<std::string> val = {"gz", "sdf", "Qwer"};
+
+	// std::cout << normalizeHeaderName(key) << "\n" << joinHeaderValues(val) << std::endl;
 }

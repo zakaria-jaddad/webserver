@@ -14,13 +14,13 @@ ServerConfig::ServerConfig()
   cgi_info(),
   index(),
   methods_accepted(),
-  serverParsers(),
   ip("0.0.0.0"),
-  root(""),
   server_name(""),
+  root(""),
   max_body(1024),
   directory_listing(false),
-  port(80)
+  port(80),
+  serverParsers()
 {
   buildServerParsers();
 }
