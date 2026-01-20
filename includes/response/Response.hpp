@@ -1,18 +1,24 @@
 #ifndef RESPONSE_HPP
 # define RESPONSE_HPP
 
-#include "ResolvedConfig.hpp"
 #include "../server/Server.hpp"
+#include "ResolvedConfig.hpp"
+
+struct t_client;
 
 class Response{
 
 	ResolvedConfig	conf;
-	HttpParser			request;
+	t_client			*client;
+	bool				wait;
+	std::string			normalizedPath;
 
 public:
-	Response( const t_client* );
+	Response( t_client* client );
 
-	HttpParser::httpResult	checkMethod( void );
+	//HttpParser::httpResult	checkMethod( void );
+	void normalizePath( void );
+	int	httpDelete( void );
 
 };
 

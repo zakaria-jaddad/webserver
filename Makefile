@@ -1,7 +1,7 @@
 NAME = ft_webserver
 TEST_NAME = ft_webserver_test
 
-CFLAGS = -Wall -Werror -Wextra -std=c++17
+CFLAGS = -Wall -Werror -Wextra -std=c++98 -g
 
 SRC_DIR		= src
 CONF_DIR	= config
@@ -21,7 +21,8 @@ RSP_SRC		= ResolvedConfig.cpp Response.cpp
 ## project srcs : here you add the prefix and boom compiled ;p
 PROJECT_SRC	=	$(addprefix $(SRC_DIR)/$(SRV_DIR)/, $(SRV_SRC)) \
 				$(addprefix $(SRC_DIR)/$(CONF_DIR)/, $(CONF_SRC)) \
-				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC))
+				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC)) \
+				$(addprefix $(SRC_DIR)/$(RSP_DIR)/, $(RSP_SRC))
 
 SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)
 
@@ -29,8 +30,7 @@ OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 TEST_SRC	= $(TEST_DIR)/request_line_test.cpp \
-								$(TEST_DIR)/test.cpp \
-
+								$(TEST_DIR)/test.cpp
 
 TEST_OBJ      = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 

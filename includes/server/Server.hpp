@@ -15,16 +15,19 @@
 #include <fcntl.h>
 #include <cerrno>
 #include "includes/request/request.hpp"
+#include "includes/response/Response.hpp"
 #include "includes/config/Config.hpp"
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
+class Response;
 
-typedef struct {
+struct t_client {
 	int fd;
 	ServerConfig *config;
 	HttpParser *request;
-} t_client;
+	Response *response;
+};
 
 class Server {
 	/* server class depends on 'config' class with the following getters:
@@ -47,6 +50,8 @@ class Server {
 		int switchEpollMode(int clientSocket, uint32_t flag);
 		int checkForServerFd(epoll_event *events, int i);
 		int checkForClientFd(epoll_event *events, int i);
+		void resetSocket(t_client *client);
+		void closeSocket(t_client *client);
 		//int setup_epoll(config &conf);
 };
 #endif
