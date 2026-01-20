@@ -3,6 +3,7 @@
 
 #include "../request/request.hpp"
 #include "../response/ResolvedConfig.hpp"
+#include "envUtils.hpp"
 
 class Cgi{
 		
@@ -16,9 +17,9 @@ class Cgi{
 
 		//env creation
 		std::map<std::string, std::string>	mapEnvBuilder( void );
-		std::string 												normalizeHeaderName( const std::string& );
-		std::string													joinHeaderValues( std::vector<std::string>& );
-		void																headerEnvBuilder( std::map<std::string, std::string>&, std::map<std::string, std::vector<std::string>>& );
+		// std::string 												normalizeHeaderName( const std::string& );
+		// std::string													joinHeaderValues( std::vector<std::string>& );
+		// void																headerEnvBuilder( std::map<std::string, std::string>&, std::map<std::string, std::vector<std::string>>& );
 		char**															charEnvBuilder( std::map<std::string, std::string> );
 		void																envBuilder( void );
 		
