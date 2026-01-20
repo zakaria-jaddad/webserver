@@ -28,11 +28,11 @@ SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)
 OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-TEST_SRC	= $(TEST_DIR)/request_line_test.cpp \
-								$(TEST_DIR)/test.cpp 
+TEST_SRC_FILES = $(SRC_DIR)/request/Request.cpp
+TEST_TEST_FILES = $(TEST_DIR)/request_line_test.cpp $(TEST_DIR)/test.cpp
 
-
-TEST_OBJ      = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+TEST_OBJ = $(TEST_SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o) \
+           $(TEST_TEST_FILES:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 GTEST_DIR     = external/googletest
 GTEST_LIBS    = $(GTEST_DIR)/build/lib/libgtest.a $(GTEST_DIR)/build/lib/libgtest_main.a
@@ -46,8 +46,8 @@ all: $(NAME)
 $(NAME): $(OBJ)
 	$(CXX) $(CFLAGS) $(OBJ) -o $(NAME)
 
-test: $(PROJECT_OBJ) $(TEST_OBJ) 
-	$(CXX) $(CFLAGS) $(PROJECT_OBJ) $(TEST_OBJ) $(GTEST_LIBS) $(LDFLAGS) -o $(TEST_NAME)
+test: $(TEST_OBJ) 
+	$(CXX) $(CFLAGS) $(TEST_OBJ) $(GTEST_LIBS) $(LDFLAGS) -o $(TEST_NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
