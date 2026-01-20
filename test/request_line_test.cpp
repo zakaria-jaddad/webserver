@@ -168,7 +168,6 @@ TEST(RequestLine, ValidHTTP2RequestLine)
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
     ASSERT_EQ(par.getRequestType(), HttpParser::POST);
     ASSERT_EQ(par.getRequestURIPath(), "/foo.html");
-    // TODO: Add par test
 
     const int *requestVersiong = par.getRequestVersion();
     ASSERT_EQ(requestVersiong[0], 2);
@@ -190,18 +189,3 @@ TEST(RequestLine, RequestTypeNotImplemented)
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_NOT_IMPLEMENTED);
 }
-//
-// TEST(RequestLine, simpleTest)
-// {
-//     HttpParser par;
-//     std::vector<std::string> tokens = par._tokenizeHeaderValue("hello, world");
-//     ASSERT_EQ(tokens[0], "hello");
-//     ASSERT_EQ(tokens[1], "world");
-// }
-//
-// TEST(RequestLine, siimmmpletest)
-// {
-//     HttpParser par;
-//     std::vector<std::string> tokens = par._tokenizeHeaderValue("'hello, world'");
-//     ASSERT_EQ(tokens[0], "hello, world");
-// }

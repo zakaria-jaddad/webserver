@@ -14,53 +14,6 @@
 #define CRLF "\r\n"
 #define DOUBLE_CRLF "\r\n\r\n"
 
-inline char hexToChar(std::string hex)
-{
-    int ret;
-    std::stringstream ss;
-    ss << std::hex << hex;
-    ss >> ret;
-    return (ret);
-}
-
-inline bool isHex(char c)
-{
-    return (!(c < '0' || (c > '9' && c < 'A') || (c > 'F' && c < 'a') || c > 'f'));
-}
-
-inline bool isValidPercentEncoding(std::string str)
-{
-    std::cout << "to check :" << str << std::endl;
-    for (size_t i = 0; i < str.length(); i++) {
-        if (i > 1 || !isHex(str[i]))
-            return (0);
-    }
-    return (1);
-}
-
-inline std::string urlDecode(std::string &str)
-{
-    std::string dec = "";
-
-    for (size_t i = 0; i < str.length(); i++) {
-        if (str[i] == '%' && isValidPercentEncoding(str.substr(i + 1, 2))) {
-            dec += hexToChar(str.substr(i + 1, 2));
-            i += 2;
-        }
-        else if (str[i] == '%') {
-            return (""); // error
-        }
-        else
-            dec += str[i];
-    }
-    return (dec);
-}
-
-// requestURI struct
-typedef struct s_requestURI {
-    std::string path;
-    std::map<std::string, std::string> params;
-} t_reqURI;
 /* inline only for development */
 inline std::string trim(const std::string &str)
 {
@@ -98,7 +51,7 @@ class HttpParser {
   public:
     HttpParser(void) : _phase(REQUEST_LINE)
     {
-        this->_requestURI.path = "";
+        this->_requestURI = {.path = "", .params = {}};
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -107,7 +60,7 @@ class HttpParser {
 
     HttpParser(const Config *config) : _phase(REQUEST_LINE)
     {
-        this->_requestURI.path = "";
+        this->_requestURI = {.path = "", .params = {}};
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -192,18 +145,91 @@ class HttpParser {
     };
 
     requestType getRequestType() const { return this->_requestType; }
-    std::string getRequestURIPath() const { return this->_requestURI.path; }
-    std::map<std::string, std::string> getRequestURIParams() const
-    {
-        return this->_requestURI.params;
-    }
+    std::string getRequestURIPath() const { return this->_requestURI.getPath(); }
     const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
+    std::map<std::string, std::string> getRequestURIParams() const
+    {
+        return this->_requestURI.getParams();
+    }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
-    int parseRequestURI(t_reqURI &req, std::string uri);
 
   private:
+    typedef struct RequestURI {
+      private:
+        char hexToChar(std::string hex)
+        {
+            int ret;
+            std::stringstream ss;
+            ss << std::hex << hex;
+            ss >> ret;
+            return (ret);
+        }
+
+        bool isHex(char c)
+        {
+            return (!(c < '0' || (c > '9' && c < 'A') || (c > 'F' && c < 'a') || c > 'f'));
+        }
+
+        bool isValidPercentEncoding(std::string str)
+        {
+            std::cout << "to check :" << str << std::endl;
+            for (size_t i = 0; i < str.length(); i++) {
+                if (i > 1 || !isHex(str[i]))
+                    return (0);
+            }
+            return (1);
+        }
+
+        std::string urlDecode(std::string &str)
+        {
+            std::string dec = "";
+
+            for (size_t i = 0; i < str.length(); i++) {
+                if (str[i] == '%' && isValidPercentEncoding(str.substr(i + 1, 2))) {
+                    dec += hexToChar(str.substr(i + 1, 2));
+                    i += 2;
+                }
+                else if (str[i] == '%') {
+                    return (""); // error
+                }
+                else
+                    dec += str[i];
+            }
+            return (dec);
+        }
+
+      public:
+        std::string path;
+        std::map<std::string, std::string> params;
+        std::string getPath() const { return this->path; }
+        std::map<std::string, std::string> getParams() const { return this->params; }
+
+        HttpParser::httpResult parseRequestURI(std::string uri)
+        {
+            std::stringstream ss(uri);
+            std::string param;
+            std::string key;
+            std::string val;
+
+            getline(ss, this->path, '?');
+            while (getline(ss, param, '&')) {
+                key = "";
+                val = "";
+                std::stringstream paramStream(param);
+                getline(paramStream, key, '=');
+                paramStream >> val;
+                this->params[key] = val;
+            }
+            this->path = urlDecode(this->path);
+            if (this->path.size() == 0) {
+                return HttpParser::HTTP_RES_BAD_REQUEST;
+            }
+            return (HttpParser::HTTP_RES_OK);
+        }
+    } requestURI;
+
     typedef enum {
         REQUEST_LINE,
         HEADERS,
@@ -214,7 +240,7 @@ class HttpParser {
   private:
     parserPhase _phase;
     requestType _requestType;
-    t_reqURI _requestURI;
+    requestURI _requestURI;
     int _requestVersion[2];
     const Config *_config;
     std::map<std::string, std::string> __headers;
@@ -289,7 +315,7 @@ class HttpParser {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
-        if (parseRequestURI(this->_requestURI, requestURI)) {
+        if (this->_requestURI.parseRequestURI(requestURI) != HTTP_RES_OK) {
             return HTTP_RES_BAD_REQUEST;
         }
 
@@ -426,30 +452,5 @@ class HttpParser {
         return HTTP_RES_OK;
     }
 };
-
-inline int HttpParser::parseRequestURI(t_reqURI &reqURI, std::string uri)
-{
-    // t_reqURI *reqURI = new t_reqURI;
-    std::stringstream ss(uri);
-    std::string param;
-    std::string key;
-    std::string val;
-
-    getline(ss, reqURI.path, '?');
-    while (getline(ss, param, '&')) {
-        key = "";
-        val = "";
-        std::stringstream paramStream(param);
-        getline(paramStream, key, '=');
-        paramStream >> val;
-        reqURI.params[key] = val;
-        // std::cout << "-------------------" << std::endl;
-        // std::cout << "key : " << key << std::endl;
-        // std::cout << "val : " << val << std::endl;
-        // std::cout << "-------------------" << std::endl;
-    }
-    reqURI.path = urlDecode(reqURI.path);
-    return (0);
-}
 
 #endif // !__REQUEST_HPP__
