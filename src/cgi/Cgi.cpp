@@ -45,10 +45,15 @@ std::map<std::string, std::string> Cgi::mapEnvBuilder()
 {
 	std::map<std::string, std::vector<std::string>> header = request->getHeaders();
 	std::map<std::string, std::string> 							env;
+	
+	std::string script_name = deriveScriptName(uriPath)[0];//i assume unsafe
+	std::string path_info = deriveScriptName(uriPath)[1];//i assume unsafe
+	std::map<std::string, std::string>	query = request->getRequestURIParams();
 
-	env["SCRIPT_NAME"]		= "/test.php";
-	env["REQUEST_METHOD"]	= "GET";
-	env["QUERY_STRING"]		= "";
+	env["SCRIPT_NAME"]		= script_name;
+	env["PATH_INFO"]			= script_name;
+	env["REQUEST_METHOD"]	= methodToString(request->getRequestType());
+	env["QUERY_STRING"]		= squashMapIntoString(query);
 	
 	//some cgi needed? bs
 	env["GATEWAY_INTERFACE"]	= "CGI/1.1";
@@ -62,11 +67,10 @@ std::map<std::string, std::string> Cgi::mapEnvBuilder()
 	env["REDIRECT_STATUS"] = "200";
 
 	//php specific variables
-	env["SCRIPT_FILENAME"] = "/home/yhossni/Desktop/test.php";
-	env["DOCUMENT_ROOT"]   = "/home/yhossni/Desktop";
+	env["SCRIPT_FILENAME"] = conf->getRoot() + script_name;
+	env["DOCUMENT_ROOT"]   = conf->getRoot();
 
-	//so far, allegedly, missing header variables
-
+	//header env variables
 	std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
 	headerEnvBuilder(env, dummy_header);
 
@@ -121,9 +125,11 @@ void Cgi::executor( void )
 
 int main()
 {
-	Cgi cgi;
-	cgi.executor();
+	// Cgi cgi;
+	// cgi.executor();
 
+	// std::string path = "/asdf/des/tst/tes";
+	// deriveScriptName(path);
 	// std::string key = "X-forwarded-For";
 	// std::vector<std::string> val = {"gz", "sdf", "Qwer"};
 

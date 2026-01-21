@@ -9,9 +9,9 @@ struct t_client;
 class Response{
 
 	ResolvedConfig	conf;
-	t_client			*client;
-	bool				wait;
 	std::string			normalizedPath;
+	t_client				*client;
+	bool						wait;
 
 public:
 	Response( t_client* client );
