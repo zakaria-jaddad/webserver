@@ -9,11 +9,20 @@
 #include "envUtils.hpp"
 
 class Cgi{
+
+		typedef enum {
+			REQUEST_LINE,
+			HEADERS,
+			BODY,
+			COMPLETE,
+		} phase;
 		
+		int fds[2];
 		ResolvedConfig*	conf;
 		HttpParser*			request;
 		char**			env;
 		std::string uriPath;
+		phase				_phase = REQUEST_LINE;
 
 	public:
 		Cgi( void );
@@ -31,7 +40,7 @@ class Cgi{
 		//execution
 		void executor( void );
 		
-
+		int* getPipe( void );
 
 };
 

@@ -3,7 +3,8 @@
 #include <stdio.h>
 
 Response::Response( t_client* dep )
-:	conf(dep->request->getRequestURIPath(), dep->config)
+:	conf(dep->request->getRequestURIPath(), dep->config),
+	_phase(REQUEST_LINE)
 {
 	this->wait = 0;
 	this->client = dep;
