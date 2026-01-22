@@ -29,7 +29,7 @@ class Cgi{
 		~Cgi( void );
 
 		//env creation
-		std::map<std::string, std::string>	mapEnvBuilder(	std::map<std::string, std::vector<std::string>>&,
+		std::map<std::string, std::string>	mapEnvBuilder(	std::map<std::string, std::vector<std::string> >&,
                                                       	std::string ,
                                                         std::string ,
                                                         std::map<std::string, std::string>& );
@@ -42,8 +42,8 @@ class Cgi{
 		
 		int* getPipe( void );
 
-		void craftHeader( std::string&  );
-		void craftBody( std::string&  );
+		// void craftHeader( std::string&  );
+		// void craftBody( std::string&  );
 
 
 };
