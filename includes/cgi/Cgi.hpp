@@ -11,10 +11,10 @@
 class Cgi{
 
 		typedef enum {
-			REQUEST_LINE,
 			HEADERS,
 			BODY,
 			COMPLETE,
+			ERROR,
 		} phase;
 		
 		int fds[2];
@@ -22,7 +22,7 @@ class Cgi{
 		HttpParser*			request;
 		char**			env;
 		std::string uriPath;
-		phase				_phase = REQUEST_LINE;
+		phase				_phase = HEADERS;
 
 	public:
 		Cgi( void );
@@ -41,6 +41,10 @@ class Cgi{
 		void executor( void );
 		
 		int* getPipe( void );
+
+		void craftHeader( std::string&  );
+		void craftBody( std::string&  );
+
 
 };
 

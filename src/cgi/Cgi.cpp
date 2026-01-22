@@ -11,28 +11,46 @@ Cgi::~Cgi()
 	delete [] env;//to check
 }
 
-
-// void craftRequestLine( std::string& buff )
+// std::string craftHeaderStatus( std::string& header )
 // {
-// 	std::string request_line = buff.substr(0, buff.find(CRLF));
-
-// 	buff.erase(0, request_line.size() + strlen(CRLF));
-
-//     std::cout << "request line : " << request_line << std::endl;
+// 	std::string line = "HTTP/1.1 ";
+	
+// 	size_t status_pos =  header.find("status");
+	
+// 	if (status_pos == std::string::npos)
+// 		line += " 200 OK";
+// 	else
+// 		line.append(header.substr(status_pos + 6));
+	
+// 	header.erase(status_pos, line.size());
+	
+// 	return line;
 // }
 
-// void craftHeader( std::string& buff )
+// void Cgi::craftHeader( std::string& buff )
 // {
-//     size_t clrf_pos = buff.find(DOUBLE_CRLF);
-//     std::string headers = buff.substr(0, clrf_pos + 2);
+// 	size_t clrf_pos = buff.find(DOUBLE_CRLF);
+//     std::string headers = buff.substr(0, clrf_pos);
 //     buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
     
-//     std::cout << "headers : " << headers << std::endl;
+// 	//parsing needed for zajaddad
+// 	// if (HttpParser::_parseRequestHeaders(headers) != HttpParser::HTTP_RES_OK)
+// 	// 	return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+	
+// 	std::string line = craftHeaderStatus(headers);
+    
+// 	std::cout << "status line : \n" << line << std::endl;	
+    
+// 	std::cout << "headers : \n" << headers << std::endl;
+	
+// 	this->_phase = BODY;
 // }
 
-// void craftBody( std::string& buff )
+// void Cgi::craftBody( std::string& buff )
 // {
-//     std::cout << "BOOOOODY" << std::endl;
+//     std::cout << "BODY : \n" << buff << std::endl;
+// 	buff.erase();
+// 	this->_phase = COMPLETE;
 // }
 
 //execution
@@ -60,17 +78,14 @@ void Cgi::executor( void )
 		// int bytes = read(fds[0], buff, sizeof(buff) - 1);
 		
 		// std::string val = buff;
-		// while (val.empty() == false)
+		// while (val.empty() == false && this->_phase != ERROR)
 		// {	
-		// 	if (this->_phase == REQUEST_LINE)
-		// 		craftRequestLine(val);
-		// 	else if (this->_phase == HEADERS)
+		// 	if (this->_phase == HEADERS)
 		// 		craftHeader(val);
 		// 	else if (this->_phase == BODY)
 		// 		craftBody(val);
 		// }
 		close(fds[0]);
-		// delete env;
 	}
 
 }

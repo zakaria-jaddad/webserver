@@ -324,7 +324,8 @@ class HttpParser {
      * interpretation
      * * usually after the message's entire header section has been processed
      */
-    httpResult _parseRequestHeaders(std::string headerLines)
+public:
+     httpResult _parseRequestHeaders(std::string headerLines)
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);

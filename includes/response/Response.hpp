@@ -14,6 +14,7 @@ class Response{
 		HEADERS,
 		BODY,
 		COMPLETE,
+		ERROR,
 	} phase;
 
 	ResolvedConfig	conf;
@@ -32,7 +33,7 @@ public:
 	int	httpDelete( void );
 
 	void	craftResponse( void );
-	void 	craftRequestLine( std::string& );
+	std::string craftHeaderStatus( std::string&  );
 	void	craftHeader( std::string& );
 	void 	craftBody( std::string& );
 
