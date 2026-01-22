@@ -103,7 +103,6 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 	//It then checks if the operation that is is ready for is 'read' or 'write'
 	// then reads or writes accordingly
 
-	const char* resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBruh hh";
 	int clientSocket = -1;
 	char req[1024] = {0}; 
 	int b;
@@ -131,18 +130,19 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 			else if (events[i].events == EPOLLOUT) { // we can write to socket
 				if (it->response == NULL)
 					it->response = new Response(&(*it));
-				it->response->httpDelete();
-				if (send(clientSocket, resp, strlen(resp), 0) == -1) {
-					std::cerr << "failed to send" << std::endl;
+				it->response->checkMethod();
+				if (it->response->isError()) {
+					closeSocket(&(*it));
+					Clients.erase(Clients.begin() + c);
 					break;
-					//maybe close connection on error
 				}
-				//TODO: check if the response has ended
-				//assuming again that the resp has ended
+				if (it->response->isComplete()) {
+					std::cout << "back to reading" << std::endl;
+					resetSocket(&(*it));
+					switchEpollMode(clientSocket, EPOLLIN);
+				}
 				//check if connection close or keep alive to know
 				//whether to close or in case of keep alive clear data buff falgs etc..
-				resetSocket(&(*it));
-				switchEpollMode(clientSocket, EPOLLIN);
 			}
 			break;
 		}

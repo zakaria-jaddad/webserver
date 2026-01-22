@@ -2,8 +2,10 @@
 # define RESPONSE_HPP
 
 #include "../server/Server.hpp"
+#include "../request/request.hpp"
 #include "ResolvedConfig.hpp"
 #include "../cgi/Cgi.hpp"
+#include <stdio.h>
 
 struct t_client;
 
@@ -24,13 +26,22 @@ class Response{
 	Cgi							*cgi;
 	int							*cgi_pipe;
 	phase						_phase;
+	int				fileFD;
+	int				headerFlag;
+	bool				status;
+	bool				error;
 
 public:
 	Response( t_client* client );
 
-	//HttpParser::httpResult	checkMethod( void );
+	HttpParser::httpResult	checkMethod( void );
 	void normalizePath( void );
+	int	sendResponse(const char *resp);
 	int	httpDelete( void );
+	int	httpGet( void );
+	void	sendHeader( void );
+	bool	isComplete( void );
+	bool	isError( void );
 
 	void	craftResponse( void );
 	std::string craftHeaderStatus( std::string&  );
