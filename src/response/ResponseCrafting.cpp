@@ -46,9 +46,11 @@ void Response::craftResponse( void )
 	cgi_pipe = cgi->getPipe();
 	char buff[1024];
 
-    int bytes = read(cgi_pipe[0], buff, sizeof(buff) - 1);
-    
+    int bytes = read(cgi_pipe[0], buff, sizeof(buff) - 1);//check errors
+    buff[bytes] = 0;
+
     std::string val = buff;
+
     while (val.empty() == false && this->_phase != ERROR)
     {	
         if (this->_phase == HEADERS)
