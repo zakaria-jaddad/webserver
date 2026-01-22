@@ -16,6 +16,8 @@ class Response{
 	std::string			normalizedPath;
 	int				fileFD;
 	int				headerFlag;
+	bool				status;
+	bool				error;
 
 public:
 	Response( t_client* client );
@@ -26,6 +28,8 @@ public:
 	int	httpDelete( void );
 	int	httpGet( void );
 	void	sendHeader( void );
+	bool	isComplete( void );
+	bool	isError( void );
 
 };
 
