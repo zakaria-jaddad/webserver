@@ -91,11 +91,6 @@ class HttpParser {
         UNKNOWN,
     } requestType;
 
-    // std::vector<std::string> _tokenizeHeaderValue(const std::string &fieldValue)
-    // {
-    //     // TODO:
-    // }
-
     httpResult parseHttpRequest(std::string rawData)
     {
 
@@ -125,13 +120,28 @@ class HttpParser {
                 this->_phase = BODY;
             }
 
-            res = _parseRequestHeaders(headerLines);
+            res = _generateHeadersMap(headerLines);
             if (res != HTTP_RES_OK) {
                 return res;
             }
         }
 
         if (this->_phase == BODY) {
+
+            /*
+             * NOTE: Header fields get's parsed usually after the message's entire header section
+             * has been processed
+             * TODO: Parse request header fields
+             *
+             *
+             *
+             *
+             */
+
+            res = _parseRequestHeaderValue();
+            if (res != HTTP_RES_OK) {
+                return res;
+            }
 
             /*
              * TODO:
@@ -253,6 +263,11 @@ class HttpParser {
         std::string token;
         while ((pos = line.find(delimiter)) != std::string::npos) {
             token = line.substr(0, pos);
+
+            // std::string foo = "\"";
+            // int counter = 0;
+            // TODO: ADD quotest handling
+
             tokens.push_back(token);
             line.erase(0, pos + delimiter.length());
         }
@@ -320,7 +335,7 @@ class HttpParser {
         }
 
         /*
-         * request versiong parsing
+         * request version parsing
          * HTTP/<major>.<minor>
          */
         std::vector<std::string> requestVersiongTokens = _getTokens(requestVersion, "/");
@@ -405,8 +420,12 @@ class HttpParser {
      *  * A server that receives a request header field, or set of fields,
      *  * larger than it wishes to process MUST respond with an appropriate 4xx
      *  * (Client Error) status code.
+     *
+     *
+     *  The Extracted header name is inserted to a map
+     *  holding the raw (non parsed) header value
      */
-    httpResult _parseRequestHeader(std::string headerField)
+    httpResult _parseRequestHeaderName(std::string headerField)
     {
 
         size_t colonPos = headerField.find_first_of(":");
@@ -422,6 +441,7 @@ class HttpParser {
 
         std::string fieldValue = trim(headerField);
 
+        // TODO: Check if key already exist
         this->__headers.insert(std::pair<std::string, std::string>(fieldName, fieldValue));
         return HTTP_RES_OK;
     }
@@ -431,8 +451,9 @@ class HttpParser {
      * * The contents within a given field value are not parsed until a later stage of message
      * interpretation
      * * usually after the message's entire header section has been processed
+     *
      */
-    httpResult _parseRequestHeaders(std::string headerLines)
+    httpResult _generateHeadersMap(std::string headerLines)
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);
@@ -444,12 +465,31 @@ class HttpParser {
         httpResult res;
 
         for (int i = 0; i < int(size); i++) {
-            res = _parseRequestHeader(headers[i]);
+            res = _parseRequestHeaderName(headers[i]);
             if (res != HTTP_RES_OK) {
                 return res;
             }
         }
         return HTTP_RES_OK;
+    }
+
+    /*
+     *
+     * - Tokenize header value
+     * - Split values
+     * - insert key value into a new map
+     *
+     */
+    httpResult _parseRequestHeaderValue()
+    {
+
+        // WARNING: Change back to c++98
+        for (const auto x : this->__headers) {
+            std::vector<std::string> headerValueTokens = _getTokens(x.second, ",");
+            if (headerValueTokens.size() == 0) {
+                return /* ??? */ HTTP_RES_OK;
+            }
+        }
     }
 };
 
