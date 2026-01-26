@@ -22,7 +22,7 @@ void Response::craftHeader( std::string& buff )
     std::string headers = buff.substr(0, clrf_pos);
     buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
     
-	//parsing needed for zajaddad
+	//parsing needed from zajaddad
 	// if (HttpParser::_parseRequestHeaders(headers) != HttpParser::HTTP_RES_OK)
 	// 	return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	

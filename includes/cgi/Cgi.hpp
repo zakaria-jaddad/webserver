@@ -17,7 +17,8 @@ class Cgi{
 			ERROR,
 		} phase;
 		
-		int fds[2];
+    int out_fds[2];
+		int in_fds[2];
 		ResolvedConfig*	conf;
 		HttpParser*			request;
 		char**			env;

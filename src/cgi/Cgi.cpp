@@ -56,25 +56,53 @@ Cgi::~Cgi()
 //execution
 void Cgi::executor( void )
 {
-	std::string cgi_path = "/usr/bin/php-cgi";
+	std::string cgi_path = "/usr/bin/python3";
 
-	char *argv[2] = {"/usr/bin/php-cgi", NULL};
-	if (pipe(fds) == -1)
+	const char *argv[] = {"/usr/bin/python3", "/home/sanruss/Desktop/test.py", NULL};
+	
+  if (pipe(in_fds) == -1)
 		return ;
-	char buff[1024];
-	pid_t child = fork();
+	if (pipe(out_fds) == -1)
+		return ;
+
+//	char buff[1024];
+	std::string fake_body = "username=feso&score=42&lang=c";
+  size_t fake_body_len = fake_body.size();
+  pid_t child = fork();
 
 	if (child == 0)
 	{
-		close(fds[0]);
-		dup2(fds[1], STDOUT_FILENO);
-		execve(cgi_path.c_str(), argv, env);
+		close(out_fds[0]);
+    close(in_fds[1]);
+
+		dup2(out_fds[1], STDOUT_FILENO);
+		dup2(in_fds[0], STDIN_FILENO);
+    
+    execve(argv[0], const_cast<char* const*>(argv), env);
 	}
 	else
 	{
 		int status;
-		close(fds[1]);
-		waitpid(child, &status, 0);
+
+    if (methodToString(request->getRequestType()) == "GET")
+    {
+      close(in_fds[0]);
+      close(out_fds[1]);
+
+      close(in_fds[1]);
+    }
+    else if (methodToString(request->getRequestType()) == "POST")
+    {
+      close(in_fds[0]);
+      close(out_fds[1]);
+
+      //write(in_fds[1], request.getBody(), request.getBodyLength());
+      write(in_fds[1], fake_body.c_str(), fake_body_len);
+      
+      close(in_fds[1]);
+    }
+
+	  waitpid(child, &status, 0);
 		// int bytes = read(fds[0], buff, sizeof(buff) - 1);
 		
 		// std::string val = buff;
@@ -85,18 +113,17 @@ void Cgi::executor( void )
 		// 	else if (this->_phase == BODY)
 		// 		craftBody(val);
 		// }
-		close(fds[0]);
 	}
 
 }
 
 int* Cgi::getPipe( void )
 {
-	return fds;
+	return out_fds;
 }
 
-// int main()
-// {
-// 	Cgi cgi;
-// 	cgi.executor();
-// }
+int main()
+{
+ 	Cgi cgi;
+ 	cgi.executor();
+}
