@@ -253,7 +253,7 @@ class HttpParser {
     requestURI _requestURI;
     int _requestVersion[2];
     const Config *_config;
-    std::map<std::string, std::string> __headers;
+    // std::map<std::string, std::string> __headers;
     std::map<std::string, std::vector<std::string> > _headers;
 
     std::vector<std::string> _getTokens(std::string line, std::string delimiter)
@@ -263,10 +263,7 @@ class HttpParser {
         std::string token;
         while ((pos = line.find(delimiter)) != std::string::npos) {
             token = line.substr(0, pos);
-
-            // std::string foo = "\"";
-            // int counter = 0;
-            // TODO: ADD quotest handling
+            // TODO: ADD quotes handling
 
             tokens.push_back(token);
             line.erase(0, pos + delimiter.length());
@@ -441,8 +438,14 @@ class HttpParser {
 
         std::string fieldValue = trim(headerField);
 
-        // TODO: Check if key already exist
-        this->__headers.insert(std::pair<std::string, std::string>(fieldName, fieldValue));
+        // if the key doesn't exist
+        if (this->_headers.find(fieldName) == this->_headers.end()) {
+            this->_headers.insert(std::pair<std::string, std::vector<std::string>>(
+                fieldName, std::vector<std::string>{fieldValue}));
+            return HTTP_RES_OK;
+        }
+        // key already exist
+        this->_headers[fieldName].push_back(fieldValue);
         return HTTP_RES_OK;
     }
 
