@@ -49,7 +49,7 @@ class HttpParser {
   public:
     HttpParser(void) : _phase(REQUEST_LINE)
     {
-        this->_requestURI = {.path = "", .params = {}};
+        this->_requestURI = {.path = "", .params = {}, .rawPath = ""};
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -58,7 +58,7 @@ class HttpParser {
 
     HttpParser(const Config *config) : _phase(REQUEST_LINE)
     {
-        this->_requestURI = {.path = "", .params = {}};
+        this->_requestURI = {.path = "", .params = {}, .rawPath = ""};
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -134,7 +134,6 @@ class HttpParser {
 
             res = _parseRequestHeaderValue();
             if (res != HTTP_RES_OK) {
-                std::cerr << "hello world" << std::endl;
                 return res;
             }
 
@@ -157,6 +156,7 @@ class HttpParser {
     {
         return this->_requestURI.getParams();
     }
+    std::string getRequestRawPath() const { return this->_requestURI.getRawPath(); }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
 
@@ -207,11 +207,14 @@ class HttpParser {
       public:
         std::string path;
         std::map<std::string, std::string> params;
+        std::string rawPath;
         std::string getPath() const { return this->path; }
         std::map<std::string, std::string> getParams() const { return this->params; }
+        std::string getRawPath() const { return this->rawPath; }
 
         HttpParser::httpResult parseRequestURI(std::string uri)
         {
+            this->rawPath = uri;
             std::stringstream ss(uri);
             std::string param;
             std::string key;
@@ -230,7 +233,7 @@ class HttpParser {
             if (this->path.size() == 0) {
                 return HttpParser::HTTP_RES_BAD_REQUEST;
             }
-            return (HttpParser::HTTP_RES_OK);
+            return HttpParser::HTTP_RES_OK;
         }
     } requestURI;
 
