@@ -45,7 +45,7 @@ TEST(RequestURI, ValidRequestURIPathWithOneParamWithoutValue)
 {
     std::string request = "GET /foo.html?foo= HTTP/1.1\r\nHost: localhost\r\n\r\n";
     HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest();
+    HttpParser::httpResult res = par.parseHttpRequest(request);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
     ASSERT_EQ(par.getRequestURIPath(), "/foo.html");
 

@@ -3,6 +3,7 @@
 
 #include "../config/Config.hpp"
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -42,9 +43,6 @@ inline std::string trim(const std::string &str)
  *                *( field-line CRLF )
  *                CRLF
  *                [ message-body ]
- *
- * TODO: Refactor Field Line Parser
- *
  */
 class HttpParser {
 
@@ -103,8 +101,9 @@ class HttpParser {
 
             /* parse Request-Line ... */
             res = _parseRequestLine(requestLine);
-            if (res != HTTP_RES_OK)
+            if (res != HTTP_RES_OK) {
                 return res;
+            }
 
             this->_phase = HEADERS;
         }
@@ -131,15 +130,11 @@ class HttpParser {
             /*
              * NOTE: Header fields get's parsed usually after the message's entire header section
              * has been processed
-             * TODO: Parse request header fields
-             *
-             *
-             *
-             *
              */
 
             res = _parseRequestHeaderValue();
             if (res != HTTP_RES_OK) {
+                std::cerr << "hello world" << std::endl;
                 return res;
             }
 
@@ -184,7 +179,6 @@ class HttpParser {
 
         bool isValidPercentEncoding(std::string str)
         {
-            std::cout << "to check :" << str << std::endl;
             for (size_t i = 0; i < str.length(); i++) {
                 if (i > 1 || !isHex(str[i]))
                     return (0);
@@ -258,18 +252,38 @@ class HttpParser {
 
     std::vector<std::string> _getTokens(std::string line, std::string delimiter)
     {
-        size_t pos = 0;
         std::vector<std::string> tokens;
         std::string token;
-        while ((pos = line.find(delimiter)) != std::string::npos) {
-            token = line.substr(0, pos);
-            // TODO: ADD quotes handling
+        bool inDoubleQuotes = false;
+        bool inSingleQuotes = false;
+        size_t tokenStart = 0;
+        size_t i = 0;
 
-            tokens.push_back(token);
-            line.erase(0, pos + delimiter.length());
+        while (i < line.length()) {
+            char c = line[i];
+
+            if (c == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+            }
+            else if (c == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;
+            }
+
+            if (!inDoubleQuotes && !inSingleQuotes) {
+                if (line.substr(i, delimiter.length()) == delimiter) {
+                    token = line.substr(tokenStart, i - tokenStart);
+                    tokens.push_back(token);
+                    i += delimiter.length();
+                    tokenStart = i;
+                    continue;
+                }
+            }
+            i++;
         }
-        if (line.empty() == false)
-            tokens.push_back(line);
+
+        if (tokenStart < line.length()) {
+            tokens.push_back(line.substr(tokenStart));
+        }
         return tokens;
     }
 
@@ -476,23 +490,20 @@ class HttpParser {
         return HTTP_RES_OK;
     }
 
-    /*
-     *
-     * - Tokenize header value
-     * - Split values
-     * - insert key value into a new map
-     *
-     */
     httpResult _parseRequestHeaderValue()
     {
-
-        // WARNING: Change back to c++98
-        for (const auto x : this->__headers) {
-            std::vector<std::string> headerValueTokens = _getTokens(x.second, ",");
-            if (headerValueTokens.size() == 0) {
-                return /* ??? */ HTTP_RES_OK;
+        for (std::map<std::string, std::vector<std::string>>::iterator it = this->_headers.begin();
+             it != this->_headers.end(); ++it) {
+            std::vector<std::string> values = {};
+            for (int i = 0; i < int(it->second.size()); i++) {
+                std::vector<std::string> tokens = _getTokens(it->second[i], ",");
+                for (int j = 0; j < int(tokens.size()); j++) {
+                    values.push_back(tokens[j]);
+                }
             }
+            it->second = values;
         }
+        return HTTP_RES_OK;
     }
 };
 

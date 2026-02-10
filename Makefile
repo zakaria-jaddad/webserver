@@ -32,6 +32,7 @@ TEST_SRC_FILES = $(SRC_DIR)/request/Request.cpp
 
 TEST_TEST_FILES = $(TEST_DIR)/request_line_test.cpp \
 									$(TEST_DIR)/request_uri.cpp \
+									$(TEST_DIR)/request_header_test.cpp \
 									$(TEST_DIR)/test.cpp 
 
 TEST_OBJ = $(TEST_SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o) \
