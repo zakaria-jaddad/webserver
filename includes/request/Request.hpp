@@ -501,7 +501,7 @@ class HttpParser {
             for (int i = 0; i < int(it->second.size()); i++) {
                 std::vector<std::string> tokens = _getTokens(it->second[i], ",");
                 for (int j = 0; j < int(tokens.size()); j++) {
-                    values.push_back(tokens[j]);
+                    values.push_back(trim(tokens[j]));
                 }
             }
             it->second = values;

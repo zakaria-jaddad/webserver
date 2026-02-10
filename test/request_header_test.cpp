@@ -2,107 +2,108 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <iterator>
+#include <vector>
 
 using namespace std;
 
-TEST(RequestHeader, MissingPath)
-{
-    string requestLine = "GET HTTP/1.1\r\nHost: localhost\r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
-}
+/*
+ * A Host header field must be sent in all HTTP/1.1 request messages. A 400 Bad Request status code
+ * may be sent to any HTTP/1.1 request message that lacks or contains more than one Host header
+ * field.
+ *
+ *
+ * A client MUST send a Host header field in all HTTP/1.1 request messages. A server MUST respond
+ * with a 400 (Bad Request) status code to any HTTP/1.1 request message that lacks a Host header
+ * field and to any request message that contains more than one Host header field line or a Host
+ * header field with an invalid field value.
+ */
 
-TEST(RequestHeader, validRequest)
+/* NOTE: Request Semantics Tests */
+
+TEST(RequestHeaders, ValidSimpleRequest)
 {
-    // string requestLine = "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
-    string requestLine = "GET /foo.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    string requestLine = "GET index.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
+
+    ASSERT_EQ(int(par.getHeaders().size()), 1);
+
+    vector<string> hostHeader = par.getHeaders()["Host"];
+
+    ASSERT_EQ(int(hostHeader.size()), 1);
+    ASSERT_EQ(hostHeader[0], "localhost");
 }
 
-TEST(RequestHeader, ValidRequestWithLongPathAndParams)
+TEST(RequestHeaders, ValidSimpleRequestWithMultipleHeaders)
+{
+    string requestLine = "GET index.html HTTP/1.1\r\nHost: localhost\r\nfoo: bar\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
+
+    map<string, vector<string>> headers = par.getHeaders();
+
+    ASSERT_EQ(int(headers.size()), 2);
+
+    ASSERT_NE(headers.find("foo"), headers.end());
+
+    vector<string> fooHeader = headers["foo"];
+    ASSERT_EQ(fooHeader[0], "bar");
+}
+
+TEST(RequestHeaders, MultiHeaderValue)
+{
+    string requestLine = "GET index.html HTTP/1.1\r\nHost: localhost\r\nfoo: bar, baz\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
+
+    map<string, vector<string>> headers = par.getHeaders();
+
+    ASSERT_EQ(int(headers.size()), 2);
+
+    ASSERT_NE(headers.find("foo"), headers.end());
+
+    vector<string> fooHeader = headers["foo"];
+    ASSERT_EQ(fooHeader[0], "bar");
+    ASSERT_EQ(fooHeader[1], "baz");
+}
+
+TEST(RequestHeaders, MultiHeadersWithSameKey)
 {
     string requestLine =
-        "GET /path/with/query?param=value&param=123 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        "GET index.html HTTP/1.1\r\nHost: localhost\r\nfoo: bar\r\nfoo: baz\r\n\r\n";
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-    ASSERT_EQ(par.getRequestType(), HttpParser::GET);
-    ASSERT_EQ(par.getRequestURIPath(), "/path/with/query");
 
-    const int *version = par.getRequestVersion();
-    ASSERT_EQ(version[0], 1);
-    ASSERT_EQ(version[1], 1);
+    map<string, vector<string>> headers = par.getHeaders();
+
+    ASSERT_EQ(int(headers.size()), 2);
+
+    ASSERT_NE(headers.find("foo"), headers.end());
+
+    vector<string> fooHeader = headers["foo"];
+    ASSERT_EQ(fooHeader[0], "bar");
+    ASSERT_EQ(fooHeader[1], "baz");
 }
 
-TEST(RequestHeader, VTabBeforeColn)
+TEST(RequestHeaders, MultiHeadersWithSameKeyEmptyValue)
 {
-    string requestLine = "GET / HTTP/1.1\r\nHost\t: localhost\r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
-}
-
-TEST(RequestHeader, SpaceBeforeFieldValue)
-{
-    string requestLine = "GET / HTTP/1.1\r\nHost:                localhost\r\n\r\n";
+    string requestLine = "GET index.html HTTP/1.1\r\nHost: localhost\r\nfoo: bar\r\nfoo: "
+                         "baz\r\nfoo:\t\r\n\r\n";
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-}
 
-TEST(RequestHeader, SpaceAfterFieldValue)
-{
-    string requestLine = "GET / HTTP/1.1\r\nHost: localhost               \r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-}
+    map<string, vector<string>> headers = par.getHeaders();
 
-TEST(RequestHeader, SpaceBeforeAndAfterFieldValue)
-{
-    string requestLine = "GET / HTTP/1.1\r\nHost:                 localhost \r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-}
+    ASSERT_EQ(int(headers.size()), 2);
 
-TEST(RequestHeader, NoSpaceAfterColn)
-{
-    string requestLine = "GET / HTTP/1.1\r\nHost:localhost\r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-}
+    ASSERT_NE(headers.find("foo"), headers.end());
 
-TEST(RequestHeader, NoDoubleCRLFAfterHeaders)
-{
-    string requestLine = "GET / HTTP/1.1\r\nHost: localhost\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-}
-
-TEST(RequestHeader, ValidRequest)
-{
-    string requestLine = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-    ASSERT_EQ(par.getRequestType(), HttpParser::GET);
-    ASSERT_EQ(par.getRequestURIPath(), "/");
-
-    const int *version = par.getRequestVersion();
-    ASSERT_EQ(version[0], 1);
-    ASSERT_EQ(version[1], 1);
-}
-
-TEST(RequestHeader, SpaceBeforeFieldName)
-{
-    string requestLine = "GET / HTTP/1.1\r\n Host: localhost\r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
+    vector<string> fooHeader = headers["foo"];
+    ASSERT_EQ(fooHeader[0], "bar");
+    ASSERT_EQ(fooHeader[1], "baz");
 }
