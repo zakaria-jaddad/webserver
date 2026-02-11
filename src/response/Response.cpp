@@ -16,8 +16,9 @@ HttpParser::httpResult Response::checkMethod( void )
 {
   // std::string methods[] = {"GET", "POST", "DELETE", "HEAD", "PUT", "OPTIONS" ,"TRACE", "CONNECT"};
 
-	if (!conf.getCgi().empty())
+	if (client->request->getRequestURIPath().find(".php") != std::string::npos && !conf.getCgi().first.empty() && !conf.getCgi().second.empty())
 	{
+		std::cout << "cgi" << std::endl;
 		if (pipe(cgi_in_pipe) == -1)
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		if (pipe(cgi_out_pipe) == -1)
@@ -46,7 +47,7 @@ HttpParser::httpResult Response::checkMethod( void )
 				sendResponse("HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n405");
 		}
 	}
-	
+
 	return (HttpParser::HTTP_RES_OK);
 }
 

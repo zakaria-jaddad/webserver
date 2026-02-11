@@ -71,7 +71,7 @@ std::string	joinHeaderValues(std::vector<std::string>& field_value)
 {
 	std::string	env_val;
 	
-	for (int i = 0; i < field_value.size(); i++)
+	for (size_t i = 0; i < field_value.size(); i++)
 	{
 		env_val += field_value[i] + ", ";
 	}
@@ -83,7 +83,7 @@ std::string normalizeHeaderName(const std::string& name)
 {
 	std::string header = "HTTP_" + name;
 
-	for (int i = 0; i < header.length(); i++)
+	for (size_t i = 0; i < header.length(); i++)
 	{
 		char c = header[i];
 
@@ -96,9 +96,9 @@ std::string normalizeHeaderName(const std::string& name)
 	return header;
 }
 
-void headerEnvBuilder( std::map<std::string, std::string>& env, std::map<std::string, std::vector<std::string>>& header )
+void headerEnvBuilder( std::map<std::string, std::string>& env, std::map<std::string, std::vector<std::string> >& header )
 {
-	std::map<std::string, std::vector<std::string>>::iterator it = header.begin();
+	std::map<std::string, std::vector<std::string> >::iterator it = header.begin();
 
 	for (; it != header.end(); it++)
 	{

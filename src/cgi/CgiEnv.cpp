@@ -61,7 +61,7 @@
 // 	return env;
 // }
 
-std::map<std::string, std::string> Cgi::mapEnvBuilder(	std::map<std::string, std::vector<std::string>>& header,
+std::map<std::string, std::string> Cgi::mapEnvBuilder(	std::map<std::string, std::vector<std::string> >& header,
                                                     		std::string script_name,
                                                         std::string path_info,
                                                         std::map<std::string, std::string>& query)
@@ -69,7 +69,7 @@ std::map<std::string, std::string> Cgi::mapEnvBuilder(	std::map<std::string, std
 	std::map<std::string, std::string> 							env;
 	
 	env["SCRIPT_NAME"]		= script_name;
-	env["PATH_INFO"]			= script_name;
+	env["PATH_INFO"]			= path_info;
 	env["REQUEST_METHOD"]	= methodToString(request->getRequestType());
 	env["QUERY_STRING"]		= squashMapIntoString(query);
 	
@@ -91,9 +91,7 @@ std::map<std::string, std::string> Cgi::mapEnvBuilder(	std::map<std::string, std
 	//header env variables
 	// std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
 	// headerEnvBuilder(env, dummy_header);
-	
-	std::map<std::string, std::vector<std::string>> headers = request->getHeaders();
-	headerEnvBuilder(env, headers);
+	headerEnvBuilder(env, header);
 
 	return env;
 }
@@ -116,10 +114,10 @@ char** Cgi::charEnvBuilder(std::map<std::string, std::string> env)
 
 void Cgi::envBuilder()
 {
-	std::map<std::string, std::vector<std::string>> header = request->getHeaders();
+	std::map<std::string, std::vector<std::string> > header = request->getHeaders();
     std::map<std::string, std::string>	query = request->getRequestURIParams();
 	std::vector<std::string> script_name = deriveScriptName(uriPath);
-	
+
     std::map<std::string, std::string> mapEnv = mapEnvBuilder(  header,
                                                                 script_name[0],
                                                                 script_name[1],

@@ -10,21 +10,22 @@
 
 class Cgi{
 
-		typedef enum {
-			HEADERS,
-			BODY,
-			COMPLETE,
-			ERROR,
-		} phase;
+		// typedef enum {
+		// 	HEADERS,
+		// 	BODY,
+		// 	COMPLETE,
+		// 	ERROR,
+		// } phase;
 		
-    int *out_fds;
 		int *in_fds;
+    	int *out_fds;
 		ResolvedConfig*	conf;
 		HttpParser*			request;
 		char**			env;
 		std::string uriPath;
-		std::string resp;
-		phase				_phase = HEADERS;
+		std::string cgiPath;
+		std::string scriptPath;
+		// phase				_phase;
 
 	public:
 		Cgi( int *, int * );
@@ -44,8 +45,8 @@ class Cgi{
 		
 		int* getPipe( void );
 
-		void craftHeader( std::string&  );
-		void craftBody( std::string&  );
+		// void craftHeader( std::string&  );
+		// void craftBody( std::string&  );
 
 
 };

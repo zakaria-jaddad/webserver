@@ -8,7 +8,7 @@
 
 class ResolvedConfig{
 	std::map<int, std::string>  error_pages;
-	std::map<std::string, std::string>  cgi_info;
+	std::pair<std::string, std::string>  cgi_info;
 	std::map<int, std::string>  redir;
 	std::vector<std::string>		methods_accepted;
   std::vector<std::string>		index;
@@ -31,7 +31,7 @@ public:
 	bool 						            getDirectoyListing( void );
 	int 						            getPort( void );
 	std::string			            getIp( void );
-	std::map<std::string, std::string>           getCgi( void );
+	std::pair<std::string, std::string>           getCgi( void );
 };
 
 #endif

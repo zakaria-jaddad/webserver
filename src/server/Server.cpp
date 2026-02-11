@@ -170,7 +170,7 @@ int Server::startServer() {
 			std::cerr << "epoll_wait Failed!" << std::endl;
 			return (1);
 		}
-		std::cout << "event_count = " << event_count << std::endl;
+		// std::cout << "event_count = " << event_count << std::endl;
 		for (int i = 0; i < event_count; i++) {
 			clientSocket = checkForServerFd(events, i);
 			if (clientSocket != -1) //found fd in serverFds
