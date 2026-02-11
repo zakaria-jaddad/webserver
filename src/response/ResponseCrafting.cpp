@@ -9,35 +9,37 @@ std::string Response::craftHeaderStatus( std::string& header )
 	if (status_pos == std::string::npos)
 		line += " 200 OK";
 	else
-		line.append(header.substr(status_pos + 6));
-	
-	header.erase(status_pos, line.size());
+	{
+		size_t line_end = header.find("\r\n", status_pos);
+		std::string status = header.substr(status_pos + 7, line_end - (status_pos + 7));
+		line.append(status);
+		line.append("\n");
+		header.erase(status_pos, line.size());
+	}
 	
 	return line;
 }
 
 void Response::craftHeader( std::string& buff )
 {
+	std::string headers = buff;
 	size_t clrf_pos = buff.find(DOUBLE_CRLF);
-    std::string headers = buff.substr(0, clrf_pos);
-    buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
-    
-	//parsing needed from zajaddad
-	// if (HttpParser::_parseRequestHeaders(headers) != HttpParser::HTTP_RES_OK)
-	// 	return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+	if (clrf_pos != std::string::npos)
+	{
+    	headers = buff.substr(0, clrf_pos);
+    	buff.erase(0, headers.size() + strlen(CRLF));
+		this->_phase = BODY;
+	}
 	
 	std::string line = craftHeaderStatus(headers);
-    
-	std::cout << "status line : \n" << line << std::endl;	
-    
-	std::cout << "headers : \n" << headers << std::endl;
-	
-	this->_phase = BODY;
+	resp.append(line);
+	resp.append(headers);
 }
 
 void Response::craftBody( std::string& buff )
 {
-    std::cout << "BOOOOODY" << std::endl;
+	resp.append(buff);
+	buff.erase();
     this->_phase = COMPLETE;
 }
 
@@ -58,4 +60,6 @@ void Response::craftResponse( void )
         else if (this->_phase == BODY)
             craftBody(val);
     }
+	sendResponse(resp.c_str());
+	resp.clear();
 }

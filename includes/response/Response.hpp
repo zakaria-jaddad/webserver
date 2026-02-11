@@ -21,6 +21,7 @@ class Response{
 
 	ResolvedConfig	conf;
 	std::string			normalizedPath;
+	std::string			resp;
 	t_client				*client;
 	bool						wait;
 	Cgi							*cgi;

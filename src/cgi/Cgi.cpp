@@ -13,16 +13,20 @@ Cgi::~Cgi()
 
 // std::string craftHeaderStatus( std::string& header )
 // {
-// 	std::string line = "HTTP/1.1 ";
+// 	std::string line = "HTTP/1.1";
 	
-// 	size_t status_pos =  header.find("status");
+// 	size_t status_pos =  header.find("Status");
 	
 // 	if (status_pos == std::string::npos)
 // 		line += " 200 OK";
 // 	else
-// 		line.append(header.substr(status_pos + 6));
-	
-// 	header.erase(status_pos, line.size());
+// 	{
+// 		size_t line_end = header.find("\r\n", status_pos);
+// 		std::string status = header.substr(status_pos + 7, line_end - (status_pos + 7));
+// 		line.append(status);
+// 		line.append("\n");
+// 		header.erase(status_pos, line.size());
+// 	}
 	
 // 	return line;
 // }
@@ -30,25 +34,33 @@ Cgi::~Cgi()
 // void Cgi::craftHeader( std::string& buff )
 // {
 // 	size_t clrf_pos = buff.find(DOUBLE_CRLF);
-//     std::string headers = buff.substr(0, clrf_pos);
-//     buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
-    
+//   std::string headers = buff;
+
+// 	if (clrf_pos != std::string::npos)
+// 	{
+// 		headers = buff.substr(0, clrf_pos);
+// 		buff.erase(0, headers.size() + strlen("\r\n"));
+// 		this->_phase = BODY;
+// 	}
+	
 // 	//parsing needed for zajaddad
 // 	// if (HttpParser::_parseRequestHeaders(headers) != HttpParser::HTTP_RES_OK)
 // 	// 	return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	
 // 	std::string line = craftHeaderStatus(headers);
     
-// 	std::cout << "status line : \n" << line << std::endl;	
+// 	resp.append(line);
+// 	resp.append(headers);
+// 	// std::cout << "status line : \n" << line << std::endl;	
     
-// 	std::cout << "headers : \n" << headers << std::endl;
+// 	// std::cout << "headers : \n" << headers << std::endl;
 	
-// 	this->_phase = BODY;
 // }
 
 // void Cgi::craftBody( std::string& buff )
 // {
-//     std::cout << "BODY : \n" << buff << std::endl;
+// 	// std::cout << "BODY : \n" << buff << std::endl;
+// 	resp.append(buff);
 // 	buff.erase();
 // 	this->_phase = COMPLETE;
 // }
@@ -56,18 +68,18 @@ Cgi::~Cgi()
 //execution
 void Cgi::executor( void )
 {
-	std::string cgi_path = "/usr/bin/python3";
+	std::string cgi_path = "/usr/bin/php-cgi";
 
-	const char *argv[] = {"/usr/bin/python3", "/home/sanruss/Desktop/test.py", NULL};
+	const char *argv[] = {"/usr/bin/php-cgi", "/home/yhossni/Desktop/test.php", NULL};
 	
   if (pipe(in_fds) == -1)
 		return ;
 	if (pipe(out_fds) == -1)
 		return ;
 
-//	char buff[1024];
-	std::string fake_body = "username=feso&score=42&lang=c";
-  size_t fake_body_len = fake_body.size();
+	// char buff[1024];
+	// std::string fake_body = "username=feso&score=42&lang=c";
+  // size_t fake_body_len = fake_body.size();
   pid_t child = fork();
 
 	if (child == 0)
@@ -97,13 +109,13 @@ void Cgi::executor( void )
       close(out_fds[1]);
 
       //write(in_fds[1], request.getBody(), request.getBodyLength());
-      write(in_fds[1], fake_body.c_str(), fake_body_len);
+      // write(in_fds[1], fake_body.c_str(), fake_body_len);
       
       close(in_fds[1]);
     }
 
 	  waitpid(child, &status, 0);
-		// int bytes = read(fds[0], buff, sizeof(buff) - 1);
+		// int bytes = read(out_fds[0], buff, sizeof(buff) - 1);
 		
 		// std::string val = buff;
 		// while (val.empty() == false && this->_phase != ERROR)
@@ -113,6 +125,7 @@ void Cgi::executor( void )
 		// 	else if (this->_phase == BODY)
 		// 		craftBody(val);
 		// }
+		// std::cout << resp << std::endl;
 	}
 
 }
@@ -122,8 +135,8 @@ int* Cgi::getPipe( void )
 	return out_fds;
 }
 
-int main()
-{
- 	Cgi cgi;
- 	cgi.executor();
-}
+// int main()
+// {
+//  	Cgi cgi;
+//  	cgi.executor();
+// }

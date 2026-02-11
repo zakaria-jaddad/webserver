@@ -23,6 +23,7 @@ class Cgi{
 		HttpParser*			request;
 		char**			env;
 		std::string uriPath;
+		std::string resp;
 		phase				_phase = HEADERS;
 
 	public:
@@ -43,8 +44,8 @@ class Cgi{
 		
 		int* getPipe( void );
 
-		// void craftHeader( std::string&  );
-		// void craftBody( std::string&  );
+		void craftHeader( std::string&  );
+		void craftBody( std::string&  );
 
 
 };

@@ -30,7 +30,7 @@ std::map<std::string, std::string> createDummyMapEnv()
 {
 	std::map<std::string, std::string> 							env;
 	
-	env["SCRIPT_NAME"]		= "/test.py";
+	env["SCRIPT_NAME"]		= "/test.php";
 	env["PATH_INFO"]			= "";
 	env["REQUEST_METHOD"]	= "GET";
 	env["QUERY_STRING"]		= "";
@@ -51,8 +51,8 @@ std::map<std::string, std::string> createDummyMapEnv()
   env["CONTENT_TYPE"] = "application/x-www-form-urlencoded";
 
 	//php specific variables
-	env["SCRIPT_FILENAME"] = "/home/sanruss/Desktop/test.py";
-	env["DOCUMENT_ROOT"]   = "/home/sanruss/Desktop";
+	env["SCRIPT_FILENAME"] = "/home/yhossni/Desktop/test.php";
+	env["DOCUMENT_ROOT"]   = "/home/yhossni/Desktop";
 
 	//header env variables
 	std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
