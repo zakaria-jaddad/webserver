@@ -45,10 +45,9 @@ void Response::craftBody( std::string& buff )
 
 void Response::craftResponse( void )
 {
-	cgi_pipe = cgi->getPipe();
 	char buff[1024];
 
-    int bytes = read(cgi_pipe[0], buff, sizeof(buff) - 1);//check errors
+    int bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
     buff[bytes] = 0;
 
     std::string val = buff;
@@ -60,6 +59,14 @@ void Response::craftResponse( void )
         else if (this->_phase == BODY)
             craftBody(val);
     }
-	sendResponse(resp.c_str());
-	resp.clear();
+
+}
+
+int Response::sendResponse(const char *resp) {
+	if (send(client->fd, resp, strlen(resp), 0) == -1) {
+		std::cerr << "failed to send" << std::endl;
+		this->error = 1;
+		return (1);
+	}
+	return (0);
 }

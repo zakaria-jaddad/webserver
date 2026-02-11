@@ -25,7 +25,8 @@ class Response{
 	t_client				*client;
 	bool						wait;
 	Cgi							*cgi;
-	int							*cgi_pipe;
+	int							*cgi_in_pipe;
+	int							*cgi_out_pipe;
 	phase						_phase;
 	int				fileFD;
 	int				headerFlag;

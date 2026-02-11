@@ -1,7 +1,8 @@
 #include "../../includes/cgi/Cgi.hpp"
 
 //constructor/destructor
-Cgi::Cgi()
+Cgi::Cgi( int* in, int* out )
+: in_fds(in), out_fds(out)
 {
 	this->envBuilder();
 }
@@ -71,11 +72,6 @@ void Cgi::executor( void )
 	std::string cgi_path = "/usr/bin/php-cgi";
 
 	const char *argv[] = {"/usr/bin/php-cgi", "/home/yhossni/Desktop/test.php", NULL};
-	
-  if (pipe(in_fds) == -1)
-		return ;
-	if (pipe(out_fds) == -1)
-		return ;
 
 	// char buff[1024];
 	// std::string fake_body = "username=feso&score=42&lang=c";

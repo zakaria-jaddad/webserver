@@ -17,8 +17,8 @@ class Cgi{
 			ERROR,
 		} phase;
 		
-    int out_fds[2];
-		int in_fds[2];
+    int *out_fds;
+		int *in_fds;
 		ResolvedConfig*	conf;
 		HttpParser*			request;
 		char**			env;
@@ -27,7 +27,7 @@ class Cgi{
 		phase				_phase = HEADERS;
 
 	public:
-		Cgi( void );
+		Cgi( int *, int * );
 		~Cgi( void );
 
 		//env creation
