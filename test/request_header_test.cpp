@@ -70,6 +70,24 @@ TEST(RequestHeaders, MultiHeaderValue)
     ASSERT_EQ(fooHeader[1], "baz");
 }
 
+TEST(RequestHeaders, MultiHeaderValueNoSpace)
+{
+    string requestLine = "GET index.html HTTP/1.1\r\nHost: localhost\r\nfoo:bar,baz\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
+
+    map<string, vector<string>> headers = par.getHeaders();
+
+    ASSERT_EQ(int(headers.size()), 2);
+
+    ASSERT_NE(headers.find("foo"), headers.end());
+
+    vector<string> fooHeader = headers["foo"];
+    ASSERT_EQ(fooHeader[0], "bar");
+    ASSERT_EQ(fooHeader[1], "baz");
+}
+
 TEST(RequestHeaders, MultiHeadersWithSameKey)
 {
     string requestLine =
@@ -106,4 +124,21 @@ TEST(RequestHeaders, MultiHeadersWithSameKeyEmptyValue)
     vector<string> fooHeader = headers["foo"];
     ASSERT_EQ(fooHeader[0], "bar");
     ASSERT_EQ(fooHeader[1], "baz");
+}
+
+TEST(RequestHeaders, MissingColon)
+{
+    string requestLine = "GET index.html HTTP/1.1\r\nHost localhost\r\nfoo: bar\r\nfoo: "
+                         "baz\r\nfoo:\t\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
+}
+
+TEST(RequestHeaders, SpaceInName)
+{
+    string requestLine = "GET index.html HTTP/1.1\r\nHost: localhost\r\nbaz\r\nfoo:\t\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
 }
