@@ -51,18 +51,22 @@ class HttpParser {
     {
         this->_requestURI.path = "";
         this->_requestURI.params.clear();
-        this->_requestURI.rawPath = "";
+        this->_requestURI.rawURI = "";
+        this->_requestURI.rawParams = "";
+
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
-        this->_config = NULL; // tmp
+        this->_config = NULL; // NOTE: tmp
     }
 
     HttpParser(const Config *config) : _phase(REQUEST_LINE)
     {
         this->_requestURI.path = "";
         this->_requestURI.params.clear();
-        this->_requestURI.rawPath = "";
+        this->_requestURI.rawURI = "";
+        this->_requestURI.rawParams = "";
+
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
@@ -153,14 +157,18 @@ class HttpParser {
     };
 
     requestType getRequestType() const { return this->_requestType; }
-    std::string getRequestURIPath() const { return this->_requestURI.getPath(); }
     const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
-    std::map<std::string, std::string> getRequestURIParams() const
+
+    //
+    std::string getRequestUriPath() const { return this->_requestURI.getPath(); }
+    std::string getRequestUriRawPath() const { return this->_requestURI.getRawUri(); }
+    std::string getRequestUriRawParams() const { return this->_requestURI.getRawParams(); }
+    std::map<std::string, std::string> getRequestUriParams() const
     {
         return this->_requestURI.getParams();
     }
-    std::string getRequestRawPath() const { return this->_requestURI.getRawPath(); }
+    //
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
 
@@ -211,14 +219,21 @@ class HttpParser {
       public:
         std::string path;
         std::map<std::string, std::string> params;
-        std::string rawPath;
+        std::string rawURI;
+        std::string rawParams;
         std::string getPath() const { return this->path; }
         std::map<std::string, std::string> getParams() const { return this->params; }
-        std::string getRawPath() const { return this->rawPath; }
+        std::string getRawUri() const { return this->rawURI; }
+        std::string getRawParams() const { return this->rawParams; }
 
         HttpParser::httpResult parseRequestURI(std::string uri)
         {
-            this->rawPath = uri;
+            this->rawURI = uri;
+            // find first accurance of ?
+            size_t pos = uri.find_first_of("?");
+            if (pos != std::string::npos) {
+                this->rawParams = uri.substr(pos + 1);
+            }
             std::stringstream ss(uri);
             std::string param;
             std::string key;
@@ -463,8 +478,8 @@ class HttpParser {
         if (this->_headers.find(fieldName) == this->_headers.end()) {
             std::vector<std::string> tmp;
             tmp.push_back(fieldValue);
-            this->_headers.insert(std::pair<std::string, std::vector<std::string> >(
-                fieldName, tmp));
+            this->_headers.insert(
+                std::pair<std::string, std::vector<std::string> >(fieldName, tmp));
             return HTTP_RES_OK;
         }
         // key already exist
@@ -479,7 +494,7 @@ class HttpParser {
      * * usually after the message's entire header section has been processed
      *
      */
-public:
+  public:
     httpResult _generateHeadersMap(std::string headerLines)
 
     {
