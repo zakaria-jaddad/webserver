@@ -1,23 +1,20 @@
 #ifndef __REQUEST_HPP__
 #define __REQUEST_HPP__
+
+#include "../config/Config.hpp"
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <map>
-#include <string>
-#include <vector>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #define CRLF "\r\n"
 #define DOUBLE_CRLF "\r\n\r\n"
 
-//requestURI struct
-    typedef struct s_requestURI {
-	    std::string path;
-	    std::map<std::string, std::string> params;
-    } t_reqURI;
 /* inline only for development */
 inline std::string trim(const std::string &str)
 {
@@ -46,19 +43,30 @@ inline std::string trim(const std::string &str)
  *                *( field-line CRLF )
  *                CRLF
  *                [ message-body ]
- *
- * TODO: Refactor Field Line Parser
- *
  */
 class HttpParser {
 
   public:
-    HttpParser() : _phase(REQUEST_LINE)
+    HttpParser(void) : _phase(REQUEST_LINE)
     {
         this->_requestURI.path = "";
+        this->_requestURI.params.clear();
+        this->_requestURI.rawPath = "";
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
+        this->_config = NULL; // tmp
+    }
+
+    HttpParser(const Config *config) : _phase(REQUEST_LINE)
+    {
+        this->_requestURI.path = "";
+        this->_requestURI.params.clear();
+        this->_requestURI.rawPath = "";
+        this->_requestVersion[0] = 0;
+        this->_requestVersion[1] = 0;
+        this->_requestType = UNKNOWN;
+        this->_config = config;
     }
 
     ~HttpParser() {}
@@ -70,12 +78,18 @@ class HttpParser {
         HTTP_RES_INTERNAL_SERVER_ERROR = 500,
         HTTP_RES_BAD_REQUEST = 400,
         HTTP_RES_NOT_IMPLEMENTED = 501,
+        HTTP_REST_METHOD_NOT_ALLOWED = 405,
     } httpResult;
 
     typedef enum {
         GET,
         POST,
         DELETE,
+        HEAD,
+        PUT,
+        OPTIONS,
+        TRACE,
+        CONNECT,
         UNKNOWN,
     } requestType;
 
@@ -91,8 +105,9 @@ class HttpParser {
 
             /* parse Request-Line ... */
             res = _parseRequestLine(requestLine);
-            if (res != HTTP_RES_OK)
+            if (res != HTTP_RES_OK) {
                 return res;
+            }
 
             this->_phase = HEADERS;
         }
@@ -108,13 +123,23 @@ class HttpParser {
                 this->_phase = BODY;
             }
 
-            res = _parseRequestHeaders(headerLines);
+            res = _generateHeadersMap(headerLines);
             if (res != HTTP_RES_OK) {
                 return res;
             }
         }
 
         if (this->_phase == BODY) {
+
+            /*
+             * NOTE: Header fields get's parsed usually after the message's entire header section
+             * has been processed
+             */
+
+            res = _parseRequestHeaderValue();
+            if (res != HTTP_RES_OK) {
+                return res;
+            }
 
             /*
              * TODO:
@@ -128,15 +153,94 @@ class HttpParser {
     };
 
     requestType getRequestType() const { return this->_requestType; }
-    std::string getRequestURIPath() const { return this->_requestURI.path; }
-    std::map<std::string, std::string> getRequestURIParams() const { return this->_requestURI.params; }
+    std::string getRequestURIPath() const { return this->_requestURI.getPath(); }
     const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
+    std::map<std::string, std::string> getRequestURIParams() const
+    {
+        return this->_requestURI.getParams();
+    }
+    std::string getRequestRawPath() const { return this->_requestURI.getRawPath(); }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
-    int parseRequestURI(t_reqURI& req, std::string uri);
 
   private:
+    typedef struct RequestURI {
+      private:
+        char hexToChar(std::string hex)
+        {
+            int ret;
+            std::stringstream ss;
+            ss << std::hex << hex;
+            ss >> ret;
+            return (ret);
+        }
+
+        bool isHex(char c)
+        {
+            return (!(c < '0' || (c > '9' && c < 'A') || (c > 'F' && c < 'a') || c > 'f'));
+        }
+
+        bool isValidPercentEncoding(std::string str)
+        {
+            for (size_t i = 0; i < str.length(); i++) {
+                if (i > 1 || !isHex(str[i]))
+                    return (0);
+            }
+            return (1);
+        }
+
+        std::string urlDecode(std::string &str)
+        {
+            std::string dec = "";
+
+            for (size_t i = 0; i < str.length(); i++) {
+                if (str[i] == '%' && isValidPercentEncoding(str.substr(i + 1, 2))) {
+                    dec += hexToChar(str.substr(i + 1, 2));
+                    i += 2;
+                }
+                else if (str[i] == '%') {
+                    return (""); // error
+                }
+                else
+                    dec += str[i];
+            }
+            return (dec);
+        }
+
+      public:
+        std::string path;
+        std::map<std::string, std::string> params;
+        std::string rawPath;
+        std::string getPath() const { return this->path; }
+        std::map<std::string, std::string> getParams() const { return this->params; }
+        std::string getRawPath() const { return this->rawPath; }
+
+        HttpParser::httpResult parseRequestURI(std::string uri)
+        {
+            this->rawPath = uri;
+            std::stringstream ss(uri);
+            std::string param;
+            std::string key;
+            std::string val;
+
+            getline(ss, this->path, '?');
+            while (getline(ss, param, '&')) {
+                key = "";
+                val = "";
+                std::stringstream paramStream(param);
+                getline(paramStream, key, '=');
+                paramStream >> val;
+                this->params[key] = val;
+            }
+            this->path = urlDecode(this->path);
+            if (this->path.size() == 0) {
+                return HttpParser::HTTP_RES_BAD_REQUEST;
+            }
+            return HttpParser::HTTP_RES_OK;
+        }
+    } requestURI;
+
     typedef enum {
         REQUEST_LINE,
         HEADERS,
@@ -147,24 +251,46 @@ class HttpParser {
   private:
     parserPhase _phase;
     requestType _requestType;
-    t_reqURI _requestURI;
+    requestURI _requestURI;
     int _requestVersion[2];
-    std::map<std::string, std::string> __headers;
+    const Config *_config;
+    // std::map<std::string, std::string> __headers;
     std::map<std::string, std::vector<std::string> > _headers;
-
 
     std::vector<std::string> _getTokens(std::string line, std::string delimiter)
     {
-        size_t pos = 0;
         std::vector<std::string> tokens;
         std::string token;
-        while ((pos = line.find(delimiter)) != std::string::npos) {
-            token = line.substr(0, pos);
-            tokens.push_back(token);
-            line.erase(0, pos + delimiter.length());
+        bool inDoubleQuotes = false;
+        bool inSingleQuotes = false;
+        size_t tokenStart = 0;
+        size_t i = 0;
+
+        while (i < line.length()) {
+            char c = line[i];
+
+            if (c == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+            }
+            else if (c == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;
+            }
+
+            if (!inDoubleQuotes && !inSingleQuotes) {
+                if (line.substr(i, delimiter.length()) == delimiter) {
+                    token = line.substr(tokenStart, i - tokenStart);
+                    tokens.push_back(token);
+                    i += delimiter.length();
+                    tokenStart = i;
+                    continue;
+                }
+            }
+            i++;
         }
-        if (line.empty() == false)
-            tokens.push_back(line);
+
+        if (tokenStart < line.length()) {
+            tokens.push_back(line.substr(tokenStart));
+        }
         return tokens;
     }
 
@@ -176,6 +302,16 @@ class HttpParser {
             return POST;
         if (_requestType == "DELETE")
             return DELETE;
+        if (_requestType == "PUT")
+            return PUT;
+        if (_requestType == "HEAD")
+            return HEAD;
+        if (_requestType == "OPTIONS")
+            return OPTIONS;
+        if (_requestType == "TRACE")
+            return TRACE;
+        if (_requestType == "CONNECT")
+            return CONNECT;
         return UNKNOWN;
     }
 
@@ -195,24 +331,29 @@ class HttpParser {
         }
 
         requestType = tokens[0];
+        requestURI = tokens[1];
+        requestVersion = tokens[2];
+
         if (_isValidToken(requestType) == false) {
             return HTTP_RES_BAD_REQUEST;
         }
 
-        requestURI = tokens[1];
-        requestVersion = tokens[2];
-
         this->_requestType = _getRequestTypeFromString(requestType);
         if (this->_requestType == UNKNOWN) {
+            return HTTP_RES_BAD_REQUEST;
+        }
+
+        if ((this->_requestType == GET || this->_requestType == POST ||
+             this->_requestType == DELETE) == false) {
             return HTTP_RES_NOT_IMPLEMENTED;
         }
 
-        if (parseRequestURI(this->_requestURI, requestURI)) {
+        if (this->_requestURI.parseRequestURI(requestURI) != HTTP_RES_OK) {
             return HTTP_RES_BAD_REQUEST;
         }
 
         /*
-         * request versiong parsing
+         * request version parsing
          * HTTP/<major>.<minor>
          */
         std::vector<std::string> requestVersiongTokens = _getTokens(requestVersion, "/");
@@ -297,8 +438,12 @@ class HttpParser {
      *  * A server that receives a request header field, or set of fields,
      *  * larger than it wishes to process MUST respond with an appropriate 4xx
      *  * (Client Error) status code.
+     *
+     *
+     *  The Extracted header name is inserted to a map
+     *  holding the raw (non parsed) header value
      */
-    httpResult _parseRequestHeader(std::string headerField)
+    httpResult _parseRequestHeaderName(std::string headerField)
     {
 
         size_t colonPos = headerField.find_first_of(":");
@@ -314,7 +459,16 @@ class HttpParser {
 
         std::string fieldValue = trim(headerField);
 
-        this->__headers.insert(std::pair<std::string, std::string>(fieldName, fieldValue));
+        // if the key doesn't exist
+        if (this->_headers.find(fieldName) == this->_headers.end()) {
+            std::vector<std::string> tmp;
+            tmp.push_back(fieldValue);
+            this->_headers.insert(std::pair<std::string, std::vector<std::string> >(
+                fieldName, tmp));
+            return HTTP_RES_OK;
+        }
+        // key already exist
+        this->_headers[fieldName].push_back(fieldValue);
         return HTTP_RES_OK;
     }
 
@@ -323,9 +477,11 @@ class HttpParser {
      * * The contents within a given field value are not parsed until a later stage of message
      * interpretation
      * * usually after the message's entire header section has been processed
+     *
      */
 public:
-     httpResult _parseRequestHeaders(std::string headerLines)
+    httpResult _generateHeadersMap(std::string headerLines)
+
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);
@@ -337,10 +493,26 @@ public:
         httpResult res;
 
         for (int i = 0; i < int(size); i++) {
-            res = _parseRequestHeader(headers[i]);
+            res = _parseRequestHeaderName(headers[i]);
             if (res != HTTP_RES_OK) {
                 return res;
             }
+        }
+        return HTTP_RES_OK;
+    }
+
+    httpResult _parseRequestHeaderValue()
+    {
+        for (std::map<std::string, std::vector<std::string> >::iterator it = this->_headers.begin();
+             it != this->_headers.end(); ++it) {
+            std::vector<std::string> values;
+            for (int i = 0; i < int(it->second.size()); i++) {
+                std::vector<std::string> tokens = _getTokens(it->second[i], ",");
+                for (int j = 0; j < int(tokens.size()); j++) {
+                    values.push_back(trim(tokens[j]));
+                }
+            }
+            it->second = values;
         }
         return HTTP_RES_OK;
     }

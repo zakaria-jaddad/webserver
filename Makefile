@@ -16,7 +16,7 @@ TEST_DIR	= test
 MAIN_SRC	= ft_webserver.cpp
 CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
 SRV_SRC		= Server.cpp
-REQ_SRC		= request.cpp
+REQ_SRC		= Request.cpp
 RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp
 CGI_SRC		= CgiEnv.cpp Cgi.cpp envUtils.cpp
 
@@ -32,10 +32,15 @@ SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)
 OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-TEST_SRC	= $(TEST_DIR)/request_line_test.cpp \
-								$(TEST_DIR)/test.cpp
+TEST_SRC_FILES = $(SRC_DIR)/request/Request.cpp
 
-TEST_OBJ      = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+TEST_TEST_FILES = $(TEST_DIR)/request_line_test.cpp \
+									$(TEST_DIR)/request_uri.cpp \
+									$(TEST_DIR)/request_header_test.cpp \
+									$(TEST_DIR)/test.cpp 
+
+TEST_OBJ = $(TEST_SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o) \
+           $(TEST_TEST_FILES:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 GTEST_DIR     = external/googletest
 GTEST_LIBS    = $(GTEST_DIR)/build/lib/libgtest.a $(GTEST_DIR)/build/lib/libgtest_main.a
@@ -49,8 +54,8 @@ all: $(NAME)
 $(NAME): $(OBJ)
 	$(CXX) $(CFLAGS) $(OBJ) -o $(NAME)
 
-test: $(PROJECT_OBJ) $(TEST_OBJ) 
-	$(CXX) $(CFLAGS) $(PROJECT_OBJ) $(TEST_OBJ) $(GTEST_LIBS) $(LDFLAGS) -o $(TEST_NAME)
+test: $(TEST_OBJ) 
+	$(CXX) $(CFLAGS) $(TEST_OBJ) $(GTEST_LIBS) $(LDFLAGS) -o $(TEST_NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)

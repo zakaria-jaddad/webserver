@@ -1,5 +1,7 @@
-#include "../includes/ft_webserver.hpp"
+#include "../includes/request/Request.hpp"
 #include <gtest/gtest.h>
+#include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -128,14 +130,6 @@ TEST(RequestLine, requestTypeSpeacileChar)
     ASSERT_EQ(res_2, HttpParser::HTTP_RES_BAD_REQUEST);
 }
 
-TEST(RequestLine, InvalidRequestType)
-{
-    string requestLine = "INVALID /\r\n Host: localhost\r\n\r\n";
-    HttpParser par;
-    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
-    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
-}
-
 TEST(RequestLine, MissingVersionWithSpace)
 {
     string requestLine = "GET / \r\n Host: localhost\r\n\r\n";
@@ -159,7 +153,7 @@ TEST(RequestLine, ValidHTTP1_1RequestLine)
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
     ASSERT_EQ(par.getRequestType(), HttpParser::GET);
-    ASSERT_EQ(par.getRequestURI(), "/foo.html");
+    ASSERT_EQ(par.getRequestURIPath(), "/foo.html");
 
     const int *requestVersiong = par.getRequestVersion();
     ASSERT_EQ(requestVersiong[0], 1);
@@ -173,9 +167,25 @@ TEST(RequestLine, ValidHTTP2RequestLine)
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
     ASSERT_EQ(par.getRequestType(), HttpParser::POST);
-    ASSERT_EQ(par.getRequestURI(), "/foo.html?foo=bar");
+    ASSERT_EQ(par.getRequestURIPath(), "/foo.html");
 
     const int *requestVersiong = par.getRequestVersion();
     ASSERT_EQ(requestVersiong[0], 2);
     ASSERT_EQ(requestVersiong[1], 0);
+}
+
+TEST(RequestLine, InvalidRequestType)
+{
+    string requestLine = "ALSO /foo.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_BAD_REQUEST);
+}
+
+TEST(RequestLine, RequestTypeNotImplemented)
+{
+    string requestLine = "PUT /foo.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    HttpParser par;
+    HttpParser::httpResult res = par.parseHttpRequest(requestLine);
+    ASSERT_EQ(res, HttpParser::HTTP_RES_NOT_IMPLEMENTED);
 }

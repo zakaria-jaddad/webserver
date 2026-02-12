@@ -2,7 +2,7 @@
 # define RESPONSE_HPP
 
 #include "../server/Server.hpp"
-#include "../request/request.hpp"
+#include "../request/Request.hpp"
 #include "ResolvedConfig.hpp"
 #include "../cgi/Cgi.hpp"
 #include <stdio.h>

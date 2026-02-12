@@ -124,6 +124,28 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 				std::cout << req;
 				std::cout << "--------------end of request------------------" << std::endl;
 				it->request->parseHttpRequest(req);
+				std::cout << "=======================" << std::endl;
+				
+				std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
+
+				for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
+					itMap != foo.end();
+					++itMap)
+				{
+					std::string key = itMap->first;
+					std::vector<std::string>& values = itMap->second;
+
+					std::cout << "Header: " << key << std::endl;
+
+					for (std::vector<std::string>::iterator itVec = values.begin();
+						itVec != values.end();
+						++itVec)
+					{
+						std::cout << "  Value: " << *itVec << std::endl;
+					}
+				}
+
+				std::cout << "=======================" << std::endl;
 				if (it->request->isComplete())
 					switchEpollMode(clientSocket, EPOLLOUT);
 			}

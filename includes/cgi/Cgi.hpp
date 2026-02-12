@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "../request/request.hpp"
+#include "../request/Request.hpp"
 #include "../response/ResolvedConfig.hpp"
 #include "../server/Server.hpp"
 #include "envUtils.hpp"

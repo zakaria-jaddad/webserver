@@ -14,7 +14,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <cerrno>
-#include "../request/request.hpp"
+#include "../request/Request.hpp"
 #include "../response/Response.hpp"
 #include "../config/Config.hpp"
 
