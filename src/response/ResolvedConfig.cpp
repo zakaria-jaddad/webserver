@@ -11,6 +11,7 @@ ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
         this->methods_accepted = loc->getAcceptedMethods();
         this->redir = loc->getRedir();
         this->root = loc->getRoot();
+        this->cgi_info = loc->getCgi();
         // this->upload_path = loc->getUploadPath();
     }
     else
@@ -20,9 +21,13 @@ ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
         this->methods_accepted = srvr->getAcceptedMethods();
         this->redir = srvr->getRedir();
         this->root = srvr->getRoot();
+        this->cgi_info = srvr->getCgi();
         // this->upload_path = srvr->getUploadPath();
 
     }
+    this->ip = srvr->getIP();
+    this->port = srvr->getPort();
+    this->server_name = srvr->getServerName();
     this->error_pages = srvr->getErrorPages();
 }
 
@@ -54,4 +59,24 @@ std::vector<std::string>	ResolvedConfig::getAcceptedMethods( void )
 std::map<int, std::string>	ResolvedConfig::getRedir( void )
 {
   return redir;
+}
+
+std::pair<std::string, std::string>	ResolvedConfig::getCgi( void )
+{
+  return cgi_info;
+}
+
+std::string ResolvedConfig::getServerName( void )
+{
+  return server_name;
+}
+
+std::string ResolvedConfig::getIp( void )
+{
+  return ip;
+}
+
+int ResolvedConfig::getPort( void )
+{
+  return port;
 }

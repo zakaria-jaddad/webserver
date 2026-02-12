@@ -73,6 +73,7 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 			client.fd = clientSocket;
 			client.config = it->second;
 			client.request = obj;
+			client.response = NULL;
 			Clients.push_back(client);
 			break;
 		}
@@ -80,24 +81,42 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 	return (clientSocket);
 }
 
+void	Server::resetSocket(t_client *client) {
+	delete client->request;
+	delete client->response;
+	client->request = new HttpParser();
+	client->response = NULL;
+}
+
+void	Server::closeSocket(t_client *client) {
+	delete client->request;
+	delete client->response;
+	//delete client->config;
+	close(client->fd);
+	client->request = NULL;
+	client->response = NULL;
+	client->config = NULL;
+}
+
 int Server::checkForClientFd(epoll_event *events, int i) {
 	//This method is to look for the event fd in clientFds
 	//It then checks if the operation that is is ready for is 'read' or 'write'
 	// then reads or writes accordingly
 
-	const char* resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 7\r\n\r\nBruh hh";
 	int clientSocket = -1;
 	char req[1024] = {0}; 
 	int b;
+	int c = 0;
 
-	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++) {
+	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++, c++) {
 		if (events[i].data.fd == it->fd) {
 			clientSocket = it->fd;
 			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
 			if (events[i].events == EPOLLIN) { // we can read from socket
 				b = recv(clientSocket, req, sizeof(req) - 1, 0);
-				if (b == -1) {
-					std::cerr << "failed to read" << std::endl;
+				if (b == -1 || b == 0) {
+					closeSocket(&(*it));
+					Clients.erase(Clients.begin() + c);
 					break;
 				}
 				req[b] = 0;
@@ -109,16 +128,21 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 					switchEpollMode(clientSocket, EPOLLOUT);
 			}
 			else if (events[i].events == EPOLLOUT) { // we can write to socket
-				if (send(clientSocket, resp, strlen(resp), 0) == -1) {
-					std::cerr << "failed to send" << std::endl;
+				if (it->response == NULL)
+					it->response = new Response(&(*it));
+				it->response->checkMethod();
+				if (it->response->isError()) {
+					closeSocket(&(*it));
+					Clients.erase(Clients.begin() + c);
 					break;
-					//maybe close connection on error
 				}
-				//TODO: check if the response has ended
-				//assuming again that the resp has ended
+				if (it->response->isComplete()) {
+					resetSocket(&(*it));
+					switchEpollMode(clientSocket, EPOLLIN);
+					std::cout << "back to reading" << std::endl;
+				}
 				//check if connection close or keep alive to know
 				//whether to close or in case of keep alive clear data buff falgs etc..
-				switchEpollMode(clientSocket, EPOLLIN);
 			}
 			break;
 		}
@@ -146,7 +170,7 @@ int Server::startServer() {
 			std::cerr << "epoll_wait Failed!" << std::endl;
 			return (1);
 		}
-		std::cout << "event_count = " << event_count << std::endl;
+		// std::cout << "event_count = " << event_count << std::endl;
 		for (int i = 0; i < event_count; i++) {
 			clientSocket = checkForServerFd(events, i);
 			if (clientSocket != -1) //found fd in serverFds

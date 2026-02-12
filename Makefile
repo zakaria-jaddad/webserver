@@ -1,13 +1,14 @@
 NAME = ft_webserver
 TEST_NAME = ft_webserver_test
 
-CFLAGS = -Wall -Werror -Wextra -std=c++17
+CFLAGS = -Wall -Werror -Wextra -std=c++98 -g
 
 SRC_DIR		= src
 CONF_DIR	= config
 SRV_DIR		= server
 REQ_DIR		= request
 RSP_DIR		= response
+CGI_DIR		= cgi
 OBJ_DIR		= obj
 TEST_DIR	= test
 
@@ -16,12 +17,15 @@ MAIN_SRC	= ft_webserver.cpp
 CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
 SRV_SRC		= Server.cpp
 REQ_SRC		= request.cpp
-RSP_SRC		= ResolvedConfig.cpp Response.cpp
+RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp
+CGI_SRC		= CgiEnv.cpp Cgi.cpp envUtils.cpp
 
 ## project srcs : here you add the prefix and boom compiled ;p
 PROJECT_SRC	=	$(addprefix $(SRC_DIR)/$(SRV_DIR)/, $(SRV_SRC)) \
 				$(addprefix $(SRC_DIR)/$(CONF_DIR)/, $(CONF_SRC)) \
-				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC))
+				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC)) \
+				$(addprefix $(SRC_DIR)/$(CGI_DIR)/, $(CGI_SRC)) \
+				$(addprefix $(SRC_DIR)/$(RSP_DIR)/, $(RSP_SRC))
 
 SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)
 
@@ -29,8 +33,7 @@ OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 TEST_SRC	= $(TEST_DIR)/request_line_test.cpp \
-								$(TEST_DIR)/test.cpp \
-
+								$(TEST_DIR)/test.cpp
 
 TEST_OBJ      = $(TEST_SRC:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 

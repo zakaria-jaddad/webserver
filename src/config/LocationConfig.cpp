@@ -7,7 +7,8 @@
 #include <algorithm>
 
 LocationConfig::LocationConfig()
-: index(),
+: cgi_info(),
+  index(),
   methods_accepted(),
   redir(),
   root(""),
@@ -139,6 +140,41 @@ void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
 }
 
 
+//parsing cgi directive
+void LocationConfig::parseCgi( std::vector<std::string>& tokens, size_t& i)
+{
+  //skip the directive name token
+  i++;
+//cgi .php /usr/bin/php-cgi
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+  std::string extension = tokens[i];
+  i++;
+  
+  if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+    throw std::runtime_error("Found an unexpected : " + tokens[i]);
+  
+  std::string cgi_path = tokens[i];
+
+  //skipping path
+  i++;
+
+  if (tokens[i] != ";")
+    throw std::runtime_error("Found an unexpected : '" + tokens[i] + "' When expecting ';'");
+
+  i++;
+  
+  if (extension != ".php" && extension != ".py")
+    throw std::runtime_error("Invalid extension : " + extension);
+  
+  if (!isAbsolutePath(cgi_path))
+    throw std::runtime_error("Invalid path : " + cgi_path);
+
+  this->cgi_info = std::make_pair(extension, cgi_path);
+}
+
+
 //parsing allow directive
 void LocationConfig::parseMethods( std::vector<std::string>& tokens, size_t& i)
 {
@@ -260,4 +296,9 @@ bool  LocationConfig::getDirectoyListing( void )
 std::string LocationConfig::getLocationPath( void )
 {
   return location_path;
+}
+
+std::pair<std::string, std::string>	LocationConfig::getCgi( void )
+{
+  return cgi_info;
 }

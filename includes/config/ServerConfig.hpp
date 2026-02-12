@@ -6,14 +6,15 @@
 class ServerConfig{
   
   std::map<int, std::string>  error_pages;
-  std::vector<std::string>    index;
-	std::vector<std::string>	methods_accepted;
 	std::map<int, std::string>  redir; //don't forget to check if this is how it should be handled
-	bool                        directory_listing;//only a fallback when index is not specified
+	std::pair<std::string, std::string>  cgi_info; //don't forget to check if this is how it should be handled
+  std::vector<std::string>    index;
+	std::vector<std::string>		methods_accepted;
   std::string                 ip;
   std::string                 server_name;
   std::string                 root;
   std::size_t                 max_body;
+	bool                        directory_listing;//only a fallback when index is not specified
   int                         port;
   
   typedef void (ServerConfig::*Parser)(std::vector<std::string>&, size_t&);
@@ -47,6 +48,7 @@ public:
   void parseListing( std::vector<std::string>&, size_t& );
 	void parseRedir( std::vector<std::string>&, size_t& );
 	void parseMethods( std::vector<std::string>&, size_t& );
+	void parseCgi( std::vector<std::string>&, size_t& );
 
   //utility methods
 
@@ -64,6 +66,7 @@ public:
 	bool 						            getDirectoyListing( void );
   std::vector<std::string>    getAcceptedMethods( void );
 	std::map<int, std::string>	getRedir( void );
+	std::pair<std::string, std::string>	getCgi( void );
 
 };
 

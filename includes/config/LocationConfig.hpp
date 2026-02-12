@@ -8,6 +8,7 @@
 
 class LocationConfig{
 	
+	std::pair<std::string, std::string>  cgi_info; //don't forget to check if this is how it should be handled
 	std::vector<std::string>    index;
 	std::vector<std::string>	methods_accepted;
 	std::map<int, std::string>  redir; //don't forget to check if this is how it should be handled
@@ -32,6 +33,7 @@ public:
 	void parseListing( std::vector<std::string>&, size_t& );
 	void parseRedir( std::vector<std::string>&, size_t& );
 	void parseMethods( std::vector<std::string>&, size_t& );
+	void parseCgi( std::vector<std::string>&, size_t& );
 
 	std::vector<std::string>	getIndex( void );
 	std::vector<std::string>	getAcceptedMethods( void );
@@ -40,6 +42,7 @@ public:
 	std::string 				getUploadPath( void );
 	bool 						getDirectoyListing( void );
 	std::string					getLocationPath( void );
+	std::pair<std::string, std::string>		getCgi( void );
 
 };
 
