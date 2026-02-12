@@ -7,6 +7,7 @@
 #include "../cgi/Cgi.hpp"
 #include <stdio.h>
 
+class Cgi;
 struct t_client;
 
 class Response{
@@ -22,16 +23,18 @@ class Response{
 	ResolvedConfig	conf;
 	std::string			normalizedPath;
 	std::string			resp;
+	std::string			head_resp;
 	t_client				*client;
 	bool						wait;
 	Cgi							*cgi;
 	int							*cgi_in_pipe;
 	int							*cgi_out_pipe;
 	phase						_phase;
-	int				fileFD;
-	int				headerFlag;
-	bool				status;
-	bool				error;
+	int							fileFD;
+	size_t						chunk_size;
+	int							headerFlag;
+	bool						status;
+	bool						error;
 
 public:
 	Response( t_client* client );
@@ -49,6 +52,7 @@ public:
 	std::string craftHeaderStatus( std::string&  );
 	void	craftHeader( std::string& );
 	void 	craftBody( std::string& );
+
 
 };
 

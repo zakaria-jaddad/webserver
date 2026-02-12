@@ -33,12 +33,12 @@ std::vector<std::string> deriveScriptName( std::string& path )
 		path_info += *it;
 	}
 
-	elements.clear();
-	
-	elements[0] = script_name;
-	elements[1] = path_info;
+    std::vector<std::string> result;
+    result.push_back(script_name);
+    result.push_back(path_info);
 
-	return elements;
+
+	return result;
 }
 
 std::string methodToString( HttpParser::requestType method )
@@ -58,6 +58,8 @@ std::string methodToString( HttpParser::requestType method )
 std::string squashMapIntoString( std::map<std::string, std::string>& map)//tmp
 {
 	std::string	env_val = "";
+	if (map.empty())
+		return "";
 	
 	for (std::map<std::string, std::string>::iterator it; it != map.end(); it++)
 	{

@@ -1,17 +1,31 @@
 #include "../../includes/cgi/Cgi.hpp"
 
 //constructor/destructor
-Cgi::Cgi( int* in, int* out )
-: in_fds(in), out_fds(out)
+Cgi::Cgi( int* in, int* out, t_client* client )
+: in_fds(in), out_fds(out), request(client->request)
 {
+	std::cout << "--------------start of cgi constructor----------------" << std::endl;
+
+	
 	uriPath = request->getRequestURIPath();
+	std::cout << "uri : " << uriPath << std::endl;
+	
+	conf = new ResolvedConfig(uriPath, client->config);
+
 	scriptPath = conf->getRoot() + deriveScriptName(uriPath)[0];
+	std::cout << "script path : " << scriptPath << std::endl;
+
 	cgiPath = conf->getCgi().second;
+	
+	
 	this->envBuilder();
+
+	std::cout << "--------------end of cgi constructor----------------" << std::endl;
 }
 
 Cgi::~Cgi()
 {
+	delete conf;
 	delete [] env;//to check
 }
 
@@ -19,6 +33,18 @@ Cgi::~Cgi()
 void Cgi::executor( void )
 {
 	const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
+	// std::cout << "cgi path : " << std::endl;
+	// std::cout << cgiPath << std::endl;
+	// std::cout << "script path : " << std::endl;
+	// std::cout << scriptPath << std::endl;
+	// int in_fds[2];
+	// int out_fds[2];
+
+	if (pipe(in_fds) == -1)
+		return;
+	if (pipe(out_fds) == -1)
+		return;
+
   pid_t child = fork();
 
 	if (child == 0)
@@ -54,6 +80,7 @@ void Cgi::executor( void )
     }
 
 	  waitpid(child, &status, 0);
+		std::cout << "finished executing" << std::endl;
 	}
 
 }

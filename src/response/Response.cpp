@@ -18,19 +18,40 @@ HttpParser::httpResult Response::checkMethod( void )
 
 	if (client->request->getRequestURIPath().find(".php") != std::string::npos && !conf.getCgi().first.empty() && !conf.getCgi().second.empty())
 	{
-		std::cout << "cgi" << std::endl;
-		if (pipe(cgi_in_pipe) == -1)
+		// std::cout << sizeof(cgi_in_pipe) << std::endl;   // should be 8 (or 8 bytes on 64-bit)
+		// std::cout << cgi_in_pipe << std::endl;
+		int in_pipe[2];
+		int out_pipe[2];
+		
+		if (pipe(in_pipe) == -1)
+		{
+			std::cerr << "pipe(inpipe) : " << strerror(errno) << std::endl;
+			error = true;
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		if (pipe(cgi_out_pipe) == -1)
+		}
+		if (pipe(out_pipe) == -1)
+		{
+			error = true;
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-
-		Cgi cgi(cgi_in_pipe, cgi_out_pipe);
+		}
+		cgi_in_pipe = in_pipe;
+		cgi_out_pipe = out_pipe;
+		
+		Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
+		
+			
+		// Cgi cgi(client);
 		cgi.executor();
-
+		
 		craftResponse();
-
+		
 		sendResponse(resp.c_str());
+		sendResponse(CRLF);
+		sendResponse("0\r\n\r\n");
+		
+		std::cout << "Done sending the response" << std::endl;
 		resp.clear();
+		this->status = 1;
 	}
 	else
 	{
@@ -47,7 +68,7 @@ HttpParser::httpResult Response::checkMethod( void )
 				sendResponse("HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n405");
 		}
 	}
-
+	
 	return (HttpParser::HTTP_RES_OK);
 }
 

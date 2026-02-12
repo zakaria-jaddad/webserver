@@ -88,6 +88,7 @@ std::map<std::string, std::string> Cgi::mapEnvBuilder(	std::map<std::string, std
 	env["SCRIPT_FILENAME"] = conf->getRoot() + script_name;
 	env["DOCUMENT_ROOT"]   = conf->getRoot();
 
+	std::cout << "here" << std::endl;
 	//header env variables
 	// std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
 	// headerEnvBuilder(env, dummy_header);
@@ -117,7 +118,7 @@ void Cgi::envBuilder()
 	std::map<std::string, std::vector<std::string> > header = request->getHeaders();
     std::map<std::string, std::string>	query = request->getRequestURIParams();
 	std::vector<std::string> script_name = deriveScriptName(uriPath);
-
+	
     std::map<std::string, std::string> mapEnv = mapEnvBuilder(  header,
                                                                 script_name[0],
                                                                 script_name[1],

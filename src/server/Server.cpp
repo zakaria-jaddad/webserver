@@ -137,9 +137,9 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 					break;
 				}
 				if (it->response->isComplete()) {
-					std::cout << "back to reading" << std::endl;
 					resetSocket(&(*it));
 					switchEpollMode(clientSocket, EPOLLIN);
+					std::cout << "back to reading" << std::endl;
 				}
 				//check if connection close or keep alive to know
 				//whether to close or in case of keep alive clear data buff falgs etc..

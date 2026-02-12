@@ -6,7 +6,10 @@
 
 #include "../request/request.hpp"
 #include "../response/ResolvedConfig.hpp"
+#include "../server/Server.hpp"
 #include "envUtils.hpp"
+
+struct t_client;
 
 class Cgi{
 
@@ -28,7 +31,7 @@ class Cgi{
 		// phase				_phase;
 
 	public:
-		Cgi( int *, int * );
+		Cgi( int *, int * , t_client* );
 		~Cgi( void );
 
 		//env creation
