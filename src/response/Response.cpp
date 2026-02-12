@@ -14,12 +14,8 @@ Response::Response( t_client* dep )
 
 HttpParser::httpResult Response::checkMethod( void )
 {
-  // std::string methods[] = {"GET", "POST", "DELETE", "HEAD", "PUT", "OPTIONS" ,"TRACE", "CONNECT"};
-
 	if (client->request->getRequestURIPath().find(".php") != std::string::npos && !conf.getCgi().first.empty() && !conf.getCgi().second.empty())
 	{
-		// std::cout << sizeof(cgi_in_pipe) << std::endl;   // should be 8 (or 8 bytes on 64-bit)
-		// std::cout << cgi_in_pipe << std::endl;
 		int in_pipe[2];
 		int out_pipe[2];
 		
