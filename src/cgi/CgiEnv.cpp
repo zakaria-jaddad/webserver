@@ -1,9 +1,9 @@
 #include "../../includes/cgi/Cgi.hpp"
 
-//env building
-// std::map<std::string, std::vector<std::string>> createDummyHeader()
-// {
-// 	std::map<std::string, std::vector<std::string>> header;
+// env building
+//  std::map<std::string, std::vector<std::string>> createDummyHeader()
+//  {
+//  	std::map<std::string, std::vector<std::string>> header;
 
 // 	// Single-value header
 // 	header["Host"].push_back("example.com");
@@ -29,12 +29,12 @@
 // std::map<std::string, std::string> createDummyMapEnv()
 // {
 // 	std::map<std::string, std::string> 							env;
-	
+
 // 	env["SCRIPT_NAME"]		= "/test.php";
 // 	env["PATH_INFO"]			= "";
 // 	env["REQUEST_METHOD"]	= "GET";
 // 	env["QUERY_STRING"]		= "";
-	
+
 // 	//some cgi needed? bs
 // 	env["GATEWAY_INTERFACE"]	= "CGI/1.1";
 // 	env["SERVER_NAME"]				= "localhost";
@@ -45,7 +45,7 @@
 
 // 	//bs needed to run on terminal
 // 	env["REDIRECT_STATUS"] = "200";
-  
+
 //   //post stuff
 //   env["CONTENT_LENGTH"] = "29";
 //   env["CONTENT_TYPE"] = "application/x-www-form-urlencoded";
@@ -61,71 +61,68 @@
 // 	return env;
 // }
 
-std::map<std::string, std::string> Cgi::mapEnvBuilder(	std::map<std::string, std::vector<std::string> >& header,
-                                                    		std::string script_name,
-                                                        std::string path_info,
-                                                        std::map<std::string, std::string>& query)
+std::map<std::string, std::string>
+Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
+                   std::string script_name, std::string path_info,
+                   std::map<std::string, std::string> &query)
 {
-	//to do:
-	//add a content type env var
-	//check if some needed env vars are needed
+    // to do:
+    // add a content type env var
+    // check if some needed env vars are needed
 
-	std::map<std::string, std::string> 							env;
-	
-	env["SCRIPT_NAME"]		= script_name;
-	env["PATH_INFO"]			= path_info;
-	env["REQUEST_METHOD"]	= methodToString(request->getRequestType());
-	env["QUERY_STRING"]		= squashMapIntoString(query);
-	
-	//some cgi needed? bs
-	env["GATEWAY_INTERFACE"]	= "CGI/1.1";
-	env["SERVER_NAME"]				= conf->getServerName();
-	env["SERVER_PORT"]				=	conf->getPort();
-	env["SERVER_PROTOCOL"]		= "HTTP/1.1";
-	env["SERVER_SOFTWARE"]		= "myserver/1.0";
-	env["REMOTE_ADDR"]				= "127.0.0.1";//get from anas
+    std::map<std::string, std::string> env;
 
-	//bs needed to run on terminal
-	env["REDIRECT_STATUS"] = "200";
+    env["SCRIPT_NAME"] = script_name;
+    env["PATH_INFO"] = path_info;
+    env["REQUEST_METHOD"] = methodToString(request->getRequestType());
+    env["QUERY_STRING"] = squashMapIntoString(query);
 
-	//php specific variables
-	env["SCRIPT_FILENAME"] = conf->getRoot() + script_name;
-	env["DOCUMENT_ROOT"]   = conf->getRoot();
+    // some cgi needed? bs
+    env["GATEWAY_INTERFACE"] = "CGI/1.1";
+    env["SERVER_NAME"] = conf->getServerName();
+    env["SERVER_PORT"] = conf->getPort();
+    env["SERVER_PROTOCOL"] = "HTTP/1.1";
+    env["SERVER_SOFTWARE"] = "myserver/1.0";
+    env["REMOTE_ADDR"] = "127.0.0.1"; // get from anas
 
-	//header env variables
-	// std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
-	// headerEnvBuilder(env, dummy_header);
-	headerEnvBuilder(env, header);
+    // bs needed to run on terminal
+    env["REDIRECT_STATUS"] = "200";
 
-	return env;
+    // php specific variables
+    env["SCRIPT_FILENAME"] = conf->getRoot() + script_name;
+    env["DOCUMENT_ROOT"] = conf->getRoot();
+
+    // header env variables
+    //  std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
+    //  headerEnvBuilder(env, dummy_header);
+    headerEnvBuilder(env, header);
+
+    return env;
 }
 
-char** Cgi::charEnvBuilder(std::map<std::string, std::string> env)
+char **Cgi::charEnvBuilder(std::map<std::string, std::string> env)
 {
-	char **envp = new char *[env.size() + 1];
+    char **envp = new char *[env.size() + 1];
 
-	std::map<std::string, std::string>::iterator it = env.begin();
-	int i = 0;
-	for (; it != env.end(); it++)
-	{
-		std::string kv = it->first + "=" + it->second;
-		envp[i] = strdup(kv.c_str());
-		i++;
-	}
+    std::map<std::string, std::string>::iterator it = env.begin();
+    int i = 0;
+    for (; it != env.end(); it++) {
+        std::string kv = it->first + "=" + it->second;
+        envp[i] = strdup(kv.c_str());
+        i++;
+    }
 
-	return envp;
+    return envp;
 }
 
 void Cgi::envBuilder()
 {
-	std::map<std::string, std::vector<std::string> > header = request->getHeaders();
-    std::map<std::string, std::string>	query = request->getRequestURIParams();
-	std::vector<std::string> script_name = deriveScriptName(uriPath);
-	
-    std::map<std::string, std::string> mapEnv = mapEnvBuilder(  header,
-                                                                script_name[0],
-                                                                script_name[1],
-                                                                query);
+    std::map<std::string, std::vector<std::string> > header = request->getHeaders();
+    std::map<std::string, std::string> query = request->getRequestUriParams();
+    std::vector<std::string> script_name = deriveScriptName(uriPath);
 
-	this->env = charEnvBuilder(mapEnv);
+    std::map<std::string, std::string> mapEnv =
+        mapEnvBuilder(header, script_name[0], script_name[1], query);
+
+    this->env = charEnvBuilder(mapEnv);
 }

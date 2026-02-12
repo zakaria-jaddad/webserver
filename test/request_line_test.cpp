@@ -153,7 +153,7 @@ TEST(RequestLine, ValidHTTP1_1RequestLine)
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
     ASSERT_EQ(par.getRequestType(), HttpParser::GET);
-    ASSERT_EQ(par.getRequestURIPath(), "/foo.html");
+    ASSERT_EQ(par.getRequestUriPath(), "/foo.html");
 
     const int *requestVersiong = par.getRequestVersion();
     ASSERT_EQ(requestVersiong[0], 1);
@@ -167,7 +167,7 @@ TEST(RequestLine, ValidHTTP2RequestLine)
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
     ASSERT_EQ(par.getRequestType(), HttpParser::POST);
-    ASSERT_EQ(par.getRequestURIPath(), "/foo.html");
+    ASSERT_EQ(par.getRequestUriPath(), "/foo.html");
 
     const int *requestVersiong = par.getRequestVersion();
     ASSERT_EQ(requestVersiong[0], 2);
