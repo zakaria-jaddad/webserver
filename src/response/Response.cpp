@@ -15,40 +15,7 @@ Response::Response( t_client* dep )
 HttpParser::httpResult Response::checkMethod( void )
 {
 	if (client->request->getRequestURIPath().find(".php") != std::string::npos && !conf.getCgi().first.empty() && !conf.getCgi().second.empty())
-	{
-		int in_pipe[2];
-		int out_pipe[2];
-		
-		if (pipe(in_pipe) == -1)
-		{
-			std::cerr << "pipe(inpipe) : " << strerror(errno) << std::endl;
-			error = true;
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		if (pipe(out_pipe) == -1)
-		{
-			error = true;
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		cgi_in_pipe = in_pipe;
-		cgi_out_pipe = out_pipe;
-		
-		Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
-		
-			
-		// Cgi cgi(client);
-		cgi.executor();
-		
-		craftResponse();
-		
-		sendResponse(resp.c_str());
-		sendResponse(CRLF);
-		sendResponse("0\r\n\r\n");
-		
-		std::cout << "Done sending the response" << std::endl;
-		resp.clear();
-		this->status = 1;
-	}
+		cgiExecution();
 	else
 	{
 		HttpParser::requestType req_method = client->request->getRequestType();

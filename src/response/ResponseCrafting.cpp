@@ -13,7 +13,6 @@ std::string Response::craftHeaderStatus( std::string& header )
 		size_t line_end = header.find("\r\n", status_pos);
 		std::string status = header.substr(status_pos + 7, line_end - (status_pos + 7));
 		line.append(status);
-		// line.append("\r\n");
 		header.erase(status_pos, line.size());
 	}
 	
@@ -29,26 +28,34 @@ void Response::craftHeader( std::string& buff )
 	{
     	headers = buff.substr(0, clrf_pos);
     	buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
-		this->_phase = BODY;
+		
+		head_resp.append(headers);
+		head_resp.append(CRLF);
+		
 		chunk_size = buff.length();
-		std::cout << "crafted header" << std::endl;
+		
+		this->_phase = BODY;
+	}
+	else
+	{
+		head_resp.append(headers);
+		buff.erase();
 	}
 	
-	std::string line = craftHeaderStatus(headers);
-	head_resp.append(line);
-	head_resp.append("Transfer-Encoding: chunked\r\n");
-	head_resp.append(headers);
-	head_resp.append(DOUBLE_CRLF);
-
-	std::cout << "headers : " << std::endl;
-	std::cout << head_resp << std::endl;
+	if (this->_phase == BODY)
+	{
+		std::string line = craftHeaderStatus(headers);
+		head_resp.insert(0, line);
+		head_resp.append("Transfer-Encoding: chunked\r\n");
+		head_resp.append(DOUBLE_CRLF);
+	}
+	
+	// std::cout << "crafted header" << std::endl;
 }
 
 void Response::craftBody( std::string& buff )
 {
 	resp.append(buff);
-	std::cout << "body : " << std::endl;
-	std::cout << resp << std::endl;
 	
 	buff.erase();
     this->_phase = COMPLETE;
@@ -72,26 +79,14 @@ void Response::craftResponse( void )
     std::string val = buff;
     while (val.empty() == false && this->_phase != ERROR)
     {	
-		// std::cout << "responding ..." << std::endl;
         if (this->_phase == HEADERS)
 			craftHeader(val);
         else if (this->_phase == BODY)
 			craftBody(val);
 	}
-
-	if (!this->headerFlag && this->_phase != HEADERS)
-	{
-		sendResponse(head_resp.c_str());
-		this->headerFlag = 1;
-	}
-
-	std::stringstream ss ;
-	ss << std::hex << chunk_size;
-	std::string hexStr = ss.str();
-	hexStr += "\r\n";
-	sendResponse(hexStr.c_str());
-	std::cout << "read : " << std::endl;
-	std::cout << buff << std::endl;
+	
+	// std::cout << "read : " << std::endl;
+	// std::cout << buff << std::endl;
 	
 	std::cout << "--------------end of crafting response----------------" << std::endl;
 }

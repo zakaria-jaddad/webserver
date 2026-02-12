@@ -20,14 +20,14 @@ class Cgi{
 		// 	ERROR,
 		// } phase;
 		
-		int *in_fds;
-    	int *out_fds;
 		ResolvedConfig*	conf;
 		HttpParser*			request;
-		char**			env;
-		std::string uriPath;
-		std::string cgiPath;
-		std::string scriptPath;
+		std::string 		uriPath;
+		std::string 		cgiPath;
+		std::string 		scriptPath;
+		int 						*in_fds;
+		int 						*out_fds;
+		char**					env;
 		// phase				_phase;
 
 	public:

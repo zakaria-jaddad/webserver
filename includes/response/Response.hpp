@@ -53,6 +53,8 @@ public:
 	void	craftHeader( std::string& );
 	void 	craftBody( std::string& );
 
+	HttpParser::httpResult	cgiExecution();
+	void		sendingCgiResponse();
 
 };
 

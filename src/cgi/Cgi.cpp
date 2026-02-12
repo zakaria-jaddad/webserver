@@ -2,10 +2,9 @@
 
 //constructor/destructor
 Cgi::Cgi( int* in, int* out, t_client* client )
-: in_fds(in), out_fds(out), request(client->request)
+:  request(client->request), in_fds(in), out_fds(out)
 {
 	std::cout << "--------------start of cgi constructor----------------" << std::endl;
-
 	
 	uriPath = request->getRequestURIPath();
 	std::cout << "uri : " << uriPath << std::endl;
@@ -33,17 +32,6 @@ Cgi::~Cgi()
 void Cgi::executor( void )
 {
 	const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
-	// std::cout << "cgi path : " << std::endl;
-	// std::cout << cgiPath << std::endl;
-	// std::cout << "script path : " << std::endl;
-	// std::cout << scriptPath << std::endl;
-	// int in_fds[2];
-	// int out_fds[2];
-
-	if (pipe(in_fds) == -1)
-		return;
-	if (pipe(out_fds) == -1)
-		return;
 
   pid_t child = fork();
 
