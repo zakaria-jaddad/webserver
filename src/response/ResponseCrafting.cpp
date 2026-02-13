@@ -30,15 +30,20 @@ void Response::craftHeader( std::string& buff )
     	buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
 		
 		head_resp.append(headers);
-		head_resp.append(CRLF);
-		
-		chunk_size = buff.length();
-		
+
+		std::cout << "+++++++ header to send next ++++++++" << std::endl;
+		std::cout << head_resp << std::endl;
+
+		head_resp.append(CRLF);		
 		this->_phase = BODY;
 	}
 	else
 	{
 		head_resp.append(headers);
+		
+		std::cout << "+++++++ header to send next ++++++++" << std::endl;
+		std::cout << head_resp << std::endl;
+		
 		buff.erase();
 	}
 	
@@ -48,6 +53,9 @@ void Response::craftHeader( std::string& buff )
 		head_resp.insert(0, line);
 		head_resp.append("Transfer-Encoding: chunked\r\n");
 		head_resp.append(DOUBLE_CRLF);
+
+		std::cout << "+++++++ header to send next ++++++++" << std::endl;
+		std::cout << head_resp << std::endl;
 	}
 	
 	// std::cout << "crafted header" << std::endl;
@@ -58,35 +66,61 @@ void Response::craftBody( std::string& buff )
 	resp.append(buff);
 	
 	buff.erase();
-    this->_phase = COMPLETE;
-	std::cout << "crafted body" << std::endl;
+	// std::cout << "crafted body : " << std::endl;
+	// std::cout << resp << std::endl;
 }
 
 void Response::craftResponse( void )
 {
 	std::cout << "--------------start of crafting response----------------" << std::endl;
 
-	char buff[1024];
+	char buff[10];
+	std::string val;
 
-    int bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
-	if (bytes == -1)
+	while (this->_phase == HEADERS && !this->error)
 	{
-		error = true;
-		return;
-	}
-    buff[bytes] = 0;
+		int bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
+		
+		if (bytes == 0)
+			this->_phase = COMPLETE;
+		
+		if (bytes == -1)
+		{
+			error = true;
+			return;
+		}
+		buff[bytes] = 0;
+		
+		val = buff;
 	
-    std::string val = buff;
-    while (val.empty() == false && this->_phase != ERROR)
-    {	
-        if (this->_phase == HEADERS)
-			craftHeader(val);
-        else if (this->_phase == BODY)
-			craftBody(val);
+		craftHeader(val);
+	}
+
+	if (this->_phase == BODY)
+	{
+		if (val.empty())
+		{
+			int bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
+			
+			if (bytes == 0)
+				this->_phase = COMPLETE;
+			
+			if (bytes == -1)
+			{
+				perror("read failed");
+				error = true;
+				return;
+			}
+			buff[bytes] = 0;
+
+			val = buff;
+		}
+
+		chunk_size = val.length();
+
+		craftBody(val);
 	}
 	
-	// std::cout << "read : " << std::endl;
-	// std::cout << buff << std::endl;
 	
 	std::cout << "--------------end of crafting response----------------" << std::endl;
 }

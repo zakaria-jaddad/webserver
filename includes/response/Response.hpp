@@ -27,13 +27,14 @@ class Response{
 	t_client				*client;
 	bool						wait;
 	Cgi							*cgi;
-	int							*cgi_in_pipe;
-	int							*cgi_out_pipe;
+	int							cgi_in_pipe[2];
+	int							cgi_out_pipe[2];
 	phase						_phase;
 	int							fileFD;
 	size_t						chunk_size;
 	int							headerFlag;
 	bool						status;
+	bool						exec_status;
 	bool						error;
 
 public:
