@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
 	std::string file;
 	if (argc == 1)
-		file = "src/config/configExample.conf";
+		file = "conf/configExample.conf";
 	else
 		file = argv[1];
 
