@@ -42,10 +42,16 @@ public:
 
 	HttpParser::httpResult	checkMethod( void );
 	void normalizePath( void );
+  std::string resolveFilePath( std::string& );
+  int   createUploadFolder( std::string&, std::string& );
 	int	sendResponse(const char *resp);
+
+  //static methods
 	int	httpDelete( void );
 	int	httpGet( void );
-	void	sendHeader( int );
+	int httpPost( void );
+
+  void	sendHeader( int );
 	bool	isComplete( void );
 	bool	isError( void );
 

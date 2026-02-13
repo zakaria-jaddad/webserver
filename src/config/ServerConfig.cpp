@@ -1,5 +1,6 @@
 #include "../../includes/config/ServerConfig.hpp"
 #include "../../includes/config/parseHelpers.hpp"
+#include <iostream>
 
 // #include <cctype>
 // #include <cstddef>
@@ -486,7 +487,7 @@ LocationConfig* ServerConfig::matchLocation( const std::string& uri )
     
     if (uri.compare(0, loc.size(), loc) == 0)
     {
-      if (loc.size() == uri.size() || uri[loc.size()] == '/')
+      if (loc == "/" || loc.size() == uri.size() || uri[loc.size()] == '/')
       {
         if (loc.size() > bestlen)
         {
@@ -496,7 +497,7 @@ LocationConfig* ServerConfig::matchLocation( const std::string& uri )
       }
     }
   }
-
+  
   return best;
 }
 

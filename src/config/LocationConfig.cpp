@@ -23,7 +23,7 @@ void LocationConfig::buildLocationParsers()
 {
   locationParsers["root"] = &LocationConfig::parseRoot;
   locationParsers["index"] = &LocationConfig::parseIndex;
-  locationParsers["client_body_temp_path"] = &LocationConfig::parsePath;
+  locationParsers["upload_store"] = &LocationConfig::parsePath;
 	locationParsers["autoindex"] = &LocationConfig::parseListing;
 	locationParsers["return"] = &LocationConfig::parseRedir;
 	locationParsers["allow"] = &LocationConfig::parseMethods;
@@ -215,7 +215,7 @@ void LocationConfig::parsePath( std::vector<std::string>& tokens, size_t& i)
   i++;
   
   if (tokens[i] != ";")
-    throw std::runtime_error("Invalid number of arguments in \"client_body_temp_path\" directive");
+    throw std::runtime_error("Invalid number of arguments in \"upload_store\" directive");
 
   //skips closing ;
   i++;

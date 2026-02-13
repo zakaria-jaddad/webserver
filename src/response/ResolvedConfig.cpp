@@ -1,4 +1,5 @@
 #include "../../includes/response/ResolvedConfig.hpp"
+#include <iostream>
 
 ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
 {
@@ -12,7 +13,8 @@ ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
         this->redir = loc->getRedir();
         this->root = loc->getRoot();
         this->cgi_info = loc->getCgi();
-        // this->upload_path = loc->getUploadPath();
+        this->upload_path = loc->getUploadPath();
+        this->location_path = loc->getLocationPath();
     }
     else
     {
@@ -22,9 +24,10 @@ ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
         this->redir = srvr->getRedir();
         this->root = srvr->getRoot();
         this->cgi_info = srvr->getCgi();
-        // this->upload_path = srvr->getUploadPath();
-
+        this->upload_path = "";
+        this->location_path = "";
     }
+
     this->ip = srvr->getIP();
     this->port = srvr->getPort();
     this->server_name = srvr->getServerName();
@@ -79,4 +82,14 @@ std::string ResolvedConfig::getIp( void )
 int ResolvedConfig::getPort( void )
 {
   return port;
+}
+
+std::string ResolvedConfig::getUploadPath()
+{
+  return upload_path;
+}
+
+std::string ResolvedConfig::getLocPath()
+{
+  return location_path;
 }

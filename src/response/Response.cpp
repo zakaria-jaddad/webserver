@@ -1,4 +1,4 @@
-#include "includes/response/Response.hpp"
+#include "../../includes/response/Response.hpp"
 
 Response::Response(t_client *dep)
     : conf(dep->request->getRequestUriPath(), dep->config), _phase(HEADERS)
@@ -20,6 +20,9 @@ Response::Response(t_client *dep)
 
 HttpParser::httpResult Response::checkMethod(void)
 {
+  //todo:
+  //check if the method called is allowed or Not
+
 	if (client->request->getRequestUriPath().find(".php") != std::string::npos && !conf.getCgi().first.empty() && !conf.getCgi().second.empty())
     {
         if (!this->exec_status)
@@ -52,6 +55,9 @@ HttpParser::httpResult Response::checkMethod(void)
 			case HttpParser::GET:
 				httpGet();
 				break;
+      case HttpParser::POST:
+        httpPost();
+        break;
 			default:
 				std::cout << "error" << std::endl;
 				sendResponse("HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n405");

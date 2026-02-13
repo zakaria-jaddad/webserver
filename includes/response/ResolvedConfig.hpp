@@ -17,7 +17,8 @@ class ResolvedConfig{
 	std::string									ip;
 	int													port;
 	bool												directory_listing;
-	// std::string									upload_path;
+	std::string									upload_path;
+  std::string                 location_path;
 
 public:
 	ResolvedConfig( const std::string&, ServerConfig* ); //passes the uri as a param using the getUriPath
@@ -31,6 +32,8 @@ public:
 	bool 						            getDirectoyListing( void );
 	int 						            getPort( void );
 	std::string			            getIp( void );
+	std::string			            getUploadPath( void );
+	std::string			            getLocPath( void );
 	std::pair<std::string, std::string>           getCgi( void );
 };
 
