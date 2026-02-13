@@ -3,35 +3,41 @@
 
 ResolvedConfig::ResolvedConfig( const std::string& uri , ServerConfig* srvr )
 {
-    LocationConfig* loc = srvr->matchLocation(uri);
+  LocationConfig* loc = srvr->matchLocation(uri);
 
-    if (loc)
-    {
-        this->directory_listing = loc->getDirectoyListing();
-        this->index = loc->getIndex();
-        this->methods_accepted = loc->getAcceptedMethods();
-        this->redir = loc->getRedir();
-        this->root = loc->getRoot();
-        this->cgi_info = loc->getCgi();
-        this->upload_path = loc->getUploadPath();
-        this->location_path = loc->getLocationPath();
-    }
-    else
-    {
-        this->directory_listing = srvr->getDirectoyListing();
-        this->index = srvr->getIndex();
-        this->methods_accepted = srvr->getAcceptedMethods();
-        this->redir = srvr->getRedir();
-        this->root = srvr->getRoot();
-        this->cgi_info = srvr->getCgi();
-        this->upload_path = "";
-        this->location_path = "";
-    }
+  this->directory_listing = srvr->getDirectoyListing();
+  this->index = srvr->getIndex();
+  this->methods_accepted = srvr->getAcceptedMethods();
+  this->redir = srvr->getRedir();
+  this->root = srvr->getRoot();
+  this->cgi_info = srvr->getCgi();
+  this->upload_path = "";
+  this->location_path = "";
+  this->ip = srvr->getIP();
+  this->port = srvr->getPort();
+  this->server_name = srvr->getServerName();
+  this->error_pages = srvr->getErrorPages();
 
-    this->ip = srvr->getIP();
-    this->port = srvr->getPort();
-    this->server_name = srvr->getServerName();
-    this->error_pages = srvr->getErrorPages();
+  if (loc)
+  {
+		if (loc->is_set_directory_listing)
+    	this->directory_listing = loc->getDirectoyListing();
+    if (loc->is_set_index)
+			this->index = loc->getIndex();
+    if(loc->is_set_methods_accepted)
+			this->methods_accepted = loc->getAcceptedMethods();
+    if (loc->is_set_redir)
+			this->redir = loc->getRedir();
+    if (loc->is_set_root)
+			this->root = loc->getRoot();
+    if (loc->is_set_cgi_info)
+			this->cgi_info = loc->getCgi();
+    if (loc->is_set_upload_path)
+			this->upload_path = loc->getUploadPath();
+    if (loc->is_set_location_path)
+			this->location_path = loc->getLocationPath();
+  }
+
 }
 
 std::string ResolvedConfig::getRoot( void )

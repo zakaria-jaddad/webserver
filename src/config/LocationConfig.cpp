@@ -16,6 +16,14 @@ LocationConfig::LocationConfig()
   location_path(""),
   directory_listing(false)
 {
+  is_set_cgi_info = false;
+	is_set_index = false;
+	is_set_methods_accepted = false;
+	is_set_redir = false;
+	is_set_root = false;
+	is_set_upload_path = false;
+	is_set_location_path = false;
+	is_set_directory_listing = false;
     buildLocationParsers();
 }
 
@@ -81,6 +89,7 @@ void LocationConfig::parseRoot( std::vector<std::string>& tokens, size_t& i)
       throw std::runtime_error("Invalid root directory : " + value);
   }
   this->root = value;
+  this->is_set_root = true;
 }
 
 
@@ -104,6 +113,7 @@ void LocationConfig::parseIndex( std::vector<std::string>& tokens, size_t& i)
     this->index.push_back(value); 
     i++;
   }
+  this->is_set_index = true;
 
   //skip closing ;
   i++;
@@ -136,6 +146,8 @@ void LocationConfig::parseListing( std::vector<std::string>& tokens, size_t& i)
     this->directory_listing = false;
   else
     throw std::runtime_error("Invalid value for : \"autoindex\" directive : " + value);
+  
+  this->is_set_directory_listing = true;
 
 }
 
@@ -172,6 +184,8 @@ void LocationConfig::parseCgi( std::vector<std::string>& tokens, size_t& i)
     throw std::runtime_error("Invalid path : " + cgi_path);
 
   this->cgi_info = std::make_pair(extension, cgi_path);
+
+  this->is_set_cgi_info = true;
 }
 
 
@@ -195,6 +209,7 @@ void LocationConfig::parseMethods( std::vector<std::string>& tokens, size_t& i)
     i++;
   }
 
+  this->is_set_methods_accepted = true;
   //skip closing ;
   i++;
 }
@@ -224,6 +239,8 @@ void LocationConfig::parsePath( std::vector<std::string>& tokens, size_t& i)
     throw std::runtime_error("Invalid upload path : " + value);
 
   this->upload_path = value;
+
+  this->is_set_upload_path = true;
 }
 
 
@@ -256,6 +273,7 @@ void LocationConfig::parseRedir( std::vector<std::string>& tokens, size_t& i)
   int number = std::atoi(value.c_str());
   
   this->redir[number] = path;
+  this->is_set_redir = true;
 
   //skip closing ;
   i++;

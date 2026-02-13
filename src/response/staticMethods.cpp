@@ -10,6 +10,7 @@ std::string Response::resolveFilePath( std::string& upload_store )
   std::string relative_path = uri;
   std::string location_prefix = conf.getLocPath();
 
+
   if (uri.find(location_prefix) == 0) 
     relative_path = uri.substr(location_prefix.size());
 
@@ -53,7 +54,6 @@ int Response::createUploadFolder( std::string& upload_path, std::string& file_pa
 }
 
 
-
 int Response::httpPost()
 {
   normalizePath();
@@ -72,20 +72,25 @@ int Response::httpPost()
   }
 
   std::string file_path = resolveFilePath(upload_path);
+	std::cout << "file path : " << file_path << std::endl;
+	std::cout << "upload path : " << upload_path << std::endl;
 
   if (createUploadFolder(upload_path, file_path))
     return 1;
 
-  int fd = open(file_path.c_str(), O_WRONLY);
+  int fd = open(file_path.c_str(), O_WRONLY | O_CREAT);
   if (fd == -1)
   {
+		perror("open failed");
     serveError(500);
     return 1;
   }
 
   std::string fake_body = "file_content=Hello+world+this+is+a+test+file";
 
+
   write(fd, fake_body.c_str(), fake_body.length());
+  std::cout << "created!!" << std::endl;
 
   serveError(200);
 

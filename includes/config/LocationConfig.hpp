@@ -8,23 +8,33 @@
 
 class LocationConfig{
 	
-	std::pair<std::string, std::string>  cgi_info; //don't forget to check if this is how it should be handled
+	std::pair<std::string, std::string>  cgi_info;
 	std::vector<std::string>    index;
 	std::vector<std::string>	methods_accepted;
-	std::map<int, std::string>  redir; //don't forget to check if this is how it should be handled
+	std::map<int, std::string>  redir;
 	std::string                 root;
 	std::string                 upload_path;
 	std::string                 location_path;
-	bool                        directory_listing;//only a fallback when index is not specified
+	bool                        directory_listing;
 
+	
 	typedef void (LocationConfig::*Parser)(std::vector<std::string>&, size_t&);
 	std::map<std::string, Parser> locationParsers;
-
+	
 	void buildLocationParsers( void );
-
+	
 public:
-	LocationConfig( void );
 
+	bool	is_set_cgi_info;
+	bool	is_set_index;
+	bool	is_set_methods_accepted;
+	bool	is_set_redir;
+	bool	is_set_root;
+	bool	is_set_upload_path;
+	bool	is_set_location_path;
+	bool	is_set_directory_listing;
+	LocationConfig( void );
+	
 	void parseBlock( std::vector<std::string>&, size_t& );
 
 	void init_error_pages();

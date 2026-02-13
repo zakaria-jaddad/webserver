@@ -51,8 +51,8 @@ void Response::craftErrorResponse(int code, int fd)
     hexStr += "\r\n";
     sendResponse(hexStr.c_str());
     
-    std::cout << "++++++++sending body++++++++" << std::endl;
-    std::cout << buff << std::endl;
+    // std::cout << "++++++++sending body++++++++" << std::endl;
+    // std::cout << buff << std::endl;
     
     sendResponse(buff);
 }
@@ -62,10 +62,11 @@ int Response::serveError(int code)
     static int fd = -1;
     std::string errorPath = this->conf.getErrorPages(code);
 
-    std::cout << "error to serve : " << errorPath << std::endl;
+    // std::cout << "error to serve : " << errorPath << std::endl;
 
     if (errorPath.empty())
     {
+        this->error = 1;
         // fallback if no custom file
         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/plain\r\n"
@@ -79,6 +80,7 @@ int Response::serveError(int code)
 
     if (fd == -1)
     {
+        this->error = 1;
         // fallback if no custom file
         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/plain\r\n"
@@ -122,13 +124,13 @@ void Response::normalizePath(void)
     }
     if (normPath == "")
         normPath = "/";
-    std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
+    // std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
     this->normalizedPath = normPath;
 }
 
 void Response::sendHeader(int status_code)
 {
-    std::cout << "++++++++sending header++++++++" << std::endl;
+    // std::cout << "++++++++sending header++++++++" << std::endl;
 
     std::stringstream ss;
 
@@ -139,7 +141,7 @@ void Response::sendHeader(int status_code)
     ss << "Transfer-Encoding: chunked\r\n";
     ss << "\r\n";
 
-    std::cout << ss.str() << std::endl;
+    // std::cout << ss.str() << std::endl;
     sendResponse(ss.str().c_str());
 }
 
