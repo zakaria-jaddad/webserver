@@ -31,8 +31,8 @@ void Response::craftHeader( std::string& buff )
 		
 		head_resp.append(headers);
 
-		std::cout << "+++++++ header to send next ++++++++" << std::endl;
-		std::cout << head_resp << std::endl;
+		// std::cout << "+++++++ header to send next ++++++++" << std::endl;
+		// std::cout << head_resp << std::endl;
 
 		head_resp.append(CRLF);		
 		this->_phase = BODY;
@@ -41,8 +41,8 @@ void Response::craftHeader( std::string& buff )
 	{
 		head_resp.append(headers);
 		
-		std::cout << "+++++++ header to send next ++++++++" << std::endl;
-		std::cout << head_resp << std::endl;
+		// std::cout << "+++++++ header to send next ++++++++" << std::endl;
+		// std::cout << head_resp << std::endl;
 		
 		buff.erase();
 	}
@@ -54,8 +54,8 @@ void Response::craftHeader( std::string& buff )
 		head_resp.append("Transfer-Encoding: chunked\r\n");
 		head_resp.append(DOUBLE_CRLF);
 
-		std::cout << "+++++++ header to send next ++++++++" << std::endl;
-		std::cout << head_resp << std::endl;
+		// std::cout << "+++++++ header to send next ++++++++" << std::endl;
+		// std::cout << head_resp << std::endl;
 	}
 	
 	// std::cout << "crafted header" << std::endl;

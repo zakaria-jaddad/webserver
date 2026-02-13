@@ -36,9 +36,9 @@ std::string ResolvedConfig::getRoot( void )
   return root;
 }
 
-std::map<int, std::string> ResolvedConfig::getErrorPages( void )
+std::string ResolvedConfig::getErrorPages( int status )
 {
-  return error_pages;
+  return error_pages[status];
 }
 
 std::vector<std::string> ResolvedConfig::getIndex( void )

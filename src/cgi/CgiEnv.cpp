@@ -64,7 +64,7 @@
 std::map<std::string, std::string>
 Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
                    std::string script_name, std::string path_info,
-                   std::map<std::string, std::string> &query)
+                   std::string &query)
 {
     // to do:
     // add a content type env var
@@ -75,7 +75,7 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     env["SCRIPT_NAME"] = script_name;
     env["PATH_INFO"] = path_info;
     env["REQUEST_METHOD"] = methodToString(request->getRequestType());
-    env["QUERY_STRING"] = squashMapIntoString(query);
+    env["QUERY_STRING"] = query;
 
     // some cgi needed? bs
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
@@ -118,8 +118,8 @@ char **Cgi::charEnvBuilder(std::map<std::string, std::string> env)
 void Cgi::envBuilder()
 {
     std::map<std::string, std::vector<std::string> > header = request->getHeaders();
-    std::map<std::string, std::string> query = request->getRequestUriParams();
     std::vector<std::string> script_name = deriveScriptName(uriPath);
+    std::string query = request->getRequestUriRawParams();
 
     std::map<std::string, std::string> mapEnv =
         mapEnvBuilder(header, script_name[0], script_name[1], query);

@@ -26,10 +26,7 @@ void Response::sendingCgiResponse()
         return ;
     
     if (this->_phase == BODY || this->_phase == COMPLETE)
-    {
         sendResponse(resp.c_str());
-        // sendResponse(CRLF);
-    }
 
     if (error)
         return ;
@@ -45,22 +42,6 @@ void Response::sendingCgiResponse()
 
 HttpParser::httpResult Response::cgiExecution()
 {
-    // int in_pipe[2];
-    // int out_pipe[2];
-    
-    // if (pipe(in_pipe) == -1)
-    // {
-    //     error = true;
-    //     return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-    // }
-    // if (pipe(out_pipe) == -1)
-    // {
-    //     error = true;
-    //     return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-    // }
-    
-    // cgi_in_pipe = in_pipe;
-    // cgi_out_pipe = out_pipe;
     Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
         
     cgi.executor();

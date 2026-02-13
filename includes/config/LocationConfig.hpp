@@ -27,6 +27,8 @@ public:
 
 	void parseBlock( std::vector<std::string>&, size_t& );
 
+	void init_error_pages();
+
 	void parseRoot( std::vector<std::string>&, size_t& );
 	void parseIndex( std::vector<std::string>&, size_t& );
 	void parsePath( std::vector<std::string>&, size_t& );

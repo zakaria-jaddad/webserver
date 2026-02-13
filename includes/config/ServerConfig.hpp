@@ -25,6 +25,7 @@ public:
   ServerConfig();
 
   void buildServerParsers( void );
+  void init_error_pages( void );
 
   void parseBlock( std::vector<std::string>&, size_t& );
 

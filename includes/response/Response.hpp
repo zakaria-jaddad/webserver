@@ -45,7 +45,7 @@ public:
 	int	sendResponse(const char *resp);
 	int	httpDelete( void );
 	int	httpGet( void );
-	void	sendHeader( void );
+	void	sendHeader( int );
 	bool	isComplete( void );
 	bool	isError( void );
 
@@ -56,6 +56,9 @@ public:
 
 	HttpParser::httpResult	cgiExecution();
 	void		sendingCgiResponse();
+	int serveError(int code);
+	std::string getStatusMessage( int );
+	void	craftErrorResponse( int, int );
 
 };
 

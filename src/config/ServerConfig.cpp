@@ -9,8 +9,7 @@
 // #include <vector>
 
 ServerConfig::ServerConfig()
-: error_pages(),
-  redir(),
+: redir(),
   cgi_info(),
   index(),
   methods_accepted(),
@@ -22,7 +21,19 @@ ServerConfig::ServerConfig()
   port(80),
   serverParsers()
 {
+  init_error_pages();
   buildServerParsers();
+}
+
+void ServerConfig::init_error_pages()
+{
+  // error_pages[200] = "/errors/200.html";
+  error_pages[400] = "pages/400.html";
+  error_pages[404] = "pages/404.html";
+  error_pages[405] = "pages/405.html";
+  error_pages[500] = "pages/500.html";
+  error_pages[501] = "pages/501.html";
+  error_pages[505] = "pages/505.html";
 }
 
 void ServerConfig::buildServerParsers()

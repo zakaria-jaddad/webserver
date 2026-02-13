@@ -8,13 +8,11 @@ int Response::httpDelete( void ) {
 	absPath += this->normalizedPath;
 	std::cout << "file to delete : " << absPath << std::endl;
 	if (access(absPath.c_str(), W_OK)) {
-		sendResponse("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n404");
-		this->error = 1;
+		serveError(404);
 		return (1);
 	}
 	if (unlink(absPath.c_str())) {
-		sendResponse("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n404");
-		this->error = 1;
+		serveError(404);
 		return (1);
 	}
 	sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nDeleted hh");
@@ -34,20 +32,20 @@ int Response::httpGet( void ) {
 		normalizePath();
 		absPath += this->normalizedPath;
 		if (access(absPath.c_str(), W_OK)) {
-			sendResponse("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n404");
-			this->error = 1;
+			serveError(404);
+			// this->error = 1;
 			return (1);
 		}
 		fd = open(absPath.c_str(), O_RDONLY);
 		if (fd == -1) {
-			sendResponse("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n404");
-			this->error = 1;
+			serveError(404);
+			// this->error = 1;
 			return (1);
 		}
 		this->fileFD = fd;
 	}
 	if (!this->headerFlag) {
-		sendHeader();
+		sendHeader(200);
 		this->headerFlag = 1;
 		return (0);
 	}
