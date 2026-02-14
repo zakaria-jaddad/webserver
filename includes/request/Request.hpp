@@ -82,7 +82,8 @@ class HttpParser {
         HTTP_RES_INTERNAL_SERVER_ERROR = 500,
         HTTP_RES_BAD_REQUEST = 400,
         HTTP_RES_NOT_IMPLEMENTED = 501,
-        HTTP_REST_METHOD_NOT_ALLOWED = 405,
+        HTTP_RES_METHOD_NOT_ALLOWED = 405,
+        HTTP_RES_LENGTH_REQUIRED = 411,
     } httpResult;
 
     typedef enum {
@@ -139,20 +140,17 @@ class HttpParser {
              * NOTE: Header fields get's parsed usually after the message's entire header section
              * has been processed
              */
-
             res = _parseRequestHeaderValue();
             if (res != HTTP_RES_OK) {
                 return res;
             }
 
-            /*
-             * TODO:
-             * Parse Request Body
-             */
+            res = _parseRequestBody();
+            if (res != HTTP_RES_OK) {
+                return res;
+            }
             this->_phase = COMPLETE;
-            /* return HTTP_RES_OK */
         }
-
         return HTTP_RES_OK;
     };
 
@@ -487,14 +485,6 @@ class HttpParser {
         return HTTP_RES_OK;
     }
 
-    /*
-     * NOTE:
-     * * The contents within a given field value are not parsed until a later stage of message
-     * interpretation
-     * * usually after the message's entire header section has been processed
-     *
-     */
-  public:
     httpResult _generateHeadersMap(std::string headerLines)
 
     {
@@ -528,6 +518,50 @@ class HttpParser {
                 }
             }
             it->second = values;
+        }
+        return HTTP_RES_OK;
+    }
+
+    httpResult _parseRequestBody()
+    {
+
+        /*
+         * If request type other than POST ignore the body
+         *
+         * If a message is received with both a Transfer-Encoding and a Content-Length
+         * header field, the Transfer-Encoding overrides the Content-Length.
+         */
+        if (this->_requestType == POST) {
+
+            if (this->_headers.find("Transfer-Encoding") == this->_headers.end() &&
+                this->_headers.find("Content-Length") == this->_headers.end()) {
+                return HTTP_RES_LENGTH_REQUIRED;
+            }
+
+            /* Transfer-Encoding Not found */
+            if (this->_headers.find("Transfer-Encoding") == this->_headers.end()) {
+
+                std::vector<std::string> contentLength = this->_headers["Content-Length"];
+                if (contentLength.size() != 1) {
+                    return HTTP_RES_BAD_REQUEST;
+                }
+
+                /* TODO: Start Parsing Body using Content-Length value */
+            }
+
+            std::vector<std::string> transferEncoding = this->_headers["Transfer-Encoding"];
+            if (transferEncoding.size() != 1) {
+                return HTTP_RES_BAD_REQUEST;
+            }
+
+            std::string transferEncodingType = transferEncoding[0];
+            if (transferEncodingType == "") {
+                return HTTP_RES_BAD_REQUEST;
+            }
+            if (transferEncodingType != "chunked") {
+                return HTTP_RES_NOT_IMPLEMENTED;
+            }
+            /* TODO: Start Transfer Encoding Parsing */
         }
         return HTTP_RES_OK;
     }

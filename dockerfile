@@ -1,10 +1,12 @@
-FROM nginx:alpine
+# Use the official Nginx base image
+FROM nginx:latest
 
-# Expose port 8080
-EXPOSE 8080
+# Expose port 2010
+EXPOSE 2010
 
-# Update nginx configuration to listen on port 8080 instead of 80
-RUN sed -i 's/listen\s*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf
+# Replace the default Nginx configuration to listen on port 2010
+RUN sed -i 's/listen\s*80;/listen 2010;/g' /etc/nginx/conf.d/default.conf && \
+    sed -i 's/listen\s*\[::\]:80;/listen [::]:2010;/g' /etc/nginx/conf.d/default.conf
 
-# Start nginx
+# Start Nginx in the foreground
 CMD ["nginx", "-g", "daemon off;"]
