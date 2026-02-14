@@ -16,8 +16,6 @@ Cgi::Cgi(int *in, int *out, t_client *client)
 
     cgiPath = conf->getCgi().second;
 
-    this->envBuilder();
-
     std::cout << "--------------end of cgi constructor----------------" << std::endl;
 }
 

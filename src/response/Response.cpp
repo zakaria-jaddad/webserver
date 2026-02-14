@@ -20,7 +20,6 @@ Response::Response(t_client *dep)
 
 HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method)
 {
-
 	const std::string& uri = client->request->getRequestUriPath();
 
 	bool is_php_request = false;
@@ -82,11 +81,7 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 
 HttpParser::httpResult Response::checkMethod(void)
-{
-  //todo:
-  //check if the method called is allowed or Not
-	//check the sanity of the logic for checking if cgi execution
-	
+{	
 	HttpParser::requestType req_method = client->request->getRequestType();
 	std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
 

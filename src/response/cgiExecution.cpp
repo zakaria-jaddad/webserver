@@ -47,6 +47,8 @@ HttpParser::httpResult Response::cgiExecution()
 {
     Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
     
+    cgi.envBuilder();
+
     if (this->error)
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 
