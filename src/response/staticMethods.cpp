@@ -25,33 +25,33 @@ std::string Response::resolveFilePath( std::string& upload_store )
   return final_path;
 }
 
-int Response::createUploadFolder( std::string& upload_path, std::string& file_path )
-{
-  size_t pos = upload_path.size();
+// int Response::createUploadFolder( std::string& upload_path, std::string& file_path )
+// {
+//   size_t pos = upload_path.size();
 
-  while ((pos = file_path.find('/', pos)) != std::string::npos) 
-  {
-    std::string dir = file_path.substr(0, pos);
-    struct stat st;
-    if (stat(dir.c_str(), &st) != 0) 
-    {
-      if (mkdir(dir.c_str(), 0755) != 0 && errno != EEXIST) 
-      {
-        std::cerr << "Failed to create directory: " << dir << std::endl;
-        serveError(500);
-        return 1; 
-      }
-    } 
-    else if (!S_ISDIR(st.st_mode)) 
-    {
-      std::cerr << "Path exists and is not a directory: " << dir << std::endl;
-      serveError(500);
-      return 1; 
-    }
-    pos += 1;
-  }
-  return 0;
-}
+//   while ((pos = file_path.find('/', pos)) != std::string::npos) 
+//   {
+//     std::string dir = file_path.substr(0, pos);
+//     struct stat st;
+//     if (stat(dir.c_str(), &st) != 0) 
+//     {
+//       if (mkdir(dir.c_str(), 0755) != 0 && errno != EEXIST) 
+//       {
+//         std::cerr << "Failed to create directory: " << dir << std::endl;
+//         servePages(500);
+//         return 1; 
+//       }
+//     } 
+//     else if (!S_ISDIR(st.st_mode)) 
+//     {
+//       std::cerr << "Path exists and is not a directory: " << dir << std::endl;
+//       servePages(500);
+//       return 1; 
+//     }
+//     pos += 1;
+//   }
+//   return 0;
+// }
 
 
 int Response::httpPost()
@@ -61,13 +61,15 @@ int Response::httpPost()
 
   if (upload_path.empty())
   {
-    serveError(405);
+		this->error = 1;
+    servePages(405);
     return 1;
   }
 
   if (access(upload_path.c_str(), R_OK) == -1)
   {
-    serveError(500);
+		this->error = 1;
+    servePages(500);
     return 1;
   }
 
@@ -75,24 +77,26 @@ int Response::httpPost()
 	std::cout << "file path : " << file_path << std::endl;
 	std::cout << "upload path : " << upload_path << std::endl;
 
-  if (createUploadFolder(upload_path, file_path))
-    return 1;
+  // if (createUploadFolder(upload_path, file_path))
+  //   return 1;
 
-  int fd = open(file_path.c_str(), O_WRONLY | O_CREAT);
+  int fd = open(file_path.c_str(), O_WRONLY | O_CREAT, 0755);
   if (fd == -1)
   {
 		perror("open failed");
-    serveError(500);
+    servePages(500);
+		this->error = 1;
     return 1;
   }
 
+  //placeholder for body provided by kiraje
   std::string fake_body = "file_content=Hello+world+this+is+a+test+file";
-
-
   write(fd, fake_body.c_str(), fake_body.length());
   std::cout << "created!!" << std::endl;
 
-  serveError(200);
+  servePages(200);
+
+	this->status = 1;
 
   return 0;
 }
@@ -105,11 +109,11 @@ int Response::httpDelete( void ) {
 	absPath += this->normalizedPath;
 	std::cout << "file to delete : " << absPath << std::endl;
 	if (access(absPath.c_str(), W_OK)) {
-		serveError(404);
+		servePages(404);
 		return (1);
 	}
 	if (unlink(absPath.c_str())) {
-		serveError(404);
+		servePages(404);
 		return (1);
 	}
 	sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nDeleted hh");
@@ -129,13 +133,13 @@ int Response::httpGet( void ) {
 		normalizePath();
 		absPath += this->normalizedPath;
 		if (access(absPath.c_str(), W_OK)) {
-			serveError(404);
+			servePages(404);
 			// this->error = 1;
 			return (1);
 		}
 		fd = open(absPath.c_str(), O_RDONLY);
 		if (fd == -1) {
-			serveError(404);
+			servePages(404);
 			// this->error = 1;
 			return (1);
 		}

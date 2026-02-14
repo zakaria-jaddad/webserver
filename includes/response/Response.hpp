@@ -43,7 +43,7 @@ public:
 	HttpParser::httpResult	checkMethod( void );
 	void normalizePath( void );
   std::string resolveFilePath( std::string& );
-  int   createUploadFolder( std::string&, std::string& );
+//   int   createUploadFolder( std::string&, std::string& );
 	int	sendResponse(const char *resp);
 
   //static methods
@@ -62,9 +62,10 @@ public:
 
 	HttpParser::httpResult	cgiExecution();
 	void		sendingCgiResponse();
-	int serveError(int code);
+
+	int 		servePages( int );
 	std::string getStatusMessage( int );
-	void	craftErrorResponse( int, int );
+	void		craftPageResponse( int, int );
 
 };
 

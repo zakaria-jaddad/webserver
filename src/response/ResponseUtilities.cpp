@@ -14,7 +14,7 @@ std::string Response::getStatusMessage(int code)
     }
 }
 
-void Response::craftErrorResponse(int code, int fd)
+void Response::craftPageResponse(int code, int fd)
 {
     if (!this->headerFlag)
     {
@@ -27,14 +27,13 @@ void Response::craftErrorResponse(int code, int fd)
     if (bytes == 0)
     {
         std::cout << "Done reading" << std::endl ;
-        this->error = 1;
-        this->_phase = ERROR;
+        this->_phase = COMPLETE;
         return ;
     }
 
     if (bytes == -1)
     {
-        // fallback if no custom file
+        this->error = 1;
         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/plain\r\n"
                      "Content-Length: 21\r\n\r\n"
@@ -57,51 +56,51 @@ void Response::craftErrorResponse(int code, int fd)
     sendResponse(buff);
 }
 
-int Response::serveError(int code)
+int Response::servePages(int code)
 {
     static int fd = -1;
     std::string errorPath = this->conf.getErrorPages(code);
 
-    // std::cout << "error to serve : " << errorPath << std::endl;
-
     if (errorPath.empty())
     {
         this->error = 1;
-        // fallback if no custom file
         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/plain\r\n"
                      "Content-Length: 21\r\n\r\n"
                      "Internal Server Error");
         return 1;
     }
-
-    if (fd == -1)
-        fd = open(errorPath.c_str(), O_RDONLY);
 
     if (fd == -1)
     {
-        this->error = 1;
-        // fallback if no custom file
-        sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
-                     "Content-Type: text/plain\r\n"
-                     "Content-Length: 21\r\n\r\n"
-                     "Internal Server Error");
-        return 1;
+        fd = open(errorPath.c_str(), O_RDONLY);
+        
+        if (fd == -1)
+        {
+            this->error = 1;
+            sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
+                         "Content-Type: text/plain\r\n"
+                         "Content-Length: 21\r\n\r\n"
+                         "Internal Server Error");
+            return 1;
+        }
     }
 
-    craftErrorResponse(code, fd);
+    craftPageResponse(code, fd);
+    
+    if (this->error)
+        return 1;
 
-    if (this->_phase == ERROR)
+    if (this->_phase == COMPLETE)
     {
         sendResponse("0\r\n\r\n");
         close(fd);
+        this->status = 1;
         fd = -1;
     }
 
-
     return 0;
 }
-
 
 void Response::normalizePath(void)
 {
