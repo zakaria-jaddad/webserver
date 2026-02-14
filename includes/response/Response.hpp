@@ -6,6 +6,7 @@
 #include "ResolvedConfig.hpp"
 #include "../cgi/Cgi.hpp"
 #include <stdio.h>
+#include <algorithm>
 
 class Cgi;
 struct t_client;
@@ -27,32 +28,48 @@ class Response{
 	t_client				*client;
 	bool						wait;
 	Cgi							*cgi;
-	int							*cgi_in_pipe;
-	int							*cgi_out_pipe;
+	int							cgi_in_pipe[2];
+	int							cgi_out_pipe[2];
 	phase						_phase;
 	int							fileFD;
 	size_t						chunk_size;
 	int							headerFlag;
 	bool						status;
+	bool						exec_status;
 	bool						error;
 
 public:
 	Response( t_client* client );
 
 	HttpParser::httpResult	checkMethod( void );
-	void normalizePath( void );
+	HttpParser::httpResult	routeMethod( HttpParser::requestType );
+	
+	void					normalizePath( void );
+  	
+	std::string resolveFilePath( std::string& );
 	int	sendResponse(const char *resp);
+//   int   createUploadFolder( std::string&, std::string& );
+
+  //static methods
 	int	httpDelete( void );
 	int	httpGet( void );
-	void	sendHeader( void );
+	int httpPost( void );
+
+  void	sendHeader( int );
 	bool	isComplete( void );
 	bool	isError( void );
 
-	void	craftResponse( void );
+	HttpParser::httpResult craftResponse( void );
 	std::string craftHeaderStatus( std::string&  );
 	void	craftHeader( std::string& );
 	void 	craftBody( std::string& );
 
+	HttpParser::httpResult	cgiExecution();
+	void		sendingCgiResponse();
+
+	int 		servePages( int );
+	std::string getStatusMessage( int );
+	void		craftPageResponse( int, int );
 
 };
 

@@ -1,5 +1,6 @@
 #include "../../includes/config/ServerConfig.hpp"
 #include "../../includes/config/parseHelpers.hpp"
+#include <iostream>
 
 // #include <cctype>
 // #include <cstddef>
@@ -9,8 +10,7 @@
 // #include <vector>
 
 ServerConfig::ServerConfig()
-: error_pages(),
-  redir(),
+: redir(),
   cgi_info(),
   index(),
   methods_accepted(),
@@ -22,7 +22,19 @@ ServerConfig::ServerConfig()
   port(80),
   serverParsers()
 {
+  init_error_pages();
   buildServerParsers();
+}
+
+void ServerConfig::init_error_pages()
+{
+  error_pages[200] = "pages/200.html";
+  error_pages[400] = "pages/400.html";
+  error_pages[404] = "pages/404.html";
+  error_pages[405] = "pages/405.html";
+  error_pages[500] = "pages/500.html";
+  error_pages[501] = "pages/501.html";
+  error_pages[505] = "pages/505.html";
 }
 
 void ServerConfig::buildServerParsers()
@@ -475,7 +487,7 @@ LocationConfig* ServerConfig::matchLocation( const std::string& uri )
     
     if (uri.compare(0, loc.size(), loc) == 0)
     {
-      if (loc.size() == uri.size() || uri[loc.size()] == '/')
+      if (loc == "/" || loc.size() == uri.size() || uri[loc.size()] == '/')
       {
         if (loc.size() > bestlen)
         {
@@ -485,7 +497,7 @@ LocationConfig* ServerConfig::matchLocation( const std::string& uri )
       }
     }
   }
-
+  
   return best;
 }
 

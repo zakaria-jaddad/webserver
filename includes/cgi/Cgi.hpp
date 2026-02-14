@@ -20,14 +20,14 @@ class Cgi{
 		// 	ERROR,
 		// } phase;
 		
-		int *in_fds;
-    	int *out_fds;
 		ResolvedConfig*	conf;
 		HttpParser*			request;
-		char**			env;
-		std::string uriPath;
-		std::string cgiPath;
-		std::string scriptPath;
+		std::string 		uriPath;
+		std::string 		cgiPath;
+		std::string 		scriptPath;
+		int 						*in_fds;
+		int 						*out_fds;
+		char**					env;
 		// phase				_phase;
 
 	public:
@@ -38,7 +38,7 @@ class Cgi{
 		std::map<std::string, std::string>	mapEnvBuilder(	std::map<std::string, std::vector<std::string> >&,
                                                       	std::string ,
                                                         std::string ,
-                                                        std::map<std::string, std::string>& );
+                                                        std::string& );
 		
 		char**															charEnvBuilder(	std::map<std::string, std::string> );
 		void																envBuilder( void );

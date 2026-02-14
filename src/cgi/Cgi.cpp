@@ -1,7 +1,8 @@
 #include "../../includes/cgi/Cgi.hpp"
 
 // constructor/destructor
-Cgi::Cgi(int *in, int *out, t_client *client) : in_fds(in), out_fds(out), request(client->request)
+Cgi::Cgi(int *in, int *out, t_client *client) 
+:  request(client->request), in_fds(in), out_fds(out)
 {
     std::cout << "--------------start of cgi constructor----------------" << std::endl;
 
@@ -15,8 +16,6 @@ Cgi::Cgi(int *in, int *out, t_client *client) : in_fds(in), out_fds(out), reques
 
     cgiPath = conf->getCgi().second;
 
-    this->envBuilder();
-
     std::cout << "--------------end of cgi constructor----------------" << std::endl;
 }
 
@@ -29,18 +28,7 @@ Cgi::~Cgi()
 // execution
 void Cgi::executor(void)
 {
-    const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
-    // std::cout << "cgi path : " << std::endl;
-    // std::cout << cgiPath << std::endl;
-    // std::cout << "script path : " << std::endl;
-    // std::cout << scriptPath << std::endl;
-    // int in_fds[2];
-    // int out_fds[2];
-
-    if (pipe(in_fds) == -1)
-        return;
-    if (pipe(out_fds) == -1)
-        return;
+	const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
 
     pid_t child = fork();
 

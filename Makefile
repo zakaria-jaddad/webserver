@@ -1,8 +1,8 @@
 NAME = ft_webserver
 TEST_NAME = ft_webserver_test
 
-# CFLAGS = -Wall -Werror -Wextra -std=c++98 -g
-CFLAGS = -Wall -Werror -Wextra -std=c++17 -g
+CFLAGS = -Wall -Werror -Wextra -std=c++98 -g
+#CFLAGS = -Wall -Werror -Wextra -std=c++17 -g
 
 SRC_DIR		= src
 CONF_DIR	= config
@@ -18,7 +18,8 @@ MAIN_SRC	= ft_webserver.cpp
 CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
 SRV_SRC		= Server.cpp
 REQ_SRC		= Request.cpp
-RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp
+RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp \
+			  cgiExecution.cpp ResponseUtilities.cpp
 CGI_SRC		= CgiEnv.cpp Cgi.cpp envUtils.cpp
 
 ## project srcs : here you add the prefix and boom compiled ;p
