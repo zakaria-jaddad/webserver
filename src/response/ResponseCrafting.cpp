@@ -64,13 +64,13 @@ void Response::craftHeader( std::string& buff )
 void Response::craftBody( std::string& buff )
 {
 	resp.append(buff);
-	
 	buff.erase();
+
 	// std::cout << "crafted body : " << std::endl;
 	// std::cout << resp << std::endl;
 }
 
-void Response::craftResponse( void )
+HttpParser::httpResult Response::craftResponse( void )
 {
 	std::cout << "--------------start of crafting response----------------" << std::endl;
 
@@ -80,19 +80,25 @@ void Response::craftResponse( void )
 	while (this->_phase == HEADERS && !this->error)
 	{
 		int bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
-		
+
 		if (bytes == 0)
+		{
+			std::cout << "nothing else to read" << std::endl;
 			this->_phase = COMPLETE;
-		
+			break;
+		}
+
 		if (bytes == -1)
 		{
+			perror("read failed");
 			error = true;
-			return;
+			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		}
+
 		buff[bytes] = 0;
-		
+
 		val = buff;
-	
+
 		craftHeader(val);
 	}
 
@@ -101,16 +107,20 @@ void Response::craftResponse( void )
 		if (val.empty())
 		{
 			int bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
-			
+
 			if (bytes == 0)
+			{
 				this->_phase = COMPLETE;
-			
+				return HttpParser::HTTP_RES_OK;
+			}
+
 			if (bytes == -1)
 			{
 				perror("read failed");
 				error = true;
-				return;
+				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 			}
+
 			buff[bytes] = 0;
 
 			val = buff;
@@ -120,9 +130,10 @@ void Response::craftResponse( void )
 
 		craftBody(val);
 	}
-	
-	
+
 	std::cout << "--------------end of crafting response----------------" << std::endl;
+
+	return HttpParser::HTTP_RES_OK;
 }
 
 int Response::sendResponse(const char *resp) {

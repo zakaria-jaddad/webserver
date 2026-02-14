@@ -26,7 +26,7 @@ void Response::craftPageResponse(int code, int fd)
     int bytes = read(fd, buff, sizeof(buff)-1);
     if (bytes == 0)
     {
-        std::cout << "Done reading" << std::endl ;
+        // std::cout << "Done reading" << std::endl ;
         this->_phase = COMPLETE;
         return ;
     }
@@ -50,14 +50,17 @@ void Response::craftPageResponse(int code, int fd)
     hexStr += "\r\n";
     sendResponse(hexStr.c_str());
     
-    // std::cout << "++++++++sending body++++++++" << std::endl;
-    // std::cout << buff << std::endl;
+    std::cout << "++++++++sending body++++++++" << std::endl;
+    std::cout << buff << std::endl;
     
     sendResponse(buff);
 }
 
 int Response::servePages(int code)
 {
+
+    std::cout << "---------------------Serving error" << code << " ------------" << std::endl;
+
     static int fd = -1;
     std::string errorPath = this->conf.getErrorPages(code);
 
@@ -97,6 +100,7 @@ int Response::servePages(int code)
         close(fd);
         this->status = 1;
         fd = -1;
+        std::cout << "---------------------Finished Serving error" << code << " ------------" << std::endl;
     }
 
     return 0;
@@ -129,7 +133,7 @@ void Response::normalizePath(void)
 
 void Response::sendHeader(int status_code)
 {
-    // std::cout << "++++++++sending header++++++++" << std::endl;
+    std::cout << "++++++++sending header++++++++" << std::endl;
 
     std::stringstream ss;
 
@@ -140,7 +144,7 @@ void Response::sendHeader(int status_code)
     ss << "Transfer-Encoding: chunked\r\n";
     ss << "\r\n";
 
-    // std::cout << ss.str() << std::endl;
+    std::cout << ss.str() << std::endl;
     sendResponse(ss.str().c_str());
 }
 

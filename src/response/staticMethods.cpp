@@ -61,14 +61,12 @@ int Response::httpPost()
 
   if (upload_path.empty())
   {
-		this->error = 1;
     servePages(405);
     return 1;
   }
 
   if (access(upload_path.c_str(), R_OK) == -1)
   {
-		this->error = 1;
     servePages(500);
     return 1;
   }
@@ -85,7 +83,6 @@ int Response::httpPost()
   {
 		perror("open failed");
     servePages(500);
-		this->error = 1;
     return 1;
   }
 
@@ -95,8 +92,6 @@ int Response::httpPost()
   std::cout << "created!!" << std::endl;
 
   servePages(200);
-
-	this->status = 1;
 
   return 0;
 }
@@ -134,13 +129,11 @@ int Response::httpGet( void ) {
 		absPath += this->normalizedPath;
 		if (access(absPath.c_str(), W_OK)) {
 			servePages(404);
-			// this->error = 1;
 			return (1);
 		}
 		fd = open(absPath.c_str(), O_RDONLY);
 		if (fd == -1) {
 			servePages(404);
-			// this->error = 1;
 			return (1);
 		}
 		this->fileFD = fd;

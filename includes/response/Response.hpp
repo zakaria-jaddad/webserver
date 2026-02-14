@@ -6,6 +6,7 @@
 #include "ResolvedConfig.hpp"
 #include "../cgi/Cgi.hpp"
 #include <stdio.h>
+#include <algorithm>
 
 class Cgi;
 struct t_client;
@@ -41,10 +42,13 @@ public:
 	Response( t_client* client );
 
 	HttpParser::httpResult	checkMethod( void );
-	void normalizePath( void );
-  std::string resolveFilePath( std::string& );
-//   int   createUploadFolder( std::string&, std::string& );
+	HttpParser::httpResult	routeMethod( HttpParser::requestType );
+	
+	void					normalizePath( void );
+  	
+	std::string resolveFilePath( std::string& );
 	int	sendResponse(const char *resp);
+//   int   createUploadFolder( std::string&, std::string& );
 
   //static methods
 	int	httpDelete( void );
@@ -55,7 +59,7 @@ public:
 	bool	isComplete( void );
 	bool	isError( void );
 
-	void	craftResponse( void );
+	HttpParser::httpResult craftResponse( void );
 	std::string craftHeaderStatus( std::string&  );
 	void	craftHeader( std::string& );
 	void 	craftBody( std::string& );

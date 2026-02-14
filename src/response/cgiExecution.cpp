@@ -20,13 +20,16 @@ void Response::sendingCgiResponse()
         std::string hexStr = ss.str();
         hexStr += "\r\n";
         sendResponse(hexStr.c_str());
+        chunk_size = 0;
     }
 
     if (error)
         return ;
     
-    if (this->_phase == BODY || this->_phase == COMPLETE)
+    if (this->_phase == BODY)
+    {
         sendResponse(resp.c_str());
+    }
 
     if (error)
         return ;
@@ -43,7 +46,10 @@ void Response::sendingCgiResponse()
 HttpParser::httpResult Response::cgiExecution()
 {
     Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
-        
+    
+    if (this->error)
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+
     cgi.executor();
 
     this->exec_status = 1;
