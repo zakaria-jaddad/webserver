@@ -108,10 +108,13 @@ int Response::httpDelete( void )
 		return (1);
 	}
 	if (unlink(absPath.c_str())) {
-		servePages(404);
+		servePages(500);
 		return (1);
 	}
-	sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nDeleted hh");
+
+	servePages(200);
+
+	// sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nDeleted hh");
 	return (0);
 }
 
@@ -137,7 +140,7 @@ int Response::httpGet( void ) {
 	std::string hexStr;
 	std::string txt;
 
-	if (this->fileFD == -3) 
+	if (this->fileFD == -3)
 	{
 		std::string absPath = this->conf.getRoot();
 		normalizePath();

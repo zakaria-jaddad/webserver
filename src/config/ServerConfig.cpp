@@ -28,7 +28,7 @@ ServerConfig::ServerConfig()
 
 void ServerConfig::init_error_pages()
 {
-  error_pages[200] = "pages/200.html";
+  error_pages[200] = "pages/200_delete.html";
   error_pages[400] = "pages/400.html";
   error_pages[404] = "pages/404.html";
   error_pages[405] = "pages/405.html";
