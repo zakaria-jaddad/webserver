@@ -35,6 +35,7 @@ void LocationConfig::buildLocationParsers()
 	locationParsers["autoindex"] = &LocationConfig::parseListing;
 	locationParsers["return"] = &LocationConfig::parseRedir;
 	locationParsers["allow"] = &LocationConfig::parseMethods;
+	locationParsers["cgi"] = &LocationConfig::parseCgi;
 }
 
 void LocationConfig::parseBlock(std::vector<std::string>& tokens, size_t& i)

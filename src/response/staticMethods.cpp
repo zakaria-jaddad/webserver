@@ -145,7 +145,6 @@ int Response::httpGet( void ) {
 	}
 	r = read(this->fileFD, buff, 1023);
 	if (r == -1) {
-		//cleanup
 		close(this->fileFD);
 		this->error = 1;
 		return (1);
