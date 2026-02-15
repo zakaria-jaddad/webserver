@@ -19,6 +19,8 @@ std::string Response::getStatusMessage(int code)
     }
 }
 
+
+//crafting response
 void Response::craftPageResponse(int code, int fd)
 {
     if (!this->headerFlag)
@@ -61,48 +63,39 @@ void Response::craftPageResponse(int code, int fd)
     sendResponse(buff);
 }
 
-void Response::craftPageResponse(int code, int fd, std::string& location)
+//redir overload
+void Response::craftPageResponse(int code, std::string& location)
 {
+    std::string html = "<!DOCTYPE html>\n"
+                "<html>\n"
+                "<head><title>Moved</title></head>\n"
+                "<body>\n"
+                "<h1>Page moved</h1>\n"
+                "<p><a href=\"" + location + "\">Click here to go to the new page</a></p>\n"
+                "</body>\n"
+                "</html>\n";
+    
     if (!this->headerFlag)
     {
         sendHeader(code, location);
         this->headerFlag = 1;
     }
-   
-    char buff[1024];
-    int bytes = read(fd, buff, sizeof(buff)-1);
-    if (bytes == 0)
-    {
-        // std::cout << "Done reading" << std::endl ;
-        this->_phase = COMPLETE;
-        return ;
-    }
 
-    if (bytes == -1)
-    {
-        this->error = 1;
-        sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
-                     "Content-Type: text/plain\r\n"
-                     "Content-Length: 21\r\n\r\n"
-                     "Internal Server Error");
-        return;
-    }
-
-    chunk_size = bytes;
-    buff[bytes] = 0;
 
     std::stringstream ss ;
-    ss << std::hex << chunk_size;
+    ss << std::hex << html.length();
     std::string hexStr = ss.str();
     hexStr += "\r\n";
     sendResponse(hexStr.c_str());
     
     std::cout << "++++++++sending body++++++++" << std::endl;
-    std::cout << buff << std::endl;
+    std::cout << html << std::endl;
     
-    sendResponse(buff);
+    sendResponse(html.c_str());
 }
 
+
+//serving pages
 int Response::servePages(int code)
 {
 
@@ -153,70 +146,25 @@ int Response::servePages(int code)
     return 0;
 }
 
+//redir overload
 int Response::servePages(int code, std::string& location)
 {
 
     std::cout << "---------------------Serving error" << code << " ------------" << std::endl;
 
-    // static int fd = -1;
-    // std::string errorPath = this->conf.getErrorPages(code);
-
-    // std::string html = "<!DOCTYPE html>\n"
-    //                 "<html>\n"
-    //                 "<head><title>Moved</title></head>\n"
-    //                 "<body>\n"
-    //                 "<h1>Page moved</h1>\n"
-    //                 "<p><a href=\"" + location + "\">Click here to go to the new page</a></p>\n"
-    //                 "</body>\n"
-    //                 "</html>\n";
-
-    // if (errorPath.empty())
-    // {
-    //     this->error = 1;
-    //     sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
-    //                  "Content-Type: text/plain\r\n"
-    //                  "Content-Length: 21\r\n\r\n"
-    //                  "Internal Server Error");
-    //     return 1;
-    // }
-
-    // if (fd == -1)
-    // {
-    //     fd = open(errorPath.c_str(), O_RDONLY);
-        
-    //     if (fd == -1)
-    //     {
-    //         this->error = 1;
-    //         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
-    //                      "Content-Type: text/plain\r\n"
-    //                      "Content-Length: 21\r\n\r\n"
-    //                      "Internal Server Error");
-    //         return 1;
-    //     }
-    // }
-
-    // craftPageResponse(code, fd, location);
-    if (!this->headerFlag)
-    {
-        sendHeader(code, location);
-        this->headerFlag = 1;
-    }
+    craftPageResponse(code, location);
     
     if (this->error)
         return 1;
 
-    // if (this->headerFlag)
-    // {
-    //     sendResponse("0\r\n\r\n");
-        // close(fd);
     this->status = 1;
-        // fd = -1;
     std::cout << "---------------------Finished Serving error" << code << " ------------" << std::endl;
-    // }
 
     return 0;
 }
 
+
+//normalizing uri
 void Response::normalizePath(void)
 {
     std::stringstream ss(this->client->request->getRequestUriPath());
@@ -242,6 +190,9 @@ void Response::normalizePath(void)
     this->normalizedPath = normPath;
 }
 
+
+//send header
+//redir overload
 void Response::sendHeader(int status_code, std::string& location)
 {
     std::cout << "++++++++sending header++++++++" << std::endl;
@@ -251,7 +202,7 @@ void Response::sendHeader(int status_code, std::string& location)
     ss << "HTTP/1.1 " << status_code << " "
        << getStatusMessage(status_code) << "\r\n";
 
-    ss << "Content-Length: 0\r\n";
+    ss << "Transfer-Encoding: chunked\r\n";
     ss << "Location: " << location << "\r\n";
     ss << "\r\n";
 
@@ -259,6 +210,7 @@ void Response::sendHeader(int status_code, std::string& location)
     sendResponse(ss.str().c_str());
 }
 
+//original
 void Response::sendHeader(int status_code)
 {
     std::cout << "++++++++sending header++++++++" << std::endl;

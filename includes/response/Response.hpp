@@ -72,7 +72,7 @@ public:
   void		craftPageResponse( int, int );
   
   int 		servePages( int, std::string& );
-  void		craftPageResponse( int, int, std::string& );
+  void		craftPageResponse( int, std::string& );
   void	sendHeader( int, std::string& );
 
 };
