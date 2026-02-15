@@ -55,6 +55,7 @@ public:
 	int	httpGet( void );
 	int httpPost( void );
 
+	std::string chooseIndex( std::string& );
   void	sendHeader( int );
   bool	isComplete( void );
   bool	isError( void );
