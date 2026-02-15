@@ -60,7 +60,7 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 	{
 		if (!this->exec_status)
 		{
-			if (cgiExecution() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
+			if (cgiExecution() != HttpParser::HTTP_RES_OK)
 			{
 				servePages(500);
 				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;

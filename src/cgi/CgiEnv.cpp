@@ -1,65 +1,6 @@
 #include "../../includes/cgi/Cgi.hpp"
 
 // env building
-//  std::map<std::string, std::vector<std::string>> createDummyHeader()
-//  {
-//  	std::map<std::string, std::vector<std::string>> header;
-
-// 	// Single-value header
-// 	header["Host"].push_back("example.com");
-
-// 	// Multi-value header (repeated field-name)
-// 	header["Accept"].push_back("text/html");
-// 	header["Accept"].push_back("application/json");
-
-// 	// Another multi-value header
-// 	header["Cache-Control"].push_back("no-cache");
-// 	header["Cache-Control"].push_back("no-store");
-
-// 	// Header with comma already inside a value
-// 	header["X-Forwarded-For"].push_back("203.0.113.1");
-// 	header["X-Forwarded-For"].push_back("198.51.100.42");
-
-// 	// Header you may want to skip in CGI
-// 	header["Content-Type"].push_back("text/plain");
-
-// 	return header;
-// }
-
-// std::map<std::string, std::string> createDummyMapEnv()
-// {
-// 	std::map<std::string, std::string> 							env;
-
-// 	env["SCRIPT_NAME"]		= "/test.php";
-// 	env["PATH_INFO"]			= "";
-// 	env["REQUEST_METHOD"]	= "GET";
-// 	env["QUERY_STRING"]		= "";
-
-// 	//some cgi needed? bs
-// 	env["GATEWAY_INTERFACE"]	= "CGI/1.1";
-// 	env["SERVER_NAME"]				= "localhost";
-// 	env["SERVER_PORT"]				=	"8080";
-// 	env["SERVER_PROTOCOL"]		= "HTTP/1.1";
-// 	env["SERVER_SOFTWARE"]		= "myserver/1.0";
-// 	env["REMOTE_ADDR"]				= "127.0.0.1";//get from anas
-
-// 	//bs needed to run on terminal
-// 	env["REDIRECT_STATUS"] = "200";
-
-//   //post stuff
-//   env["CONTENT_LENGTH"] = "29";
-//   env["CONTENT_TYPE"] = "application/x-www-form-urlencoded";
-
-// 	//php specific variables
-// 	env["SCRIPT_FILENAME"] = "/home/yhossni/Desktop/test.php";
-// 	env["DOCUMENT_ROOT"]   = "/home/yhossni/Desktop";
-
-// 	//header env variables
-// 	std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
-// 	headerEnvBuilder(env, dummy_header);
-
-// 	return env;
-// }
 
 // int checkVarSanity(std::string path)
 // {
@@ -101,12 +42,15 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     env["REDIRECT_STATUS"] = "200";
 
     // php specific variables
-    env["SCRIPT_FILENAME"] = conf->getRoot() + script_name;
+    std::string script_filename = conf->getRoot() + script_name;
+
+    if (access(script_filename.c_str(), F_OK))
+        return std::map<std::string, std::string>();
+
+    env["SCRIPT_FILENAME"] = script_filename;
     env["DOCUMENT_ROOT"] = conf->getRoot();
 
     // header env variables
-    //  std::map<std::string, std::vector<std::string>> dummy_header = createDummyHeader();
-    //  headerEnvBuilder(env, dummy_header);
     headerEnvBuilder(env, header);
 
     return env;
@@ -127,7 +71,7 @@ char **Cgi::charEnvBuilder(std::map<std::string, std::string> env)
     return envp;
 }
 
-void Cgi::envBuilder()
+HttpParser::httpResult Cgi::envBuilder()
 {
     std::map<std::string, std::vector<std::string> > header = request->getHeaders();
     std::vector<std::string> script_name = deriveScriptName(uriPath);
@@ -136,5 +80,12 @@ void Cgi::envBuilder()
     std::map<std::string, std::string> mapEnv =
         mapEnvBuilder(header, script_name[0], script_name[1], query);
 
+    if (mapEnv.empty())
+    {
+        this->env = NULL;
+        return HttpParser::HTTP_RES_NOT_IMPLEMENTED;
+    }
+
     this->env = charEnvBuilder(mapEnv);
+    return HttpParser::HTTP_RES_OK;
 }
