@@ -532,6 +532,7 @@ class HttpParser {
          * header field, the Transfer-Encoding overrides the Content-Length.
          */
         if (this->_requestType == POST) {
+            std::cout << this->_requestURI.getRawUri() << std::endl;
 
             if (this->_headers.find("Transfer-Encoding") == this->_headers.end() &&
                 this->_headers.find("Content-Length") == this->_headers.end()) {
@@ -546,7 +547,15 @@ class HttpParser {
                     return HTTP_RES_BAD_REQUEST;
                 }
 
+                std::string contentLengthValue = contentLength[0];
+
+                // ignored for now
+                if (std::atoi(contentLengthValue.c_str()) <= 0) {
+                    return HTTP_RES_LENGTH_REQUIRED;
+                }
+
                 /* TODO: Start Parsing Body using Content-Length value */
+                return HTTP_RES_OK;
             }
 
             std::vector<std::string> transferEncoding = this->_headers["Transfer-Encoding"];
