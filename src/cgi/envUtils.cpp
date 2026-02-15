@@ -1,6 +1,5 @@
 #include "../../includes/cgi/Cgi.hpp"
 
-
 std::vector<std::string> deriveScriptName( std::string& path )
 {
 	std::stringstream s(path);
@@ -19,22 +18,25 @@ std::vector<std::string> deriveScriptName( std::string& path )
 
 	for (; it != elements.end(); it++)
 	{
+		script_name += "/";
+		script_name += *it;
 		if ((*it).find(".php") != std::string::npos)
+		{
+			it++;
 			break;
-
-		path_info += "/";
-		path_info += *it;
+		}
 	}
 
 	for (; it != elements.end(); it++)
 	{
-		script_name += "/";
-		script_name += *it;
+		path_info += "/";
+		path_info += *it;
 	}
 
     std::vector<std::string> result;
-    result.push_back(path_info);
     result.push_back(script_name);
+    result.push_back(path_info);
+
 
 	return result;
 }
