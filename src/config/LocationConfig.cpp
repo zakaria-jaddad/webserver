@@ -273,7 +273,7 @@ void LocationConfig::parseRedir( std::vector<std::string>& tokens, size_t& i)
   
   int number = std::atoi(value.c_str());
   
-  this->redir[number] = path;
+  this->redir = std::make_pair(number, path);
   this->is_set_redir = true;
 
   //skip closing ;
@@ -292,7 +292,7 @@ std::vector<std::string>	LocationConfig::getAcceptedMethods( void )
   return methods_accepted;
 }
 
-std::map<int, std::string>	LocationConfig::getRedir( void )
+std::pair<int, std::string>	LocationConfig::getRedir( void )
 {
   return redir;
 }

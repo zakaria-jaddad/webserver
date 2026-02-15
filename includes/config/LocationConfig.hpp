@@ -11,7 +11,7 @@ class LocationConfig{
 	std::pair<std::string, std::string>  cgi_info;
 	std::vector<std::string>    index;
 	std::vector<std::string>	methods_accepted;
-	std::map<int, std::string>  redir;
+	std::pair<int, std::string>  redir;
 	std::string                 root;
 	std::string                 upload_path;
 	std::string                 location_path;
@@ -49,7 +49,7 @@ public:
 
 	std::vector<std::string>	getIndex( void );
 	std::vector<std::string>	getAcceptedMethods( void );
-	std::map<int, std::string>	getRedir( void );
+	std::pair<int, std::string>	getRedir( void );
 	std::string 				getRoot( void );
 	std::string 				getUploadPath( void );
 	bool 						getDirectoyListing( void );

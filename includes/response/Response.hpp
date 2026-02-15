@@ -56,20 +56,24 @@ public:
 	int httpPost( void );
 
   void	sendHeader( int );
-	bool	isComplete( void );
-	bool	isError( void );
-
-	HttpParser::httpResult craftResponse( void );
-	std::string craftHeaderStatus( std::string&  );
-	void	craftHeader( std::string& );
-	void 	craftBody( std::string& );
-
-	HttpParser::httpResult	cgiExecution();
-	void		sendingCgiResponse();
-
-	int 		servePages( int );
-	std::string getStatusMessage( int );
-	void		craftPageResponse( int, int );
+  bool	isComplete( void );
+  bool	isError( void );
+  
+  HttpParser::httpResult craftResponse( void );
+  std::string craftHeaderStatus( std::string&  );
+  void	craftHeader( std::string& );
+  void 	craftBody( std::string& );
+  
+  HttpParser::httpResult	cgiExecution();
+  void		sendingCgiResponse();
+  
+  int 		servePages( int );
+  std::string getStatusMessage( int );
+  void		craftPageResponse( int, int );
+  
+  int 		servePages( int, std::string& );
+  void		craftPageResponse( int, int, std::string& );
+  void	sendHeader( int, std::string& );
 
 };
 

@@ -9,7 +9,7 @@
 class ResolvedConfig{
 	std::pair<std::string, std::string>	cgi_info;
 	std::map<int, std::string>					error_pages;
-	std::map<int, std::string>  				redir;
+	std::pair<int, std::string>  				redir;
 	std::vector<std::string>						methods_accepted;
   std::vector<std::string>						index;
   std::string                 				server_name;
@@ -23,7 +23,7 @@ class ResolvedConfig{
 public:
 	ResolvedConfig( const std::string&, ServerConfig* ); //passes the uri as a param using the getUriPath
 
-	std::map<int, std::string>	getRedir( void );
+	std::pair<int, std::string>	getRedir( void );
   std::vector<std::string>    getIndex( void );
   std::vector<std::string>    getAcceptedMethods( void );
 	std::string  								getErrorPages( int );

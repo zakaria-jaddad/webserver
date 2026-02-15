@@ -65,7 +65,7 @@ std::vector<std::string>	ResolvedConfig::getAcceptedMethods( void )
   return methods_accepted;
 }
 
-std::map<int, std::string>	ResolvedConfig::getRedir( void )
+std::pair<int, std::string>	ResolvedConfig::getRedir( void )
 {
   return redir;
 }

@@ -108,6 +108,13 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 HttpParser::httpResult Response::checkMethod(void)
 {	
+	std::pair<int, std::string> redir = conf.getRedir();
+	if (!redir.second.empty())
+	{
+		if (servePages(redir.first, redir.second))
+			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+		return HttpParser::HTTP_RES_OK;
+	}
 	HttpParser::requestType req_method = client->request->getRequestType();
 	std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
 
