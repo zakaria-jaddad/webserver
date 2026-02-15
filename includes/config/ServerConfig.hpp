@@ -6,7 +6,7 @@
 class ServerConfig{
   
   std::map<int, std::string>  error_pages;
-	std::map<int, std::string>  redir; //don't forget to check if this is how it should be handled
+	std::pair<int, std::string>  redir; //don't forget to check if this is how it should be handled
 	std::pair<std::string, std::string>  cgi_info; //don't forget to check if this is how it should be handled
   std::vector<std::string>    index;
 	std::vector<std::string>		methods_accepted;
@@ -66,7 +66,7 @@ public:
   int			                    getPort( void );
 	bool 						            getDirectoyListing( void );
   std::vector<std::string>    getAcceptedMethods( void );
-	std::map<int, std::string>	getRedir( void );
+	std::pair<int, std::string>	getRedir( void );
 	std::pair<std::string, std::string>	getCgi( void );
 
 };

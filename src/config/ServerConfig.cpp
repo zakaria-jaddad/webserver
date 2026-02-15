@@ -28,7 +28,7 @@ ServerConfig::ServerConfig()
 
 void ServerConfig::init_error_pages()
 {
-  error_pages[200] = "pages/200.html";
+  error_pages[200] = "pages/200_delete.html";
   error_pages[400] = "pages/400.html";
   error_pages[404] = "pages/404.html";
   error_pages[405] = "pages/405.html";
@@ -164,7 +164,7 @@ void ServerConfig::parseRedir( std::vector<std::string>& tokens, size_t& i)
   
   int number = std::atoi(value.c_str());
   
-  this->redir[number] = path;
+  this->redir = std::make_pair(number, path);
 
   //skip closing ;
   i++;
@@ -553,7 +553,7 @@ std::vector<std::string>	ServerConfig::getAcceptedMethods( void )
   return methods_accepted;
 }
 
-std::map<int, std::string>	ServerConfig::getRedir( void )
+std::pair<int, std::string>	ServerConfig::getRedir( void )
 {
   return redir;
 }

@@ -96,8 +96,8 @@ int Response::httpPost()
   return 0;
 }
 
-int Response::httpDelete( void ) {
-	//TODO:check if method is allowed
+int Response::httpDelete( void ) 
+{
 	std::string absPath = this->conf.getRoot();
 
 	normalizePath();
@@ -108,11 +108,28 @@ int Response::httpDelete( void ) {
 		return (1);
 	}
 	if (unlink(absPath.c_str())) {
-		servePages(404);
+		servePages(500);
 		return (1);
 	}
-	sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nDeleted hh");
+
+	servePages(200);
+
+	// sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\nDeleted hh");
 	return (0);
+}
+
+std::string Response::chooseIndex( std::string& path )
+{
+	std::vector<std::string> indx = this->conf.getIndex();
+
+	for (std::vector<std::string>::iterator it = indx.begin(); it != indx.end(); it++)
+	{
+		std::string tst = path + "/" + *it;
+		if (access(tst.c_str(), R_OK) == 0)
+			return ("/" + *it);
+	}
+
+	return "";
 }
 
 int Response::httpGet( void ) {
@@ -123,10 +140,20 @@ int Response::httpGet( void ) {
 	std::string hexStr;
 	std::string txt;
 
-	if (this->fileFD == -3) {
+	if (this->fileFD == -3)
+	{
 		std::string absPath = this->conf.getRoot();
 		normalizePath();
 		absPath += this->normalizedPath;
+
+		if (absPath == (this->conf.getRoot() + "/"))
+			absPath += chooseIndex(absPath);
+
+		if (absPath.empty())
+		{
+			servePages(404);
+			return 1;
+		}
 		if (access(absPath.c_str(), W_OK)) {
 			servePages(404);
 			return (1);
@@ -138,19 +165,21 @@ int Response::httpGet( void ) {
 		}
 		this->fileFD = fd;
 	}
-	if (!this->headerFlag) {
+	if (!this->headerFlag) 
+	{
 		sendHeader(200);
 		this->headerFlag = 1;
 		return (0);
 	}
 	r = read(this->fileFD, buff, 1023);
-	if (r == -1) {
-		//cleanup
+	if (r == -1) 
+	{
 		close(this->fileFD);
 		this->error = 1;
 		return (1);
 	}
-	else if (r == 0) {
+	else if (r == 0) 
+	{
 		sendResponse("0\r\n\r\n");
 		std::cout << "done" << std::endl;
 		close(this->fileFD);

@@ -41,7 +41,7 @@ class Cgi{
                                                         std::string& );
 		
 		char**															charEnvBuilder(	std::map<std::string, std::string> );
-		void																envBuilder( void );
+		HttpParser::httpResult											envBuilder( void );
 		
 		//execution
 		void executor( void );

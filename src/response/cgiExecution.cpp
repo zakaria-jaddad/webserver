@@ -47,10 +47,9 @@ HttpParser::httpResult Response::cgiExecution()
 {
     Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
     
-    cgi.envBuilder();
-
-    if (this->error)
-        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+    HttpParser::httpResult env_status = cgi.envBuilder(); 
+    if (env_status != HttpParser::HTTP_RES_OK)
+        return env_status;
 
     cgi.executor();
 

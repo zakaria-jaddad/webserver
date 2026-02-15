@@ -13,28 +13,54 @@ Response::Response(t_client *dep)
 
     if (pipe(cgi_in_pipe) == -1)
         error = true;
-    
+
     if (pipe(cgi_out_pipe) == -1)
         error = true;
+}
+
+bool isCgi(const std::string& uri, std::pair<std::string, std::string> cgiInfo)
+{
+	bool cgi_configured = !cgiInfo.first.empty() &&
+												!cgiInfo.second.empty();
+
+	if (!cgi_configured)
+		return false;
+	
+	bool is_php_request = false;
+
+	std::stringstream s(uri);
+	std::string elem;
+	std::vector<std::string> elements;
+
+	while (getline(s, elem, '/')) {
+		if (elem.empty())
+			continue;
+		elements.push_back(elem);
+	}
+
+	std::vector<std::string>::iterator it = elements.begin();
+
+	for (; it != elements.end(); it++)
+	{
+		if ((*it).find(".php") != std::string::npos)
+		{
+			is_php_request = true;
+			break;
+		}
+	}
+
+	return is_php_request && cgi_configured;
 }
 
 HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method)
 {
 	const std::string& uri = client->request->getRequestUriPath();
 
-	bool is_php_request = false;
-
-	if (uri.length() >= 4 && uri.compare(uri.length() - 4, 4, ".php") == 0)
-			is_php_request = true;
-
-	bool cgi_configured = !conf.getCgi().first.empty() &&
-												!conf.getCgi().second.empty();
-
-	if (is_php_request && cgi_configured)
+	if (isCgi(uri, conf.getCgi()))
 	{
 		if (!this->exec_status)
 		{
-			if (cgiExecution() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
+			if (cgiExecution() != HttpParser::HTTP_RES_OK)
 			{
 				servePages(500);
 				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
@@ -82,6 +108,13 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 HttpParser::httpResult Response::checkMethod(void)
 {	
+	std::pair<int, std::string> redir = conf.getRedir();
+	if (!redir.second.empty())
+	{
+		if (servePages(redir.first, redir.second))
+			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+		return HttpParser::HTTP_RES_OK;
+	}
 	HttpParser::requestType req_method = client->request->getRequestType();
 	std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
 

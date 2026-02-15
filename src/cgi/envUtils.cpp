@@ -16,7 +16,7 @@ std::vector<std::string> deriveScriptName( std::string& path )
 
 	std::vector<std::string>::iterator it = elements.begin();
 
-	for (; it != elements.end(); it++) 
+	for (; it != elements.end(); it++)
 	{
 		script_name += "/";
 		script_name += *it;
