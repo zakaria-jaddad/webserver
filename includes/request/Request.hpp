@@ -47,7 +47,7 @@ inline std::string trim(const std::string &str)
 class HttpParser {
 
   public:
-    HttpParser(void) : _phase(REQUEST_LINE)
+    HttpParser(void) : _phase(REQUEST_LINE), _body(NULL)
     {
         this->_requestURI.path = "";
         this->_requestURI.params.clear();
@@ -58,9 +58,10 @@ class HttpParser {
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
         this->_config = NULL; // NOTE: tmp
+        this->_body.init(this);
     }
 
-    HttpParser(const Config *config) : _phase(REQUEST_LINE)
+    HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body(NULL)
     {
         this->_requestURI.path = "";
         this->_requestURI.params.clear();
@@ -70,20 +71,71 @@ class HttpParser {
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
-        this->_config = config;
+        this->_config = ServerConfig;
+        this->_body.init(this);
     }
 
     ~HttpParser() {}
 
     /* Server Errors */
     typedef enum {
-        HTTP_VERSION_NOT_SUPPORTED = 505,
+        // ─────────────────────────────────────────────
+        // 1xx Informational
+        // ─────────────────────────────────────────────
+        HTTP_RES_CONTINUE = 100,
+        HTTP_RES_SWITCHING_PROTOCOLS = 101,
+
+        // ─────────────────────────────────────────────
+        // 2xx Success
+        // ─────────────────────────────────────────────
         HTTP_RES_OK = 200,
-        HTTP_RES_INTERNAL_SERVER_ERROR = 500,
+        HTTP_RES_CREATED = 201,
+        HTTP_RES_ACCEPTED = 202,
+        HTTP_RES_NO_CONTENT = 204,
+        HTTP_RES_PARTIAL_CONTENT = 206,
+
+        // ─────────────────────────────────────────────
+        // 3xx Redirection
+        // ─────────────────────────────────────────────
+        HTTP_RES_MOVED_PERMANENTLY = 301,
+        HTTP_RES_FOUND = 302,
+        HTTP_RES_SEE_OTHER = 303,
+        HTTP_RES_NOT_MODIFIED = 304,
+        HTTP_RES_TEMPORARY_REDIRECT = 307,
+        HTTP_RES_PERMANENT_REDIRECT = 308,
+
+        // ─────────────────────────────────────────────
+        // 4xx Client Errors
+        // ─────────────────────────────────────────────
         HTTP_RES_BAD_REQUEST = 400,
-        HTTP_RES_NOT_IMPLEMENTED = 501,
+        HTTP_RES_UNAUTHORIZED = 401,
+        HTTP_RES_FORBIDDEN = 403,
+        HTTP_RES_NOT_FOUND = 404,
         HTTP_RES_METHOD_NOT_ALLOWED = 405,
+        HTTP_RES_NOT_ACCEPTABLE = 406,
+        HTTP_RES_REQUEST_TIMEOUT = 408,
+        HTTP_RES_CONFLICT = 409,
+        HTTP_RES_GONE = 410,
         HTTP_RES_LENGTH_REQUIRED = 411,
+        HTTP_RES_PRECONDITION_FAILED = 412,
+        HTTP_RES_REQUEST_ENTITY_TOO_LARGE = 413,
+        HTTP_RES_REQUEST_URI_TOO_LONG = 414,
+        HTTP_RES_UNSUPPORTED_MEDIA_TYPE = 415,
+        HTTP_RES_RANGE_NOT_SATISFIABLE = 416,
+        HTTP_RES_EXPECTATION_FAILED = 417,
+        HTTP_RES_TOO_MANY_REQUESTS = 429,
+        HTTP_RES_REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
+
+        // ─────────────────────────────────────────────
+        // 5xx Server Errors
+        // ─────────────────────────────────────────────
+        HTTP_RES_INTERNAL_SERVER_ERROR = 500,
+        HTTP_RES_NOT_IMPLEMENTED = 501,
+        HTTP_RES_BAD_GATEWAY = 502,
+        HTTP_RES_SERVICE_UNAVAILABLE = 503,
+        HTTP_RES_GATEWAY_TIMEOUT = 504,
+        HTTP_RES_HTTP_VERSION_NOT_SUPPORTED = 505
+
     } httpResult;
 
     typedef enum {
@@ -136,21 +188,29 @@ class HttpParser {
 
         if (this->_phase == BODY) {
 
-            /*
-             * NOTE: Header fields get's parsed usually after the message's entire header section
-             * has been processed
-             */
-            res = _parseRequestHeaderValue();
+            if (this->_body._state == Body::BODY_NOT_STARTED) {
+
+                res = _parseRequestHeaderValue();
+                if (res != HTTP_RES_OK) {
+                    return res;
+                }
+            }
+
+            /* If request type other than POST ignore the body */
+            if (this->_requestType != POST) {
+                this->_phase = COMPLETE;
+                return HTTP_RES_OK;
+            }
+
+            res = this->_body.parseRequestBody();
             if (res != HTTP_RES_OK) {
                 return res;
             }
 
-            res = _parseRequestBody();
-            if (res != HTTP_RES_OK) {
-                return res;
-            }
+            // WARNING: This should be removed from here
             this->_phase = COMPLETE;
         }
+
         return HTTP_RES_OK;
     };
 
@@ -252,7 +312,7 @@ class HttpParser {
             }
             return HttpParser::HTTP_RES_OK;
         }
-    } requestURI;
+    } RequestURI;
 
     typedef enum {
         REQUEST_LINE,
@@ -261,14 +321,118 @@ class HttpParser {
         COMPLETE,
     } parserPhase;
 
-  private:
+    typedef struct Body {
+        typedef enum {
+            NONE,
+            CONTENT_LENGTH,
+            CHUNKED,
+        } bodyType;
+        typedef enum {
+            BODY_NOT_STARTED,
+            BODY_READING,
+            BODY_COMPLETE,
+        } bodyState;
+
+      private:
+        httpResult _initParsingInfo()
+        {
+            this->_maxBodySize = this->httpParser->_config->getSize();
+            if (httpParser->_headers.find("Transfer-Encoding") == httpParser->_headers.end() &&
+                httpParser->_headers.find("Content-Length") == httpParser->_headers.end()) {
+                return HTTP_RES_LENGTH_REQUIRED;
+            }
+
+            /* Transfer-Encoding Not found */
+            if (httpParser->_headers.find("Transfer-Encoding") == httpParser->_headers.end()) {
+
+                std::vector<std::string> contentLength = httpParser->_headers["Content-Length"];
+                if (contentLength.size() != 1) {
+                    return HTTP_RES_BAD_REQUEST;
+                }
+
+                size_t contentLengthValue = std::atoi(contentLength[0].c_str());
+
+                // ignored for now
+                if (contentLengthValue <= 0) {
+                    return HTTP_RES_LENGTH_REQUIRED;
+                }
+
+                if (contentLengthValue > this->_maxBodySize) {
+                    return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                }
+                this->_type = CONTENT_LENGTH;
+                this->_contentLength = contentLengthValue;
+                return HTTP_RES_OK;
+            }
+
+            std::vector<std::string> transferEncoding = httpParser->_headers["Transfer-Encoding"];
+            if (transferEncoding.size() != 1) {
+                return HTTP_RES_BAD_REQUEST;
+            }
+            std::string transferEncodingType = transferEncoding[0];
+            if (transferEncodingType == "") {
+                return HTTP_RES_BAD_REQUEST;
+            }
+            if (transferEncodingType != "chunked") {
+                return HTTP_RES_NOT_IMPLEMENTED;
+            }
+            this->_type = CHUNKED;
+            return HTTP_RES_OK;
+        }
+
+      public:
+        Body(HttpParser *httpParser)
+        {
+            this->_type = NONE;
+            this->_state = BODY_NOT_STARTED;
+            this->_contentLength = 0;
+            this->_bytesReceived = 0;
+            this->httpParser = httpParser; // always NULL here
+            this->_maxBodySize = 0;
+            this->_body = "";
+        }
+
+        void init(HttpParser *httpParser) { this->httpParser = httpParser; }
+
+        bodyType _type;
+        bodyState _state;
+        size_t _maxBodySize;
+        size_t _contentLength;
+        size_t _bytesReceived;
+        std::string _body;
+        HttpParser *httpParser;
+
+        // long currentChunkSize;
+        // long currentChunkRead;
+        // bool lastChunkReceived;
+        httpResult parseRequestBody()
+        {
+            httpResult res;
+            /* If a message is received with both a Transfer-Encoding and a Content-Length
+             * header field, the Transfer-Encoding overrides the Content-Length. */
+            if (this->_state == BODY_NOT_STARTED) {
+                res = _initParsingInfo();
+                if (res != HTTP_RES_OK) {
+                    return res;
+                }
+                this->_state = BODY_READING;
+            }
+            if (this->_state == BODY_READING) {
+                std::cout << this->_contentLength << std::endl;
+                // TODO: Start Parsing
+            }
+
+            return HTTP_RES_OK;
+        }
+    } Body;
+
     parserPhase _phase;
     requestType _requestType;
-    requestURI _requestURI;
+    RequestURI _requestURI;
     int _requestVersion[2];
-    const Config *_config;
-    // std::map<std::string, std::string> __headers;
+    ServerConfig *_config;
     std::map<std::string, std::vector<std::string> > _headers;
+    Body _body;
 
     std::vector<std::string> _getTokens(std::string line, std::string delimiter)
     {
@@ -518,59 +682,6 @@ class HttpParser {
                 }
             }
             it->second = values;
-        }
-        return HTTP_RES_OK;
-    }
-
-    httpResult _parseRequestBody()
-    {
-
-        /*
-         * If request type other than POST ignore the body
-         *
-         * If a message is received with both a Transfer-Encoding and a Content-Length
-         * header field, the Transfer-Encoding overrides the Content-Length.
-         */
-        if (this->_requestType == POST) {
-            std::cout << this->_requestURI.getRawUri() << std::endl;
-
-            if (this->_headers.find("Transfer-Encoding") == this->_headers.end() &&
-                this->_headers.find("Content-Length") == this->_headers.end()) {
-                return HTTP_RES_LENGTH_REQUIRED;
-            }
-
-            /* Transfer-Encoding Not found */
-            if (this->_headers.find("Transfer-Encoding") == this->_headers.end()) {
-
-                std::vector<std::string> contentLength = this->_headers["Content-Length"];
-                if (contentLength.size() != 1) {
-                    return HTTP_RES_BAD_REQUEST;
-                }
-
-                std::string contentLengthValue = contentLength[0];
-
-                // ignored for now
-                if (std::atoi(contentLengthValue.c_str()) <= 0) {
-                    return HTTP_RES_LENGTH_REQUIRED;
-                }
-
-                /* TODO: Start Parsing Body using Content-Length value */
-                return HTTP_RES_OK;
-            }
-
-            std::vector<std::string> transferEncoding = this->_headers["Transfer-Encoding"];
-            if (transferEncoding.size() != 1) {
-                return HTTP_RES_BAD_REQUEST;
-            }
-
-            std::string transferEncodingType = transferEncoding[0];
-            if (transferEncodingType == "") {
-                return HTTP_RES_BAD_REQUEST;
-            }
-            if (transferEncodingType != "chunked") {
-                return HTTP_RES_NOT_IMPLEMENTED;
-            }
-            /* TODO: Start Transfer Encoding Parsing */
         }
         return HTTP_RES_OK;
     }

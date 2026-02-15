@@ -6,6 +6,7 @@ Server::Server(std::string &path)
     this->conf.tokenize(path);
     this->conf.loadServers();
 }
+
 void Server::setupServerFds()
 {
     int serverSocket;
@@ -77,7 +78,7 @@ int Server::checkForServerFd(epoll_event *events, int i)
                 std::cerr << "failed to accept" << std::endl;
             if (addToEpoll(clientSocket, EPOLLIN))
                 std::cerr << "failed to add to epoll" << std::endl;
-            obj = new HttpParser();
+            obj = new HttpParser(it->second);
             client.fd = clientSocket;
             client.config = it->second;
             client.request = obj;
@@ -136,10 +137,10 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 std::cout << req;
                 std::cout << "--------------end of request------------------" << std::endl;
                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
-                if (res != HttpParser::HTTP_RES_OK) {
-                    // do something
-                }
-                std::cout << "=======================" << std::endl;
+                std::cout << res << std::endl;
+                // if (res != HttpParser::HTTP_RES_OK) {
+                // }
+                std::cout << "Yoooo           =======================" << std::endl;
 
                 std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
 
