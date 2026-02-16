@@ -10,6 +10,7 @@ std::string Response::getStatusMessage(int code)
         case 303: return "See Other";
         case 307: return "Temporary Redirect";
         case 308: return "Permanent Redirect";
+        case 403: return "Forbidden";
         case 404: return "Not Found";
         case 500: return "Internal Server Error";
         case 405: return "Method Not Allowed";
@@ -30,7 +31,7 @@ void Response::craftPageResponse(int code, int fd)
     }
    
     char buff[1024];
-    int bytes = read(fd, buff, sizeof(buff)-1);
+    ssize_t bytes = read(fd, buff, sizeof(buff)-1);
     if (bytes == 0)
     {
         // std::cout << "Done reading" << std::endl ;
@@ -167,10 +168,15 @@ int Response::servePages(int code, std::string& location)
 //normalizing uri
 void Response::normalizePath(void)
 {
-    std::stringstream ss(this->client->request->getRequestUriPath());
+    std::string originalPath = this->client->request->getRequestUriPath();
+    std::stringstream ss(originalPath);
     std::string elem;
     std::vector<std::string> elements;
     std::string normPath = "";
+    bool ends_with_slash = false;
+
+    if (!originalPath.empty() && originalPath[originalPath.length() - 1] == '/')
+        ends_with_slash = true;
 
     while (getline(ss, elem, '/')) {
         if (elem == "." || elem.empty())
@@ -186,7 +192,12 @@ void Response::normalizePath(void)
     }
     if (normPath == "")
         normPath = "/";
+    
+    if (ends_with_slash && normPath != "/")
+        normPath += "/";
+
     // std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
+    // std::cout << "The original path is :'" << this->client->request->getRequestUriPath() << "'" << std::endl;
     this->normalizedPath = normPath;
 }
 
@@ -208,6 +219,18 @@ void Response::sendHeader(int status_code, std::string& location)
 
     std::cout << ss.str() << std::endl;
     sendResponse(ss.str().c_str());
+}
+
+
+void Response::sendChunkSize( size_t size )
+{
+    std::string hexStr;
+    std::stringstream ss;
+
+    ss << std::hex << size;
+    hexStr = ss.str();
+    hexStr += "\r\n";
+    sendResponse(hexStr.c_str());
 }
 
 //original
