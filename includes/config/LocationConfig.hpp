@@ -8,14 +8,14 @@
 
 class LocationConfig{
 	
-	std::pair<std::string, std::string>  cgi_info;
-	std::vector<std::string>    index;
-	std::vector<std::string>	methods_accepted;
-	std::pair<int, std::string>  redir;
-	std::string                 root;
-	std::string                 upload_path;
-	std::string                 location_path;
-	bool                        directory_listing;
+	std::pair<std::string, std::string>		cgi_info;
+	std::vector<std::string>    					index;
+	std::vector<std::string>							methods_accepted;
+	std::pair<int, std::string>						redir;
+	std::string                 					root;
+	std::string                 					upload_path;
+	std::string                 					location_path;
+	bool                        					directory_listing;
 
 	
 	typedef void (LocationConfig::*Parser)(std::vector<std::string>&, size_t&);

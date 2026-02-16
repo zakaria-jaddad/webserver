@@ -5,6 +5,7 @@ Server::Server(std::string &path) {
 	this->conf.tokenize(path);
 	this->conf.loadServers();
 }
+
 void Server::setupServerFds() {
 	int serverSocket;
 	int opt = 1;
@@ -118,14 +119,16 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 					closeSocket(&(*it));
 					Clients.erase(Clients.begin() + c);
 					break;
+					//TODO:check if i must remove from epoll list of interest
 				}
 				req[b] = 0;
 				std::cout << "--------------start of request----------------" << std::endl;
 				std::cout << req;
 				std::cout << "--------------end of request------------------" << std::endl;
 				it->request->parseHttpRequest(req);
-				std::cout << "=======================" << std::endl;
 				
+				//debuggin parsed request
+				std::cout << "=======================" << std::endl;
 				std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
 
 				for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
@@ -144,8 +147,8 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 						std::cout << "  Value: " << *itVec << std::endl;
 					}
 				}
-
 				std::cout << "=======================" << std::endl;
+				
 				if (it->request->isComplete())
 					switchEpollMode(clientSocket, EPOLLOUT);
 			}
@@ -157,6 +160,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 					closeSocket(&(*it));
 					Clients.erase(Clients.begin() + c);
 					break;
+					//hh
 				}
 				if (it->response->isComplete()) {
 					resetSocket(&(*it));

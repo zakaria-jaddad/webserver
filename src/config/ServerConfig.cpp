@@ -14,8 +14,8 @@ ServerConfig::ServerConfig()
   cgi_info(),
   index(),
   methods_accepted(),
+  server_name(),
   ip("0.0.0.0"),
-  server_name(""),
   root(""),
   max_body(1024),
   directory_listing(false),
@@ -253,7 +253,9 @@ void ServerConfig::checkServerName( const std::string& name )
     val.push_back(std::tolower(c));
   }
 
-  this->server_name = val;
+  std::cout <<"###################"<< std::endl;
+  std::cout << "host : " << val << std::endl;
+  this->server_name.push_back(val);
 }
 
 void ServerConfig::parseName( std::vector<std::string>& tokens, size_t& i)
@@ -264,18 +266,26 @@ void ServerConfig::parseName( std::vector<std::string>& tokens, size_t& i)
   if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
     throw std::runtime_error("Found an unexpected : " + tokens[i]);
   
-  std::string value = tokens[i];
+  // std::string value = tokens[i];
   
-  //skip the value token
-  i++;
+  // //skip the value token
+  // i++;
 
-  if (tokens[i] != ";")
-    throw std::runtime_error("Invalid number of argumenst in \"server_name\" directive");
+  // if (tokens[i] != ";")
+  //   throw std::runtime_error("Invalid number of argumenst in \"server_name\" directive");
 
   //skip the closing ';'
-  i++;
+  // i++;
+
+  while(tokens[i] != ";")
+  {
+    std::string value = tokens[i];
+    checkServerName(value);
+    // this->index.push_back(value);
+    i++;
+  }
   
-  checkServerName(value);
+  i++;
 }
 
 
@@ -510,7 +520,7 @@ std::map<std::string, int> ServerConfig::getListeningPairs()
   return m;
 }
 
-std::string ServerConfig::getServerName( void )
+std::vector<std::string> ServerConfig::getServerName( void )
 {
   return server_name;
 }

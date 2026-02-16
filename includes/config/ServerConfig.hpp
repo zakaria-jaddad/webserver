@@ -10,8 +10,8 @@ class ServerConfig{
 	std::pair<std::string, std::string>  cgi_info; //don't forget to check if this is how it should be handled
   std::vector<std::string>    index;
 	std::vector<std::string>		methods_accepted;
+  std::vector<std::string>     server_name;
   std::string                 ip;
-  std::string                 server_name;
   std::string                 root;
   std::size_t                 max_body;
 	bool                        directory_listing;//only a fallback when index is not specified
@@ -59,8 +59,8 @@ public:
   std::map<std::string, int>  getListeningPairs( void );
   std::map<int, std::string>  getErrorPages( void );
   std::vector<std::string>    getIndex( void );
+  std::vector<std::string>    getServerName( void );
   std::size_t                 getSize( void );
-  std::string                 getServerName( void );
   std::string                 getRoot( void );
   std::string                 getIP( void );
   int			                    getPort( void );

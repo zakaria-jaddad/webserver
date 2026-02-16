@@ -12,7 +12,7 @@ class ResolvedConfig{
 	std::pair<int, std::string>  				redir;
 	std::vector<std::string>						methods_accepted;
   std::vector<std::string>						index;
-  std::string                 				server_name;
+  std::vector<std::string>						server_name;
   std::string													root;
 	std::string													ip;
 	std::string													upload_path;
@@ -26,9 +26,9 @@ public:
 	std::pair<int, std::string>	getRedir( void );
   std::vector<std::string>    getIndex( void );
   std::vector<std::string>    getAcceptedMethods( void );
+  std::vector<std::string>		getServerName( void );
 	std::string  								getErrorPages( int );
   std::string                 getRoot( void );
-  std::string                 getServerName( void );
 	bool 						            getDirectoyListing( void );
 	int 						            getPort( void );
 	std::string			            getIp( void );

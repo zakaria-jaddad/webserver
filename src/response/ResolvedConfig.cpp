@@ -75,7 +75,7 @@ std::pair<std::string, std::string>	ResolvedConfig::getCgi( void )
   return cgi_info;
 }
 
-std::string ResolvedConfig::getServerName( void )
+std::vector<std::string> ResolvedConfig::getServerName( void )
 {
   return server_name;
 }
