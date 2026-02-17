@@ -62,6 +62,7 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 	int clientSocket = -1;
 	HttpParser *obj;
 	t_client client;
+	time_t now = time(NULL);
 
 	for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin(); it != this->vServers.end(); it++) {
 		if (events[i].data.fd == it->first) {
@@ -75,6 +76,8 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 			client.config = it->second;
 			client.request = obj;
 			client.response = NULL;
+			client.connection_time = now;
+			client.last_activity = now;
 			Clients.push_back(client);
 			break;
 		}
@@ -99,6 +102,23 @@ void	Server::closeSocket(t_client *client) {
 	client->config = NULL;
 }
 
+int Server::checkClientTimeout(t_client *client)
+{
+	time_t now = time(NULL);
+	time_t idle_time = now - client->last_activity;
+	
+	std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
+	std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
+
+	if (!client->request->isComplete() && idle_time > REQUEST_TIMEOUT)//placeholder request timeout
+		return 1;
+	
+	if (client->request->isComplete() && idle_time > IDLE_TIMEOUT)//placeholder idle timeout
+		return 1;
+	
+	return 0;
+}
+
 int Server::checkForClientFd(epoll_event *events, int i) {
 	//This method is to look for the event fd in clientFds
 	//It then checks if the operation that is is ready for is 'read' or 'write'
@@ -109,8 +129,30 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 	int b;
 	int c = 0;
 
-	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++, c++) {
-		if (events[i].data.fd == it->fd) {
+	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++, c++) 
+	{
+		std::cout << "looping thru clients" << std::endl;
+
+		int isTimeout = checkClientTimeout(&(*it));
+		if (isTimeout)
+		{
+			std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+
+			if (it->response == NULL)
+				it->response = new Response(&(*it));
+
+			(*it).response->servePages(408);
+
+			closeSocket(&(*it));
+			switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+			Clients.erase(Clients.begin() + c);
+			return -2;
+		}
+		else
+			clientSocket = 0;
+
+		if (events[i].data.fd == it->fd) 
+		{
 			clientSocket = it->fd;
 			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
 			if (events[i].events == EPOLLIN) { // we can read from socket
@@ -118,10 +160,11 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 				if (b == -1 || b == 0) {
 					closeSocket(&(*it));
 					Clients.erase(Clients.begin() + c);
-					break;
+					return 1;
 					//TODO:check if i must remove from epoll list of interest
 				}
 				req[b] = 0;
+				it->last_activity = time(NULL);
 				std::cout << "--------------start of request----------------" << std::endl;
 				std::cout << req;
 				std::cout << "--------------end of request------------------" << std::endl;
@@ -176,8 +219,8 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 	return (clientSocket);
 }
 
-int Server::startServer() {
-
+int Server::startServer() 
+{
 	setupServerFds();
 	int clientSocket;
 	int event_count;
@@ -191,13 +234,17 @@ int Server::startServer() {
 	}
 
 	while (1) {
-		event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 30000);
+		event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
+
 		if (event_count == -1) {
 			std::cerr << "epoll_wait Failed!" << std::endl;
 			return (1);
 		}
 		// std::cout << "event_count = " << event_count << std::endl;
-		for (int i = 0; i < event_count; i++) {
+		if (event_count > 0)
+			event_count -= 1;
+		for (int i = 0; i <= event_count; i++) {
+			std::cout << "i : " << i << std::endl;
 			clientSocket = checkForServerFd(events, i);
 			if (clientSocket != -1) //found fd in serverFds
 				continue;
