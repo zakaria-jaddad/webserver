@@ -10,12 +10,21 @@ Response::Response(t_client *dep)
     this->status = 0;
     this->exec_status = 0;
     this->error = 0;
+    this->timed_out = 0;
+    this->start_time = time(NULL);
+    this->cgi = NULL;
 
     if (pipe(cgi_in_pipe) == -1)
         error = true;
 
     if (pipe(cgi_out_pipe) == -1)
         error = true;
+}
+
+Response::~Response( void )
+{
+	if (cgi)
+		delete cgi;
 }
 
 bool isCgi(const std::string& uri, std::pair<std::string, std::string> cgiInfo)
@@ -58,13 +67,28 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 	if (isCgi(uri, conf.getCgi()))
 	{
+		if ((time(NULL) - start_time) > CGI_TIMEOUT)
+    {
+			this->timed_out = 1;
+			int childpid = cgi->getChild();
+
+			std::cout << "child to kill : " << childpid << std::endl;
+
+			kill(childpid, SIGKILL);
+			waitpid(childpid, NULL, 0);
+			return HttpParser::HTTP_VERSION_NOT_SUPPORTED;//placeholder
+    }
+
 		if (!this->exec_status)
 		{
-			if (cgiExecution() != HttpParser::HTTP_RES_OK)
+			HttpParser::httpResult res = cgiExecution();
+
+			if (res != HttpParser::HTTP_RES_OK)
 			{
 				servePages(500);
 				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 			}
+			return HttpParser::HTTP_RES_OK;
 		}
 
 		if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
@@ -107,7 +131,10 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 
 HttpParser::httpResult Response::checkMethod(void)
-{	
+{
+	if (this->timed_out)
+		return HttpParser::HTTP_VERSION_NOT_SUPPORTED;//placeholder
+
 	std::pair<int, std::string> redir = conf.getRedir();
 	if (!redir.second.empty())
 	{
@@ -126,8 +153,10 @@ HttpParser::httpResult Response::checkMethod(void)
 		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	}
 
-	if (routeMethod(req_method) != HttpParser::HTTP_RES_OK)
-		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+	HttpParser::httpResult res = routeMethod(req_method);
+	
+	if (res != HttpParser::HTTP_RES_OK)
+		return res;
 	
 	return (HttpParser::HTTP_RES_OK);
 }

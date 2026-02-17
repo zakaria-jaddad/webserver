@@ -108,8 +108,8 @@ int Server::checkClientTimeout(t_client *client)
 	time_t now = time(NULL);
 	time_t idle_time = now - client->last_activity;
 	
-	std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
-	std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
+	// std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
+	// std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
 
 	if (!client->request->isComplete() && idle_time > REQUEST_TIMEOUT)//placeholder request timeout
 		return 1;
@@ -130,34 +130,38 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 	int b;
 	int c = 0;
 
-	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++, c++) 
+	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); c++) 
 	{
-		std::cout << "looping thru clients" << std::endl;
+		// std::cout << "looping thru clients" << std::endl;
 
 		int isTimeout = checkClientTimeout(&(*it));
 		if (isTimeout)
 		{
 			std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-
-			// if (it->response == NULL)
-			// 	it->response = new Response(&(*it));
-
-			// it->response->servePages(408);
-			// if (it->response->isComplete())
-			// {
-				closeSocket(&(*it));
-				switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-				Clients.erase(Clients.begin() + c);
-			// }
-
-			return -2;
+			switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+			closeSocket(&(*it));
+			it = Clients.erase(Clients.begin() + c);
+			continue ;
 		}
 
 		if (events[i].data.fd == it->fd) 
 		{
 			clientSocket = it->fd;
 			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
-			if (events[i].events == EPOLLIN) { // we can read from socket
+			if (events[i].events == EPOLLIN) 
+			{ 
+				// we can read from socket
+
+				int time_out = checkClientTimeout(&(*it));
+				if (time_out)
+				{
+					std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+					switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+					closeSocket(&(*it));
+					it = Clients.erase(Clients.begin() + c);
+					continue ;
+				}
+				
 				b = recv(clientSocket, req, sizeof(req) - 1, 0);
 				if (b == -1 || b == 0) {
 					closeSocket(&(*it));
@@ -197,10 +201,25 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 				if (it->request->isComplete())
 					switchEpollMode(clientSocket, EPOLLOUT);
 			}
-			else if (events[i].events == EPOLLOUT) { // we can write to socket
+			else if (events[i].events == EPOLLOUT) 
+			{ 
+				// we can write to socket
 				if (it->response == NULL)
 					it->response = new Response(&(*it));
-				it->response->checkMethod();
+				HttpParser::httpResult res = it->response->checkMethod();
+				if (res == HttpParser::HTTP_VERSION_NOT_SUPPORTED)
+				{
+					std::cout << "cgi timed out" << std::endl;
+					it->response->servePages(408);
+					if(it->response->isComplete())
+					{
+						std::cout << "cleaned socket" << std::endl;
+						switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+						closeSocket(&(*it));
+						it = Clients.erase(Clients.begin() + c);
+					}
+					break ;
+				}
 				if (it->response->isError()) {
 					closeSocket(&(*it));
 					Clients.erase(Clients.begin() + c);
@@ -217,6 +236,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 			}
 			break;
 		}
+		it++;
 	}
 	return (clientSocket);
 }
@@ -246,7 +266,7 @@ int Server::startServer()
 		if (event_count == 0)
 		{
 			int c = 0;
-			for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++, c++) 
+			for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); c++) 
 			{
 				std::cout << "looping thru clients" << std::endl;
 
@@ -254,29 +274,13 @@ int Server::startServer()
 				if (isTimeout)
 				{
 					std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-
-					// if (it->response == NULL)
-					// {
-					// 	it->response = new Response(&(*it));
-					// 	std::cout << "creating response" << std::endl;
-					// }
-
-					// if (it->response->servePages(408))
-					// {
-					// 	std::cout << "some bs error happened!!!!!!!!!!!" << std::endl; 
-					// 	return 1;
-					// }
-					std::cout << "aaaaaaaaaaa" << std::endl;
-					
-					// if (it->response->isComplete())
-					// {
-						std::cout << "done sending timeout resetting socket..." << std::endl;
-						closeSocket(&(*it));
-						switchEpollMode(it->fd, EPOLL_CTL_DEL);
-						Clients.erase(Clients.begin() + c);
-					// }
+					std::cout << "done sending timeout resetting socket..." << std::endl;
+					switchEpollMode(it->fd, EPOLL_CTL_DEL);
+					closeSocket(&(*it));
+					it = Clients.erase(Clients.begin() + c);
 					continue ;
 				}
+				it++;
 			}
 		}
 

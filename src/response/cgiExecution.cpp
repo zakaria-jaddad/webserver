@@ -45,15 +45,22 @@ void Response::sendingCgiResponse()
 
 HttpParser::httpResult Response::cgiExecution()
 {
-    Cgi cgi(cgi_in_pipe, cgi_out_pipe, client);
+    if (!cgi)
+    {
+        cgi = new Cgi(cgi_in_pipe, cgi_out_pipe, client);
+
+        HttpParser::httpResult env_status = cgi->envBuilder(); 
+        if (env_status != HttpParser::HTTP_RES_OK)
+            return env_status;
+    }
+
+    cgi->executor();
     
-    HttpParser::httpResult env_status = cgi.envBuilder(); 
-    if (env_status != HttpParser::HTTP_RES_OK)
-        return env_status;
-
-    cgi.executor();
-
-    this->exec_status = 1;
-
-	return HttpParser::HTTP_RES_OK;
+    if (cgi->getChildStatus() == cgi->getChild())
+    {
+        this->exec_status = 1;
+        std::cout << "finished executing" << std::endl;
+    }
+        
+    return HttpParser::HTTP_RES_OK;
 }
