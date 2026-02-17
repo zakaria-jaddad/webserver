@@ -50,6 +50,7 @@ int Server::switchEpollMode(int clientSocket, uint32_t flag) {
 	event.events = flag;
 	event.data.fd = clientSocket;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, clientSocket, &event) == -1) {
+		perror("ctl failed");
 		std::cerr << "epoll_ctl Failed!" << std::endl;
 		return (1);
 	}
@@ -138,18 +139,19 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 		{
 			std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
 
-			if (it->response == NULL)
-				it->response = new Response(&(*it));
+			// if (it->response == NULL)
+			// 	it->response = new Response(&(*it));
 
-			(*it).response->servePages(408);
+			// it->response->servePages(408);
+			// if (it->response->isComplete())
+			// {
+				closeSocket(&(*it));
+				switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+				Clients.erase(Clients.begin() + c);
+			// }
 
-			closeSocket(&(*it));
-			switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-			Clients.erase(Clients.begin() + c);
 			return -2;
 		}
-		else
-			clientSocket = 0;
 
 		if (events[i].data.fd == it->fd) 
 		{
@@ -241,10 +243,45 @@ int Server::startServer()
 			return (1);
 		}
 		// std::cout << "event_count = " << event_count << std::endl;
-		if (event_count > 0)
-			event_count -= 1;
-		for (int i = 0; i <= event_count; i++) {
-			std::cout << "i : " << i << std::endl;
+		if (event_count == 0)
+		{
+			int c = 0;
+			for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); it++, c++) 
+			{
+				std::cout << "looping thru clients" << std::endl;
+
+				int isTimeout = checkClientTimeout(&(*it));
+				if (isTimeout)
+				{
+					std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+
+					// if (it->response == NULL)
+					// {
+					// 	it->response = new Response(&(*it));
+					// 	std::cout << "creating response" << std::endl;
+					// }
+
+					// if (it->response->servePages(408))
+					// {
+					// 	std::cout << "some bs error happened!!!!!!!!!!!" << std::endl; 
+					// 	return 1;
+					// }
+					std::cout << "aaaaaaaaaaa" << std::endl;
+					
+					// if (it->response->isComplete())
+					// {
+						std::cout << "done sending timeout resetting socket..." << std::endl;
+						closeSocket(&(*it));
+						switchEpollMode(it->fd, EPOLL_CTL_DEL);
+						Clients.erase(Clients.begin() + c);
+					// }
+					continue ;
+				}
+			}
+		}
+
+		for (int i = 0; i < event_count; i++) {
+
 			clientSocket = checkForServerFd(events, i);
 			if (clientSocket != -1) //found fd in serverFds
 				continue;
