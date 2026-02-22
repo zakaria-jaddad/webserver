@@ -133,31 +133,11 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     break;
                 }
                 req[b] = 0;
-                std::cout << "--------------start of request----------------" << std::endl;
-                std::cout << req;
-                std::cout << "--------------end of request------------------" << std::endl;
                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
-                std::cout << res << std::endl;
-                // if (res != HttpParser::HTTP_RES_OK) {
-                // }
-                std::cout << "Yoooo           =======================" << std::endl;
 
-                std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
+                it->request->printHttpResult(res);
+                it->request->printHeaders();
 
-                for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
-                     itMap != foo.end(); ++itMap) {
-                    std::string key = itMap->first;
-                    std::vector<std::string> &values = itMap->second;
-
-                    std::cout << "Header: " << key << std::endl;
-
-                    for (std::vector<std::string>::iterator itVec = values.begin();
-                         itVec != values.end(); ++itVec) {
-                        std::cout << "  Value: " << *itVec << std::endl;
-                    }
-                }
-
-                std::cout << "=======================" << std::endl;
                 if (it->request->isComplete())
                     switchEpollMode(clientSocket, EPOLLOUT);
             }

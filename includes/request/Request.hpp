@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -14,6 +15,8 @@
 
 #define CRLF "\r\n"
 #define DOUBLE_CRLF "\r\n\r\n"
+
+using namespace std;
 
 /* inline only for development */
 inline std::string trim(const std::string &str)
@@ -137,6 +140,98 @@ class HttpParser {
         HTTP_RES_HTTP_VERSION_NOT_SUPPORTED = 505
 
     } httpResult;
+
+    const char *httpResultToString(httpResult result)
+    {
+        switch (result) {
+        // 1xx
+        case HTTP_RES_CONTINUE:
+            return "100 Continue";
+        case HTTP_RES_SWITCHING_PROTOCOLS:
+            return "101 Switching Protocols";
+
+        // 2xx
+        case HTTP_RES_OK:
+            return "200 OK";
+        case HTTP_RES_CREATED:
+            return "201 Created";
+        case HTTP_RES_ACCEPTED:
+            return "202 Accepted";
+        case HTTP_RES_NO_CONTENT:
+            return "204 No Content";
+        case HTTP_RES_PARTIAL_CONTENT:
+            return "206 Partial Content";
+
+        // 3xx
+        case HTTP_RES_MOVED_PERMANENTLY:
+            return "301 Moved Permanently";
+        case HTTP_RES_FOUND:
+            return "302 Found";
+        case HTTP_RES_SEE_OTHER:
+            return "303 See Other";
+        case HTTP_RES_NOT_MODIFIED:
+            return "304 Not Modified";
+        case HTTP_RES_TEMPORARY_REDIRECT:
+            return "307 Temporary Redirect";
+        case HTTP_RES_PERMANENT_REDIRECT:
+            return "308 Permanent Redirect";
+
+        // 4xx
+        case HTTP_RES_BAD_REQUEST:
+            return "400 Bad Request";
+        case HTTP_RES_UNAUTHORIZED:
+            return "401 Unauthorized";
+        case HTTP_RES_FORBIDDEN:
+            return "403 Forbidden";
+        case HTTP_RES_NOT_FOUND:
+            return "404 Not Found";
+        case HTTP_RES_METHOD_NOT_ALLOWED:
+            return "405 Method Not Allowed";
+        case HTTP_RES_NOT_ACCEPTABLE:
+            return "406 Not Acceptable";
+        case HTTP_RES_REQUEST_TIMEOUT:
+            return "408 Request Timeout";
+        case HTTP_RES_CONFLICT:
+            return "409 Conflict";
+        case HTTP_RES_GONE:
+            return "410 Gone";
+        case HTTP_RES_LENGTH_REQUIRED:
+            return "411 Length Required";
+        case HTTP_RES_PRECONDITION_FAILED:
+            return "412 Precondition Failed";
+        case HTTP_RES_REQUEST_ENTITY_TOO_LARGE:
+            return "413 Payload Too Large";
+        case HTTP_RES_REQUEST_URI_TOO_LONG:
+            return "414 URI Too Long";
+        case HTTP_RES_UNSUPPORTED_MEDIA_TYPE:
+            return "415 Unsupported Media Type";
+        case HTTP_RES_RANGE_NOT_SATISFIABLE:
+            return "416 Range Not Satisfiable";
+        case HTTP_RES_EXPECTATION_FAILED:
+            return "417 Expectation Failed";
+        case HTTP_RES_TOO_MANY_REQUESTS:
+            return "429 Too Many Requests";
+        case HTTP_RES_REQUEST_HEADER_FIELDS_TOO_LARGE:
+            return "431 Request Header Fields Too Large";
+
+        // 5xx
+        case HTTP_RES_INTERNAL_SERVER_ERROR:
+            return "500 Internal Server Error";
+        case HTTP_RES_NOT_IMPLEMENTED:
+            return "501 Not Implemented";
+        case HTTP_RES_BAD_GATEWAY:
+            return "502 Bad Gateway";
+        case HTTP_RES_SERVICE_UNAVAILABLE:
+            return "503 Service Unavailable";
+        case HTTP_RES_GATEWAY_TIMEOUT:
+            return "504 Gateway Timeout";
+        case HTTP_RES_HTTP_VERSION_NOT_SUPPORTED:
+            return "505 HTTP Version Not Supported";
+
+        default:
+            return "Unknown Status";
+        }
+    }
 
     typedef enum {
         GET,
@@ -382,6 +477,7 @@ class HttpParser {
 
       public:
         Body(HttpParser *httpParser)
+            : fileName("/home/zajaddad/Projects/ft_webserver/www/uploads/upload.txt")
         {
             this->_type = NONE;
             this->_state = BODY_NOT_STARTED;
@@ -390,7 +486,10 @@ class HttpParser {
             this->httpParser = httpParser; // always NULL here
             this->_maxBodySize = 0;
             this->_body = "";
+            file.open(this->fileName.c_str());
         }
+
+        ~Body() { file.close(); }
 
         void init(HttpParser *httpParser) { this->httpParser = httpParser; }
 
@@ -401,6 +500,8 @@ class HttpParser {
         size_t _bytesReceived;
         std::string _body;
         HttpParser *httpParser;
+        std::string fileName;
+        std::ofstream file;
 
         // long currentChunkSize;
         // long currentChunkRead;
@@ -412,16 +513,25 @@ class HttpParser {
              * header field, the Transfer-Encoding overrides the Content-Length. */
             if (this->_state == BODY_NOT_STARTED) {
                 res = _initParsingInfo();
+                httpParser->printHttpResult(res);
                 if (res != HTTP_RES_OK) {
                     return res;
                 }
                 this->_state = BODY_READING;
             }
             if (this->_state == BODY_READING) {
-                std::cout << this->_contentLength << std::endl;
-                // TODO: Start Parsing
+                // This part should be removed
+                if (this->_type == CONTENT_LENGTH) {
+                    if (!file.is_open()) {
+                        std::cerr << "file not opened" << endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    else {
+                        cout << "==== Hello world ====" << endl;
+                        this->file << "hello world" << endl;
+                    }
+                }
             }
-
             return HTTP_RES_OK;
         }
     } Body;
@@ -678,12 +788,36 @@ class HttpParser {
             for (int i = 0; i < int(it->second.size()); i++) {
                 std::vector<std::string> tokens = _getTokens(it->second[i], ",");
                 for (int j = 0; j < int(tokens.size()); j++) {
+                    ;
                     values.push_back(trim(tokens[j]));
                 }
             }
             it->second = values;
         }
         return HTTP_RES_OK;
+    }
+
+  public:
+    void printHttpResult(httpResult result)
+    {
+        std::cerr << "HTTP: " << httpResultToString(result) << std::endl;
+    }
+    void printHeaders()
+    {
+        std::map<std::string, std::vector<std::string> > foo = this->_headers;
+
+        for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
+             itMap != foo.end(); ++itMap) {
+            std::string key = itMap->first;
+            std::vector<std::string> &values = itMap->second;
+
+            std::cout << "Header: " << key << std::endl;
+
+            for (std::vector<std::string>::iterator itVec = values.begin(); itVec != values.end();
+                 ++itVec) {
+                std::cout << "  Value: " << *itVec << std::endl;
+            }
+        }
     }
 };
 
