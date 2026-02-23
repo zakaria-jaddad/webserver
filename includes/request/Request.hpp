@@ -482,7 +482,6 @@ class HttpParser {
         {
 
             std::string upload_path = this->conf->getUploadPath();
-            std::cout << "This is the uploaded path" << upload_path << std::endl;
 
             if (upload_path.empty()) {
                 return HTTP_RES_METHOD_NOT_ALLOWED;
@@ -493,8 +492,6 @@ class HttpParser {
             }
 
             std::string file_path = resolveFilePath(upload_path);
-            std::cout << "file path : " << file_path << std::endl;
-            std::cout << "upload path : " << upload_path << std::endl;
 
             this->fileFd = open(file_path.c_str(), O_WRONLY | O_CREAT, 0755);
             if (this->fileFd == -1) {
@@ -610,16 +607,8 @@ class HttpParser {
             }
             if (this->_state == BODY_READING) {
                 // This part should be removed
-                // if (this->_type == CONTENT_LENGTH) {
-                //     if (!file.is_open()) {
-                //         std::cerr << "file not opened" << endl;
-                //         exit(EXIT_FAILURE);
-                //     }
-                //     else {
-                //         cout << "==== Hello world ====" << endl;
-                //         this->file << "hello world" << endl;
-                //     }
-                // }
+                if (this->_type == CONTENT_LENGTH) {
+                }
             }
             return HTTP_RES_OK;
         }
