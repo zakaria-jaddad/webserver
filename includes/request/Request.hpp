@@ -2,15 +2,18 @@
 #define __REQUEST_HPP__
 
 #include "../config/Config.hpp"
+#include "../response/ResolvedConfig.hpp"
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 #define CRLF "\r\n"
@@ -50,7 +53,7 @@ inline std::string trim(const std::string &str)
 class HttpParser {
 
   public:
-    HttpParser(void) : _phase(REQUEST_LINE), _body(NULL)
+    HttpParser(void) : _phase(REQUEST_LINE), _body()
     {
         this->_requestURI.path = "";
         this->_requestURI.params.clear();
@@ -60,11 +63,10 @@ class HttpParser {
         this->_requestVersion[0] = 0;
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
-        this->_config = NULL; // NOTE: tmp
-        this->_body.init(this);
+        this->_config = NULL;
     }
 
-    HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body(NULL)
+    HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body()
     {
         this->_requestURI.path = "";
         this->_requestURI.params.clear();
@@ -75,7 +77,6 @@ class HttpParser {
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
         this->_config = ServerConfig;
-        this->_body.init(this);
     }
 
     ~HttpParser() {}
@@ -283,6 +284,8 @@ class HttpParser {
 
         if (this->_phase == BODY) {
 
+            this->_body.init(this);
+
             if (this->_body._state == Body::BODY_NOT_STARTED) {
 
                 res = _parseRequestHeaderValue();
@@ -429,9 +432,76 @@ class HttpParser {
         } bodyState;
 
       private:
+        void normalizePath(void)
+        {
+            std::stringstream ss(httpParser->getRequestUriPath());
+            std::string elem;
+            std::vector<std::string> elements;
+            std::string normPath = "";
+
+            while (getline(ss, elem, '/')) {
+                if (elem == "." || elem.empty())
+                    continue;
+                else if (elem == ".." && elements.size() != 0)
+                    elements.resize(elements.size() - 1);
+                else if (elem != "..")
+                    elements.push_back(elem);
+            }
+            for (std::vector<std::string>::iterator it = elements.begin(); it != elements.end();
+                 it++) {
+                normPath += "/";
+                normPath += *it;
+            }
+            if (normPath == "")
+                normPath = "/";
+            std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
+            this->normalizedPath = normPath;
+        }
+
+        std::string resolveFilePath(std::string &upload_store)
+        {
+            std::string uri = this->normalizedPath;
+            std::string relative_path = uri;
+            std::string location_prefix = this->conf->getLocPath();
+
+            if (uri.find(location_prefix) == 0)
+                relative_path = uri.substr(location_prefix.size());
+
+            if (!relative_path.empty() && relative_path[0] == '/')
+                relative_path.erase(0, 1);
+
+            std::string final_path = upload_store;
+            if (!final_path.empty() && final_path[final_path.size() - 1] != '/')
+                final_path += '/';
+            final_path += relative_path;
+
+            return final_path;
+        }
+
         httpResult _initParsingInfo()
         {
-            this->_maxBodySize = this->httpParser->_config->getSize();
+
+            std::string upload_path = this->conf->getUploadPath();
+            std::cout << "This is the uploaded path" << upload_path << std::endl;
+
+            if (upload_path.empty()) {
+                return HTTP_RES_METHOD_NOT_ALLOWED;
+            }
+
+            if (access(upload_path.c_str(), R_OK) == -1) {
+                return HTTP_RES_INTERNAL_SERVER_ERROR;
+            }
+
+            std::string file_path = resolveFilePath(upload_path);
+            std::cout << "file path : " << file_path << std::endl;
+            std::cout << "upload path : " << upload_path << std::endl;
+
+            this->fileFd = open(file_path.c_str(), O_WRONLY | O_CREAT, 0755);
+            if (this->fileFd == -1) {
+                cerr << "Error: " << file_path << " File Not Opened" << endl;
+                return HTTP_RES_INTERNAL_SERVER_ERROR;
+            }
+
             if (httpParser->_headers.find("Transfer-Encoding") == httpParser->_headers.end() &&
                 httpParser->_headers.find("Content-Length") == httpParser->_headers.end()) {
                 return HTTP_RES_LENGTH_REQUIRED;
@@ -476,22 +546,40 @@ class HttpParser {
         }
 
       public:
-        Body(HttpParser *httpParser)
-            : fileName("/home/zajaddad/Projects/ft_webserver/www/uploads/upload.txt")
+        Body()
         {
             this->_type = NONE;
             this->_state = BODY_NOT_STARTED;
             this->_contentLength = 0;
             this->_bytesReceived = 0;
-            this->httpParser = httpParser; // always NULL here
+            this->httpParser = NULL;
+            this->conf = NULL;
             this->_maxBodySize = 0;
             this->_body = "";
-            file.open(this->fileName.c_str());
+            this->normalizedPath = "";
+            this->fileFd = -1;
         }
 
-        ~Body() { file.close(); }
+        ~Body()
+        {
+            if (this->fileFd != -1) {
+                close(this->fileFd);
+            }
+            delete this->conf;
+        }
 
-        void init(HttpParser *httpParser) { this->httpParser = httpParser; }
+        void init(HttpParser *httpParser)
+        {
+            this->httpParser = httpParser;
+            this->_maxBodySize = this->httpParser->_config->getSize();
+
+            this->conf = new ResolvedConfig(httpParser->getRequestUriPath(), httpParser->_config);
+            normalizePath();
+
+            std::cout << "========= " << this->normalizedPath << " ========" << std::endl;
+            std::cout << "========= " << httpParser->getRequestUriPath()
+                      << " ========" << std::endl;
+        }
 
         bodyType _type;
         bodyState _state;
@@ -500,12 +588,13 @@ class HttpParser {
         size_t _bytesReceived;
         std::string _body;
         HttpParser *httpParser;
-        std::string fileName;
-        std::ofstream file;
-
+        ResolvedConfig *conf;
+        std::string normalizedPath;
+        int fileFd;
         // long currentChunkSize;
         // long currentChunkRead;
         // bool lastChunkReceived;
+
         httpResult parseRequestBody()
         {
             httpResult res;
@@ -521,16 +610,16 @@ class HttpParser {
             }
             if (this->_state == BODY_READING) {
                 // This part should be removed
-                if (this->_type == CONTENT_LENGTH) {
-                    if (!file.is_open()) {
-                        std::cerr << "file not opened" << endl;
-                        exit(EXIT_FAILURE);
-                    }
-                    else {
-                        cout << "==== Hello world ====" << endl;
-                        this->file << "hello world" << endl;
-                    }
-                }
+                // if (this->_type == CONTENT_LENGTH) {
+                //     if (!file.is_open()) {
+                //         std::cerr << "file not opened" << endl;
+                //         exit(EXIT_FAILURE);
+                //     }
+                //     else {
+                //         cout << "==== Hello world ====" << endl;
+                //         this->file << "hello world" << endl;
+                //     }
+                // }
             }
             return HTTP_RES_OK;
         }
