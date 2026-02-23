@@ -9,6 +9,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -481,21 +482,21 @@ class HttpParser {
         httpResult _initParsingInfo()
         {
 
-            std::string upload_path = this->conf->getUploadPath();
+            std::string uploadPath = this->conf->getUploadPath();
 
-            if (upload_path.empty()) {
+            if (uploadPath.empty()) {
                 return HTTP_RES_METHOD_NOT_ALLOWED;
             }
 
-            if (access(upload_path.c_str(), R_OK) == -1) {
+            if (access(uploadPath.c_str(), R_OK) == -1) {
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
-            std::string file_path = resolveFilePath(upload_path);
+            std::string filePath = resolveFilePath(uploadPath);
 
-            this->fileFd = open(file_path.c_str(), O_WRONLY | O_CREAT, 0755);
-            if (this->fileFd == -1) {
-                cerr << "Error: " << file_path << " File Not Opened" << endl;
+            file.open(filePath.c_str(), ios::out | ios::trunc);
+            if (file.is_open() == false) {
+                cerr << "Error: " << filePath << " File Not Opened" << endl;
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
@@ -554,14 +555,11 @@ class HttpParser {
             this->_maxBodySize = 0;
             this->_body = "";
             this->normalizedPath = "";
-            this->fileFd = -1;
         }
 
         ~Body()
         {
-            if (this->fileFd != -1) {
-                close(this->fileFd);
-            }
+            this->file.close();
             delete this->conf;
         }
 
@@ -587,7 +585,7 @@ class HttpParser {
         HttpParser *httpParser;
         ResolvedConfig *conf;
         std::string normalizedPath;
-        int fileFd;
+        fstream file;
         // long currentChunkSize;
         // long currentChunkRead;
         // bool lastChunkReceived;
