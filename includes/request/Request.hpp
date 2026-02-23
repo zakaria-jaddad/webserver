@@ -3,6 +3,7 @@
 
 #include "../config/Config.hpp"
 #include "../response/ResolvedConfig.hpp"
+#include <algorithm>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +13,7 @@
 #include <ios>
 #include <iostream>
 #include <map>
+#include <pstl/glue_algorithm_defs.h>
 #include <sstream>
 #include <string>
 #include <unistd.h>
@@ -301,7 +303,7 @@ class HttpParser {
                 return HTTP_RES_OK;
             }
 
-            res = this->_body.parseRequestBody();
+            res = this->_body.parseRequestBody(rawData);
             if (res != HTTP_RES_OK) {
                 return res;
             }
@@ -492,11 +494,11 @@ class HttpParser {
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
-            std::string filePath = resolveFilePath(uploadPath);
+            this->filePath = resolveFilePath(uploadPath);
 
-            file.open(filePath.c_str(), ios::out | ios::trunc);
+            file.open(this->filePath.c_str(), ios::out | ios::trunc);
             if (file.is_open() == false) {
-                cerr << "Error: " << filePath << " File Not Opened" << endl;
+                cerr << "Error: " << this->filePath << " Failed to open file" << endl;
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
@@ -555,6 +557,7 @@ class HttpParser {
             this->_maxBodySize = 0;
             this->_body = "";
             this->normalizedPath = "";
+            this->filePath = "";
         }
 
         ~Body()
@@ -586,11 +589,12 @@ class HttpParser {
         ResolvedConfig *conf;
         std::string normalizedPath;
         fstream file;
+        string filePath;
         // long currentChunkSize;
         // long currentChunkRead;
         // bool lastChunkReceived;
 
-        httpResult parseRequestBody()
+        httpResult parseRequestBody(std::string rawData)
         {
             httpResult res;
             /* If a message is received with both a Transfer-Encoding and a Content-Length
@@ -603,9 +607,22 @@ class HttpParser {
                 }
                 this->_state = BODY_READING;
             }
+
+            size_t rawDataSize = rawData.size();
             if (this->_state == BODY_READING) {
                 // This part should be removed
                 if (this->_type == CONTENT_LENGTH) {
+                    // ----
+                    if (rawDataSize + this->_bytesReceived >= this->_maxBodySize) {
+                        file.close();
+                        if (remove(this->filePath.c_str()) != 0) {
+                            std::cerr << "Error: " << this->filePath << " deleting file.\n";
+                            return HTTP_RES_INTERNAL_SERVER_ERROR;
+                        }
+                        return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                    }
+                    file.write(rawData.c_str(), rawDataSize);
+                    return HTTP_RES_OK;
                 }
             }
             return HTTP_RES_OK;
