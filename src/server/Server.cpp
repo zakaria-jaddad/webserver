@@ -69,6 +69,7 @@ int Server::checkForServerFd(epoll_event *events, int i)
     int clientSocket = -1;
     HttpParser *obj;
     t_client client;
+    std::cout << this->vServers.size() << std::endl;
 
     for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
@@ -133,10 +134,14 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     break;
                 }
                 req[b] = 0;
+                std::cout << req << std::endl;
+                it->printInfo();
+                std::cout << it->request->getServerConfig() << std::endl;
                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
+                std::cout << it->request->getRequestUriRawPath() << std::endl;
 
                 it->request->printHttpResult(res);
-                it->request->printHeaders();
+                // it->request->printHeaders();
 
                 if (it->request->isComplete())
                     switchEpollMode(clientSocket, EPOLLOUT);
@@ -153,7 +158,8 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 if (it->response->isComplete()) {
                     resetSocket(&(*it));
                     switchEpollMode(clientSocket, EPOLLIN);
-                    std::cout << "back to reading" << std::endl;
+                    std::cout << "-------------------- back to reading --------------------"
+                              << std::endl;
                 }
                 // check if connection close or keep alive to know
                 // whether to close or in case of keep alive clear data buff falgs etc..

@@ -3,7 +3,6 @@
 
 #include "../config/Config.hpp"
 #include "../response/ResolvedConfig.hpp"
-#include <algorithm>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -13,7 +12,6 @@
 #include <ios>
 #include <iostream>
 #include <map>
-#include <pstl/glue_algorithm_defs.h>
 #include <sstream>
 #include <string>
 #include <unistd.h>
@@ -253,6 +251,9 @@ class HttpParser {
     {
 
         httpResult res;
+        // cout << " ==== " << endl;
+        // std::cout << rawData << std::endl;
+        // cout << " ==== " << endl;
 
         if (this->_phase == REQUEST_LINE) {
 
@@ -277,6 +278,8 @@ class HttpParser {
                 headerLines = rawData.substr(0, doubleCrlfPos + 2);
                 rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
                 this->_phase = BODY;
+                // BUG:
+                this->_body.init(this);
             }
 
             res = _generateHeadersMap(headerLines);
@@ -287,7 +290,11 @@ class HttpParser {
 
         if (this->_phase == BODY) {
 
-            this->_body.init(this);
+            /* If request type other than POST ignore the body */
+            if (this->_requestType != POST) {
+                this->_phase = COMPLETE;
+                return HTTP_RES_OK;
+            }
 
             if (this->_body._state == Body::BODY_NOT_STARTED) {
 
@@ -295,12 +302,6 @@ class HttpParser {
                 if (res != HTTP_RES_OK) {
                     return res;
                 }
-            }
-
-            /* If request type other than POST ignore the body */
-            if (this->_requestType != POST) {
-                this->_phase = COMPLETE;
-                return HTTP_RES_OK;
             }
 
             res = this->_body.parseRequestBody(rawData);
@@ -327,7 +328,7 @@ class HttpParser {
     {
         return this->_requestURI.getParams();
     }
-    //
+    ServerConfig *getServerConfig() const { return this->_config; }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
 
@@ -457,7 +458,7 @@ class HttpParser {
             }
             if (normPath == "")
                 normPath = "/";
-            std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
+            // std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
             this->normalizedPath = normPath;
         }
 
@@ -569,14 +570,15 @@ class HttpParser {
         void init(HttpParser *httpParser)
         {
             this->httpParser = httpParser;
+            // cout << "=== " << this->httpParser->_config->getSize() << " ===" << endl;
             this->_maxBodySize = this->httpParser->_config->getSize();
 
             this->conf = new ResolvedConfig(httpParser->getRequestUriPath(), httpParser->_config);
             normalizePath();
 
-            std::cout << "========= " << this->normalizedPath << " ========" << std::endl;
-            std::cout << "========= " << httpParser->getRequestUriPath()
-                      << " ========" << std::endl;
+            // std::cout << "========= " << this->normalizedPath << " ========" << std::endl;
+            // std::cout << "========= " << httpParser->getRequestUriPath()
+            //           << " ========" << std::endl;
         }
 
         bodyType _type;
@@ -613,7 +615,7 @@ class HttpParser {
                 // This part should be removed
                 if (this->_type == CONTENT_LENGTH) {
                     // ----
-                    if (rawDataSize + this->_bytesReceived >= this->_maxBodySize) {
+                    if (rawDataSize + this->_bytesReceived > this->_contentLength) {
                         file.close();
                         if (remove(this->filePath.c_str()) != 0) {
                             std::cerr << "Error: " << this->filePath << " deleting file.\n";
@@ -622,8 +624,22 @@ class HttpParser {
                         return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                     }
                     file.write(rawData.c_str(), rawDataSize);
+                    this->_bytesReceived = this->_bytesReceived + rawDataSize;
+                    if (this->_bytesReceived == this->_contentLength) {
+                        this->_state = BODY_COMPLETE;
+                    }
                     return HTTP_RES_OK;
                 }
+            }
+
+            /* NOTE: Error When More Body Content Arrives */
+            if (this->_state == BODY_COMPLETE) {
+                file.close();
+                if (remove(this->filePath.c_str()) != 0) {
+                    std::cerr << "Error: " << this->filePath << " deleting file.\n";
+                    return HTTP_RES_INTERNAL_SERVER_ERROR;
+                }
+                return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
             }
             return HTTP_RES_OK;
         }
