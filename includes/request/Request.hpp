@@ -278,8 +278,6 @@ class HttpParser {
                 headerLines = rawData.substr(0, doubleCrlfPos + 2);
                 rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
                 this->_phase = BODY;
-                // BUG:
-                this->_body.init(this);
             }
 
             res = _generateHeadersMap(headerLines);
@@ -297,7 +295,7 @@ class HttpParser {
             }
 
             if (this->_body._state == Body::BODY_NOT_STARTED) {
-
+                this->_body.init(this);
                 res = _parseRequestHeaderValue();
                 if (res != HTTP_RES_OK) {
                     return res;

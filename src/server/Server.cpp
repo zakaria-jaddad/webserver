@@ -69,7 +69,6 @@ int Server::checkForServerFd(epoll_event *events, int i)
     int clientSocket = -1;
     HttpParser *obj;
     t_client client;
-    std::cout << this->vServers.size() << std::endl;
 
     for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
@@ -95,7 +94,7 @@ void Server::resetSocket(t_client *client)
 {
     delete client->request;
     delete client->response;
-    client->request = new HttpParser();
+    client->request = new HttpParser(client->config);
     client->response = NULL;
 }
 
