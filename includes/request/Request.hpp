@@ -3,6 +3,8 @@
 
 #include "../config/Config.hpp"
 #include "../response/ResolvedConfig.hpp"
+#include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -40,6 +42,33 @@ inline std::string trim(const std::string &str)
     }
 
     return str.substr(start, end - start + 1);
+}
+
+inline bool is_all_digits(const std::string str)
+{
+    return str.find_first_not_of("0123456789") == std::string::npos;
+}
+
+inline int hex_to_decimal(string hex)
+{
+    int decimal = 0;
+    int base = 1;
+    for (int i = hex.length() - 1; i >= 0; i--) {
+        if (hex[i] >= '0' && hex[i] <= '9') {
+            decimal += (hex[i] - '0') * base;
+        }
+        else if (hex[i] >= 'A' && hex[i] <= 'F') {
+            decimal += (hex[i] - 'A' + 10) * base;
+        }
+        else if (hex[i] >= 'a' && hex[i] <= 'f') {
+            decimal += (hex[i] - 'a' + 10) * base;
+        }
+        else {
+            return -1;
+        }
+        base *= 16;
+    }
+    return decimal;
 }
 
 /*
@@ -275,7 +304,9 @@ class HttpParser {
 
             size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
             if (doubleCrlfPos != std::string::npos) {
-                headerLines = rawData.substr(0, doubleCrlfPos + 2);
+                // WARNING: A + 2 was after doubleCrlfPos no idea why it was there.
+                // removed it to get the first body part
+                headerLines = rawData.substr(0, doubleCrlfPos);
                 rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
                 this->_phase = BODY;
             }
@@ -543,6 +574,11 @@ class HttpParser {
             this->_type = CHUNKED;
             return HTTP_RES_OK;
         }
+        void _fileCleanUp()
+        {
+            file.close();
+            remove(this->filePath.c_str());
+        }
 
       public:
         Body()
@@ -590,9 +626,12 @@ class HttpParser {
         std::string normalizedPath;
         fstream file;
         string filePath;
-        // long currentChunkSize;
-        // long currentChunkRead;
-        // bool lastChunkReceived;
+        long currentChunkSize;  /* Declared size of the chunk currently being read. Used to resume
+                                   reading when a chunk spans multiple recv() calls. */
+        long currentChunkRead;  /* Number of bytes already read for the current chunk. Compared
+                                   against currentChunkSize to verify completeness. */
+        bool lastChunkReceived; /* Set to true when the terminating chunk (size 0) is received,
+                                   signaling that the entire chunked body has been fully read. */
 
         httpResult parseRequestBody(std::string rawData)
         {
@@ -610,15 +649,11 @@ class HttpParser {
 
             size_t rawDataSize = rawData.size();
             if (this->_state == BODY_READING) {
-                // This part should be removed
+
+                // Content-Length Body Parsing
                 if (this->_type == CONTENT_LENGTH) {
-                    // ----
                     if (rawDataSize + this->_bytesReceived > this->_contentLength) {
-                        file.close();
-                        if (remove(this->filePath.c_str()) != 0) {
-                            std::cerr << "Error: " << this->filePath << " deleting file.\n";
-                            return HTTP_RES_INTERNAL_SERVER_ERROR;
-                        }
+                        this->_fileCleanUp();
                         return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                     }
                     file.write(rawData.c_str(), rawDataSize);
@@ -628,15 +663,49 @@ class HttpParser {
                     }
                     return HTTP_RES_OK;
                 }
+
+                // Chunked Body Parsing
+                if (this->_type == CHUNKED) {
+
+                    std::string foo =
+                        "8c\r\n{\n  \"name\": \"Mohit\",\n  \"age\": 30,\n  \"cities\": [\"New "
+                        "York\", \"Bangalore\", \"San Francisco\", \"Casablanca\", \"Ain "
+                        "Choke\"],\n  \"is_active\": true\n}\r\n0\r\n\r\n";
+                    vector<string> chunkedBodyTokens = httpParser->_getTokens(foo, CRLF);
+                    for (vector<string>::const_iterator it = chunkedBodyTokens.begin();
+                         it != chunkedBodyTokens.end(); it++) {
+                        std::cout << "'" << *it << "'" << std::endl;
+                    }
+
+                    exit(0);
+                    string encodedChunkSize = chunkedBodyTokens[0];
+                    int chunkSize = hex_to_decimal(encodedChunkSize);
+                    std::cout << "chunkSize: " << chunkSize << std::endl;
+                    if (chunkSize == -1) {
+                        return HTTP_RES_BAD_REQUEST;
+                    }
+
+                    if (chunkSize == 0) {
+                        file.close();
+                        std::cout << "Finished Chunked Body" << std::endl;
+                        this->_state = BODY_COMPLETE;
+                        return HTTP_RES_OK;
+                    }
+
+                    if (this->_bytesReceived + chunkSize > this->_maxBodySize) {
+                        this->_fileCleanUp();
+                        return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                    }
+
+                    std::string chunkedData = chunkedBodyTokens[1];
+                    file.write(chunkedData.c_str(), chunkSize);
+                    this->_bytesReceived = this->_bytesReceived + chunkSize;
+                }
             }
 
             /* NOTE: Error When More Body Content Arrives */
             if (this->_state == BODY_COMPLETE) {
-                file.close();
-                if (remove(this->filePath.c_str()) != 0) {
-                    std::cerr << "Error: " << this->filePath << " deleting file.\n";
-                    return HTTP_RES_INTERNAL_SERVER_ERROR;
-                }
+                this->_fileCleanUp();
                 return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
             }
             return HTTP_RES_OK;
@@ -925,6 +994,40 @@ class HttpParser {
                 std::cout << "  Value: " << *itVec << std::endl;
             }
         }
+    }
+    void printRaw(const std::string str)
+    {
+        for (size_t i = 0; i < str.size(); i++) {
+            switch (str[i]) {
+            case '\r':
+                std::cout << "\\r";
+                break;
+            case '\n':
+                std::cout << "\\n";
+                break;
+            case '\t':
+                std::cout << "\\t";
+                break;
+            case '\0':
+                std::cout << "\\0";
+                break;
+            case '\\':
+                std::cout << "\\\\";
+                break;
+            default:
+                if (str[i] < 32 || str[i] == 127) {
+                    // Non-printable character → show hex value
+                    std::cout << "\\x"
+                              << "0123456789abcdef"[(str[i] >> 4) & 0x0F]
+                              << "0123456789abcdef"[str[i] & 0x0F];
+                }
+                else {
+                    std::cout << str[i];
+                }
+                break;
+            }
+        }
+        std::cout << std::endl;
     }
 };
 
