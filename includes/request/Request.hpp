@@ -13,9 +13,11 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <sstream>
 #include <string>
+#include <sys/types.h>
 #include <unistd.h>
 #include <vector>
 
@@ -303,6 +305,7 @@ class HttpParser {
             std::string headerLines = rawData;
 
             size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
+
             if (doubleCrlfPos != std::string::npos) {
                 // WARNING: A + 2 was after doubleCrlfPos no idea why it was there.
                 // removed it to get the first body part
@@ -581,6 +584,26 @@ class HttpParser {
         }
 
       public:
+        bodyType _type;
+        bodyState _state;
+        size_t _maxBodySize;
+        size_t _contentLength;
+        size_t _bytesReceived;
+        std::string _body;
+        HttpParser *httpParser;
+        ResolvedConfig *conf;
+        std::string normalizedPath;
+        fstream file;
+        string filePath;
+        long currentChunkSize; /* Declared size of the chunk currently being read. Used to resume
+                                  reading when a chunk spans multiple recv() calls. */
+        long currentChunkRead; /* Number of bytes already read for the current chunk. Compared
+                                  against currentChunkSize to verify completeness. */
+        bool currentChunkComplete; /* Set to true when the terminating chunk (size 0) is received,
+                                   signaling that the entire chunked body has been fully read. */
+        bool chunkSizeReceived;
+        std::string rawChunkSize;
+
         Body()
         {
             this->_type = NONE;
@@ -593,6 +616,11 @@ class HttpParser {
             this->_body = "";
             this->normalizedPath = "";
             this->filePath = "";
+            this->currentChunkSize = 0;
+            this->currentChunkRead = 0;
+            this->currentChunkComplete = true;
+            this->chunkSizeReceived = true;
+            this->rawChunkSize = "";
         }
 
         ~Body()
@@ -614,24 +642,6 @@ class HttpParser {
             // std::cout << "========= " << httpParser->getRequestUriPath()
             //           << " ========" << std::endl;
         }
-
-        bodyType _type;
-        bodyState _state;
-        size_t _maxBodySize;
-        size_t _contentLength;
-        size_t _bytesReceived;
-        std::string _body;
-        HttpParser *httpParser;
-        ResolvedConfig *conf;
-        std::string normalizedPath;
-        fstream file;
-        string filePath;
-        long currentChunkSize;  /* Declared size of the chunk currently being read. Used to resume
-                                   reading when a chunk spans multiple recv() calls. */
-        long currentChunkRead;  /* Number of bytes already read for the current chunk. Compared
-                                   against currentChunkSize to verify completeness. */
-        bool lastChunkReceived; /* Set to true when the terminating chunk (size 0) is received,
-                                   signaling that the entire chunked body has been fully read. */
 
         httpResult parseRequestBody(std::string rawData)
         {
@@ -667,39 +677,105 @@ class HttpParser {
                 // Chunked Body Parsing
                 if (this->_type == CHUNKED) {
 
-                    std::string foo =
-                        "8c\r\n{\n  \"name\": \"Mohit\",\n  \"age\": 30,\n  \"cities\": [\"New "
-                        "York\", \"Bangalore\", \"San Francisco\", \"Casablanca\", \"Ain "
-                        "Choke\"],\n  \"is_active\": true\n}\r\n0\r\n\r\n";
-                    vector<string> chunkedBodyTokens = httpParser->_getTokens(foo, CRLF);
-                    for (vector<string>::const_iterator it = chunkedBodyTokens.begin();
-                         it != chunkedBodyTokens.end(); it++) {
-                        std::cout << "'" << *it << "'" << std::endl;
+                    size_t crlfPos;
+                    if (this->currentChunkComplete == false) {
+                        // complete reading the chunk
+                        crlfPos = rawData.find(CRLF);
+                        if (crlfPos == std::string::npos) {
+                            if (this->_bytesReceived + this->currentChunkRead + rawData.size() >
+                                this->_maxBodySize) {
+                                return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                            }
+                            file.write(rawData.c_str(), rawData.size());
+                            this->_bytesReceived += rawData.size();
+                            this->currentChunkRead += rawData.size();
+                            return HTTP_RES_OK;
+                        }
+                        std::string chunkData = rawData.substr(0, crlfPos);
+                        this->currentChunkRead += chunkData.size();
+
+                        if (this->currentChunkRead != this->currentChunkSize) {
+                            this->_fileCleanUp();
+                            return HTTP_RES_BAD_REQUEST;
+                        }
+
+                        file.write(chunkData.c_str(), chunkData.size());
+                        this->_bytesReceived += chunkData.size();
+                        rawData.erase(0, crlfPos + strlen(CRLF));
+
+                        this->currentChunkComplete = true;
+                        this->currentChunkRead = 0;
+                        this->currentChunkSize = 0;
                     }
 
-                    exit(0);
-                    string encodedChunkSize = chunkedBodyTokens[0];
-                    int chunkSize = hex_to_decimal(encodedChunkSize);
-                    std::cout << "chunkSize: " << chunkSize << std::endl;
-                    if (chunkSize == -1) {
-                        return HTTP_RES_BAD_REQUEST;
+                    while ((crlfPos = rawData.find(CRLF)) != std::string::npos) {
+
+                        string encodedChunkSize = rawData.substr(0, crlfPos);
+                        if (this->chunkSizeReceived == false) {
+                            encodedChunkSize = this->rawChunkSize + encodedChunkSize;
+
+                            // reset
+                            this->rawChunkSize = "";
+                            this->chunkSizeReceived = true;
+                        }
+
+                        rawData.erase(0, encodedChunkSize.size() + strlen(CRLF));
+                        long chunkSize = hex_to_decimal(encodedChunkSize);
+                        std::cout << "chunkSize: " << chunkSize << std::endl;
+
+                        if (chunkSize == -1) {
+                            return HTTP_RES_BAD_REQUEST;
+                        }
+
+                        if (chunkSize == 0) {
+                            file.close();
+                            std::cout << "Finished Chunked Body" << std::endl;
+                            this->_state = BODY_COMPLETE;
+                            return HTTP_RES_OK;
+                        }
+                        this->currentChunkSize = chunkSize;
+
+                        if (this->_bytesReceived + this->currentChunkSize > this->_maxBodySize) {
+                            this->_fileCleanUp();
+                            return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                        }
+
+                        crlfPos = rawData.find(CRLF);
+
+                        // if CRLF  Not Found
+                        if (crlfPos == std::string::npos) {
+                            this->currentChunkComplete = false;
+                            if (this->currentChunkRead + long(rawData.size()) >
+                                this->currentChunkSize) {
+                                this->_fileCleanUp();
+                                return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                            }
+                            file.write(rawData.c_str(), rawData.size());
+                            this->_bytesReceived += rawData.size();
+                            this->currentChunkRead += rawData.size();
+                            return HTTP_RES_OK;
+                        }
+                        std::string chunkedData = rawData.substr(0, crlfPos);
+                        rawData.erase(0, chunkedData.size() + strlen(CRLF));
+                        if (this->currentChunkSize != long(chunkedData.size())) {
+                            this->_fileCleanUp();
+                            return HTTP_RES_BAD_REQUEST;
+                        }
+                        file.write(chunkedData.c_str(), chunkedData.size());
+                        this->_bytesReceived = this->_bytesReceived + chunkedData.size();
+                        this->currentChunkRead = 0;
+                        this->currentChunkSize = 0;
                     }
 
-                    if (chunkSize == 0) {
-                        file.close();
-                        std::cout << "Finished Chunked Body" << std::endl;
-                        this->_state = BODY_COMPLETE;
+                    if (this->_state == BODY_COMPLETE && rawData.find(CRLF) == std::string::npos) {
                         return HTTP_RES_OK;
                     }
 
-                    if (this->_bytesReceived + chunkSize > this->_maxBodySize) {
-                        this->_fileCleanUp();
-                        return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                    // NOTE: I only got the first part of the size
+                    if (rawData.empty() == false && rawData.find(CRLF) == std::string::npos) {
+                        this->chunkSizeReceived = false;
+                        this->rawChunkSize += rawData;
                     }
-
-                    std::string chunkedData = chunkedBodyTokens[1];
-                    file.write(chunkedData.c_str(), chunkSize);
-                    this->_bytesReceived = this->_bytesReceived + chunkSize;
                 }
             }
 
@@ -936,7 +1012,6 @@ class HttpParser {
     }
 
     httpResult _generateHeadersMap(std::string headerLines)
-
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);
