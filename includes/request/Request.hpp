@@ -336,7 +336,10 @@ class HttpParser {
                 }
             }
 
+            std::cout << "Parsing Body" << std::endl;
             res = this->_body.parseRequestBody(rawData);
+            std::cout << "body Parsed, res: ";
+            printHttpResult(res);
             if (res != HTTP_RES_OK) {
                 return res;
             }
@@ -365,54 +368,78 @@ class HttpParser {
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
 
   private:
-    typedef struct RequestURI {
-      private:
-        char hexToChar(std::string hex)
-        {
-            int ret;
-            std::stringstream ss;
-            ss << std::hex << hex;
-            ss >> ret;
-            return (ret);
-        }
+    static char _hexToChar(std::string hex)
+    {
+        int ret;
+        std::stringstream ss;
+        ss << std::hex << hex;
+        ss >> ret;
+        return static_cast<char>(ret);
+    }
 
-        bool isHex(char c)
-        {
-            return (!(c < '0' || (c > '9' && c < 'A') || (c > 'F' && c < 'a') || c > 'f'));
-        }
+    static bool _isHex(char c)
+    {
+        return ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'));
+    }
 
-        bool isValidPercentEncoding(std::string str)
-        {
-            for (size_t i = 0; i < str.length(); i++) {
-                if (i > 1 || !isHex(str[i]))
-                    return (0);
-            }
-            return (1);
-        }
+    static bool _isValidPercentEncoding(std::string str)
+    {
+        if (str.length() != 2)
+            return false;
+        return _isHex(str[0]) && _isHex(str[1]);
+    }
 
-        std::string urlDecode(std::string &str)
-        {
-            std::string dec = "";
+    static std::string _urlDecode(std::string str)
+    {
+        std::string dec = "";
 
-            for (size_t i = 0; i < str.length(); i++) {
-                if (str[i] == '%' && isValidPercentEncoding(str.substr(i + 1, 2))) {
-                    dec += hexToChar(str.substr(i + 1, 2));
+        for (size_t i = 0; i < str.length(); i++) {
+            if (str[i] == '%') {
+                if (i + 2 < str.length() && _isValidPercentEncoding(str.substr(i + 1, 2))) {
+                    dec += _hexToChar(str.substr(i + 1, 2));
                     i += 2;
                 }
-                else if (str[i] == '%') {
-                    return (""); // error
+                else {
+                    return ""; // Error: Invalid or incomplete encoding
                 }
-                else
-                    dec += str[i];
             }
-            return (dec);
+            else {
+                dec += str[i];
+            }
         }
+        return dec;
+    }
 
+    static void _parseQueryString(std::string &query, std::map<std::string, std::string> &store)
+    {
+        std::stringstream ss(query);
+        std::string param;
+
+        while (getline(ss, param, '&')) {
+            std::string key;
+            std::string val;
+            std::stringstream paramStream(param);
+
+            // Read key until '='
+            if (getline(paramStream, key, '=')) {
+                // Read the rest of the stream as value
+                getline(paramStream, val);
+
+                // Note: You might want to urlDecode the key and value here
+                // depending on your specific requirements, but standard practice
+                // is that keys/values are also encoded.
+                store[key] = val;
+            }
+        }
+    }
+
+    typedef struct RequestURI {
       public:
         std::string path;
         std::map<std::string, std::string> params;
         std::string rawURI;
         std::string rawParams;
+
         std::string getPath() const { return this->path; }
         std::map<std::string, std::string> getParams() const { return this->params; }
         std::string getRawUri() const { return this->rawURI; }
@@ -421,27 +448,27 @@ class HttpParser {
         HttpParser::httpResult parseRequestURI(std::string uri)
         {
             this->rawURI = uri;
-            // find first accurance of ?
-            size_t pos = uri.find_first_of("?");
-            if (pos != std::string::npos) {
-                this->rawParams = uri.substr(pos + 1);
-            }
-            std::stringstream ss(uri);
-            std::string param;
-            std::string key;
-            std::string val;
+            // this->params.clear(); // Important: Reset params for new request
 
-            getline(ss, this->path, '?');
-            while (getline(ss, param, '&')) {
-                key = "";
-                val = "";
-                std::stringstream paramStream(param);
-                getline(paramStream, key, '=');
-                paramStream >> val;
-                this->params[key] = val;
+            size_t pos = uri.find("?");
+
+            if (pos != std::string::npos) {
+                // Split URI into Path and Query Params
+                this->path = uri.substr(0, pos);
+                this->rawParams = uri.substr(pos + 1);
+
+                // Use the shared utility
+                HttpParser::_parseQueryString(this->rawParams, this->params);
             }
-            this->path = urlDecode(this->path);
-            if (this->path.size() == 0) {
+            else {
+                this->path = uri;
+                this->rawParams = "";
+            }
+
+            // Decode the path (e.g., "%20" -> " ")
+            this->path = HttpParser::_urlDecode(this->path);
+
+            if (this->path.empty()) {
                 return HttpParser::HTTP_RES_BAD_REQUEST;
             }
             return HttpParser::HTTP_RES_OK;
