@@ -13,7 +13,6 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <sstream>
 #include <string>
@@ -322,18 +321,23 @@ class HttpParser {
 
         if (this->_phase == BODY) {
 
-            /* If request type other than POST ignore the body */
-            if (this->_requestType != POST) {
-                this->_phase = COMPLETE;
-                return HTTP_RES_OK;
-            }
-
             if (this->_body._state == Body::BODY_NOT_STARTED) {
-                this->_body.init(this);
+
+                std::cout << "Parsing Headers" << std::endl;
                 res = _parseRequestHeaderValue();
+                std::cout << "headers Parsed, res: ";
+                printHttpResult(res);
                 if (res != HTTP_RES_OK) {
                     return res;
                 }
+
+                /* If request type other than POST ignore the body */
+                if (this->_requestType != POST) {
+                    this->_phase = COMPLETE;
+                    return HTTP_RES_OK;
+                }
+
+                this->_body.init(this);
             }
 
             std::cout << "Parsing Body" << std::endl;
@@ -417,18 +421,18 @@ class HttpParser {
 
         while (getline(ss, param, '&')) {
             std::string key;
-            std::string val;
+            std::string value;
             std::stringstream paramStream(param);
 
             // Read key until '='
             if (getline(paramStream, key, '=')) {
                 // Read the rest of the stream as value
-                getline(paramStream, val);
+                getline(paramStream, value);
 
-                // Note: You might want to urlDecode the key and value here
-                // depending on your specific requirements, but standard practice
-                // is that keys/values are also encoded.
-                store[key] = val;
+                // docode key and value
+                key = _urlDecode(key);
+                value = _urlDecode(value);
+                store[key] = value;
             }
         }
     }
@@ -556,7 +560,7 @@ class HttpParser {
 
             this->filePath = resolveFilePath(uploadPath);
 
-            file.open(this->filePath.c_str(), ios::out | ios::trunc);
+            file.open(this->filePath.c_str(), ios::out | ios::in | ios::trunc);
             if (file.is_open() == false) {
                 cerr << "Error: " << this->filePath << " Failed to open file" << endl;
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
@@ -659,15 +663,10 @@ class HttpParser {
         void init(HttpParser *httpParser)
         {
             this->httpParser = httpParser;
-            // cout << "=== " << this->httpParser->_config->getSize() << " ===" << endl;
             this->_maxBodySize = this->httpParser->_config->getSize();
 
             this->conf = new ResolvedConfig(httpParser->getRequestUriPath(), httpParser->_config);
             normalizePath();
-
-            // std::cout << "========= " << this->normalizedPath << " ========" << std::endl;
-            // std::cout << "========= " << httpParser->getRequestUriPath()
-            //           << " ========" << std::endl;
         }
 
         httpResult parseRequestBody(std::string rawData)
@@ -698,7 +697,6 @@ class HttpParser {
                     if (this->_bytesReceived == this->_contentLength) {
                         this->_state = BODY_COMPLETE;
                     }
-                    return HTTP_RES_OK;
                 }
 
                 // Chunked Body Parsing
@@ -758,7 +756,10 @@ class HttpParser {
                             file.close();
                             std::cout << "Finished Chunked Body" << std::endl;
                             this->_state = BODY_COMPLETE;
-                            return HTTP_RES_OK;
+                            // return HTTP_RES_OK;
+                            // this->file.close();
+                            this->file.clear();
+                            break;
                         }
                         this->currentChunkSize = chunkSize;
 
@@ -804,13 +805,63 @@ class HttpParser {
                         this->rawChunkSize += rawData;
                     }
                 }
+
+                // Check for Content-type header after body complete
+                if (httpParser->_headers.find("Content-Type") == httpParser->_headers.end()) {
+                    return HTTP_RES_OK;
+                }
+
+                std::cout << "\033[33mContent Type Start\033[0m" << std::endl;
+
+                // retrieve type application/x-www-form-urlencoded or multipart/form-data
+                std::string contentTypeValue = httpParser->_headers["Content-Type"][0];
+
+                std::vector<std::string> requiredParsedTypes;
+                requiredParsedTypes.push_back("application/x-www-form-urlencoded");
+                requiredParsedTypes.push_back("multipart/form-data");
+
+                if (std::find(requiredParsedTypes.begin(), requiredParsedTypes.end(),
+                              contentTypeValue) == requiredParsedTypes.end()) {
+                    // TODO: rename the file, add it's extantion from the mime types
+                    return HTTP_RES_OK;
+                }
+
+                if (contentTypeValue == requiredParsedTypes[0]) {
+
+                    std::map<std::string, std::string> params;
+
+                    std::string urlEncodedForm;
+
+                    this->file.seekg(0, ios::beg);
+                    this->file >> urlEncodedForm;
+
+                    std::cout << "urlEncodedForm: " << urlEncodedForm << std::endl;
+
+                    _parseQueryString(urlEncodedForm, params);
+                    if (params.size() == 0) {
+                        return HTTP_RES_BAD_REQUEST;
+                    }
+
+                    std::cout << "Url decode form" << std::endl;
+                    for (std::map<std::string, std::string>::const_iterator it = params.begin();
+                         it != params.end(); it++) {
+                        std::cout << "key: " << it->first << ", value: " << it->second << std::endl;
+                    }
+
+                    // TODO: Do something after form validation
+
+                    _fileCleanUp();
+                    return HTTP_RES_OK;
+                }
+                else {
+                }
             }
 
             /* NOTE: Error When More Body Content Arrives */
-            if (this->_state == BODY_COMPLETE) {
-                this->_fileCleanUp();
-                return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
-            }
+            // if (this->_state == BODY_COMPLETE) {
+            //     this->_fileCleanUp();
+            //     return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+            // }
             return HTTP_RES_OK;
         }
     } Body;

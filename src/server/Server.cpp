@@ -133,17 +133,25 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     break;
                 }
                 req[b] = 0;
-                std::cout << req << std::endl;
-                it->printInfo();
-                std::cout << it->request->getServerConfig() << std::endl;
+                // std::cout << req << std::endl;
+                // it->printInfo();
+                // it->request->printRaw(req);
+                // std::cout << it->request->getServerConfig() << std::endl;
                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
                 std::cout << it->request->getRequestUriRawPath() << std::endl;
 
                 it->request->printHttpResult(res);
+                // std::map<std::string, std::string> foo = it->request->getRequestUriParams();
+                // for (std::map<std::string, std::string>::const_iterator it = foo.begin();
+                //      it != foo.end(); it++) {
+                //     std::cout << "key: " << it->first << std::endl;
+                //     std::cout << "value: " << it->second << std::endl;
+                // }
                 // it->request->printHeaders();
 
-                if (it->request->isComplete())
+                if (it->request->isComplete()) {
                     switchEpollMode(clientSocket, EPOLLOUT);
+                }
             }
             else if (events[i].events == EPOLLOUT) { // we can write to socket
                 if (it->response == NULL)

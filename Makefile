@@ -2,7 +2,7 @@ NAME = ft_webserver
 TEST_NAME = ft_webserver_test
 
 CFLAGS = -Wall -Werror -Wextra -std=c++98 -g -fsanitize=address
-#CFLAGS = -Wall -Werror -Wextra -std=c++17 -g
+# CFLAGS = -Wall -Werror -Wextra -std=c++17 -g
 
 SRC_DIR		= src
 CONF_DIR	= config
