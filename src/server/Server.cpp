@@ -1,6 +1,20 @@
 #include "../../includes/server/Server.hpp"
 #include <sstream>
 
+std::string http_response =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/html; charset=UTF-8\r\n"
+    "Connection: close\r\n"
+    "\r\n"
+    "<html>\n"
+    "<head><title>Anime GIF</title></head>\n"
+    "<body>\n"
+    "<h1>Here is an anime girl GIF</h1>\n"
+    "<img src=\"https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif\" alt=\"anime girl "
+    "gif\">\n"
+    "</body>\n"
+    "</html>\n";
+
 Server::Server(std::string &path)
 {
     this->conf.tokenize(path);
@@ -135,7 +149,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 req[b] = 0;
                 // std::cout << req << std::endl;
                 // it->printInfo();
-                // it->request->printRaw(req);
+                it->request->printRaw(req);
                 // std::cout << it->request->getServerConfig() << std::endl;
                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
                 std::cout << it->request->getRequestUriRawPath() << std::endl;
@@ -156,6 +170,9 @@ int Server::checkForClientFd(epoll_event *events, int i)
             else if (events[i].events == EPOLLOUT) { // we can write to socket
                 if (it->response == NULL)
                     it->response = new Response(&(*it));
+                if (it->request->getRequestType() == HttpParser::POST) {
+                    it->response->sendResponse(http_response.c_str());
+                }
                 it->response->checkMethod();
                 if (it->response->isError()) {
                     closeSocket(&(*it));
