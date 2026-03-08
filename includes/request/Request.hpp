@@ -348,8 +348,9 @@ class HttpParser {
                 return res;
             }
 
-            // WARNING: This should be removed from here
-            this->_phase = COMPLETE;
+            if (this->_body._state == Body::BODY_COMPLETE) {
+                this->_phase = COMPLETE;
+            }
         }
 
         return HTTP_RES_OK;
@@ -683,11 +684,16 @@ class HttpParser {
                 this->_state = BODY_READING;
             }
 
+            std::cout << "max body size: " << this->_maxBodySize << std::endl;
+            std::cout << "content-length: " << this->_contentLength << std::endl;
             size_t rawDataSize = rawData.size();
             if (this->_state == BODY_READING) {
+                std::cout << "\033[33mProcessing Body\033[0m" << std::endl;
 
                 // Content-Length Body Parsing
                 if (this->_type == CONTENT_LENGTH) {
+                    std::cout << "\033[33mProcessing Body using Content-Length value\033[0m"
+                              << std::endl;
                     if (rawDataSize + this->_bytesReceived > this->_contentLength) {
                         this->_fileCleanUp();
                         return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
@@ -806,56 +812,79 @@ class HttpParser {
                     }
                 }
 
-                // Check for Content-type header after body complete
-                if (httpParser->_headers.find("Content-Type") == httpParser->_headers.end()) {
-                    return HTTP_RES_OK;
-                }
+                if (this->_state == BODY_COMPLETE) {
+                    // Check for Content-type header after body complete
+                    if (httpParser->_headers.find("Content-Type") == httpParser->_headers.end()) {
+                        return HTTP_RES_OK;
+                    }
 
-                std::cout << "\033[33mContent Type Start\033[0m" << std::endl;
+                    std::cout << "\033[33mContent Type Start\033[0m" << std::endl;
 
-                // retrieve type application/x-www-form-urlencoded or multipart/form-data
-                std::string contentTypeValue = httpParser->_headers["Content-Type"][0];
+                    // retrieve type application/x-www-form-urlencoded or multipart/form-data
+                    std::string contentTypeValue = httpParser->_headers["Content-Type"][0];
 
-                std::vector<std::string> requiredParsedTypes;
-                requiredParsedTypes.push_back("application/x-www-form-urlencoded");
-                requiredParsedTypes.push_back("multipart/form-data");
+                    if (contentTypeValue == "application/x-www-form-urlencoded") {
 
-                if (std::find(requiredParsedTypes.begin(), requiredParsedTypes.end(),
-                              contentTypeValue) == requiredParsedTypes.end()) {
-                    // TODO: rename the file, add it's extantion from the mime types
-                    return HTTP_RES_OK;
-                }
+                        std::map<std::string, std::string> params;
 
-                if (contentTypeValue == requiredParsedTypes[0]) {
+                        std::string urlEncodedForm;
 
-                    std::map<std::string, std::string> params;
+                        this->file.seekg(0, ios::beg);
+                        this->file >> urlEncodedForm;
 
-                    std::string urlEncodedForm;
+                        std::cout << "urlEncodedForm: " << urlEncodedForm << std::endl;
 
-                    this->file.seekg(0, ios::beg);
-                    this->file >> urlEncodedForm;
+                        _parseQueryString(urlEncodedForm, params);
+                        if (params.size() == 0) {
+                            return HTTP_RES_BAD_REQUEST;
+                        }
 
-                    std::cout << "urlEncodedForm: " << urlEncodedForm << std::endl;
+                        std::cout << "Url decode form" << std::endl;
+                        for (std::map<std::string, std::string>::const_iterator it = params.begin();
+                             it != params.end(); it++) {
+                            std::cout << "key: " << it->first << ", value: " << it->second
+                                      << std::endl;
+                        }
 
-                    _parseQueryString(urlEncodedForm, params);
-                    if (params.size() == 0) {
+                        _fileCleanUp();
+
+                        // TODO: Do something after form validation
+                        return HTTP_RES_OK;
+                    }
+
+                    // check if multipart
+                    std::vector<std::string> parsedContentTypeValue =
+                        httpParser->_getTokens(contentTypeValue, ";");
+
+                    if (parsedContentTypeValue.size() > 2) {
+                        _fileCleanUp();
+                        return HTTP_RES_BAD_REQUEST;
+                    }
+                    if (parsedContentTypeValue.size() == 1) {
+                        // TODO:
+                    }
+
+                    // no boundary is provided
+                    if (parsedContentTypeValue[0] == "multipart/form-data" &&
+                        parsedContentTypeValue.size() != 2) {
+                        _fileCleanUp();
                         return HTTP_RES_BAD_REQUEST;
                     }
 
-                    std::cout << "Url decode form" << std::endl;
-                    for (std::map<std::string, std::string>::const_iterator it = params.begin();
-                         it != params.end(); it++) {
-                        std::cout << "key: " << it->first << ", value: " << it->second << std::endl;
-                    }
-
-                    // TODO: Do something after form validation
-
-                    _fileCleanUp();
-                    return HTTP_RES_OK;
-                }
-                else {
+                    std::string boundary = parsedContentTypeValue[1];
+                    std::cout << "Boundary: " << boundary << std::endl;
                 }
             }
+            /*
+             * For uploaded files
+             * struct FilePart {
+             * std::string name;       // Form field name (e.g., "avatar")
+             * std::string filename;   // Original filename (e.g., "me.png")
+             * std::string contentType;
+             * std::string filePath;   // Path where the final file is saved on server
+             * };
+             * std::vector<FilePart> _files;
+             */
 
             /* NOTE: Error When More Body Content Arrives */
             // if (this->_state == BODY_COMPLETE) {
