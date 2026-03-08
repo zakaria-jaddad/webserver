@@ -32,7 +32,7 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
 
     // some cgi needed? bs
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
-    env["SERVER_NAME"] = conf->getServerName();
+    env["SERVER_NAME"] = "localhost";//TODO: change this value to the host requested by the client
     env["SERVER_PORT"] = conf->getPort();
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SERVER_SOFTWARE"] = "myserver/1.0";

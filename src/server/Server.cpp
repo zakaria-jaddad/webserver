@@ -1,20 +1,6 @@
 #include "../../includes/server/Server.hpp"
 #include <sstream>
 
-std::string http_response =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/html; charset=UTF-8\r\n"
-    "Connection: close\r\n"
-    "\r\n"
-    "<html>\n"
-    "<head><title>Anime GIF</title></head>\n"
-    "<body>\n"
-    "<h1>Here is an anime girl GIF</h1>\n"
-    "<img src=\"https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif\" alt=\"anime girl "
-    "gif\">\n"
-    "</body>\n"
-    "</html>\n";
-
 Server::Server(std::string &path)
 {
     this->conf.tokenize(path);
@@ -145,45 +131,49 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     closeSocket(&(*it));
                     Clients.erase(Clients.begin() + c);
                     break;
+                    // TODO:check if i must remove from epoll list of interest
                 }
                 req[b] = 0;
-                // std::cout << req << std::endl;
-                // it->printInfo();
-                it->request->printRaw(req);
-                // std::cout << it->request->getServerConfig() << std::endl;
-                HttpParser::httpResult res = it->request->parseHttpRequest(req);
-                std::cout << it->request->getRequestUriRawPath() << std::endl;
+                std::cout << "--------------start of request----------------" << std::endl;
+                std::cout << req;
+                std::cout << "--------------end of request------------------" << std::endl;
+                it->request->parseHttpRequest(req);
 
-                it->request->printHttpResult(res);
-                // std::map<std::string, std::string> foo = it->request->getRequestUriParams();
-                // for (std::map<std::string, std::string>::const_iterator it = foo.begin();
-                //      it != foo.end(); it++) {
-                //     std::cout << "key: " << it->first << std::endl;
-                //     std::cout << "value: " << it->second << std::endl;
-                // }
-                // it->request->printHeaders();
+                // debuggin parsed request
+                std::cout << "=======================" << std::endl;
+                std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
 
-                if (it->request->isComplete()) {
-                    switchEpollMode(clientSocket, EPOLLOUT);
+                for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
+                     itMap != foo.end(); ++itMap) {
+                    std::string key = itMap->first;
+                    std::vector<std::string> &values = itMap->second;
+
+                    std::cout << "Header: " << key << std::endl;
+
+                    for (std::vector<std::string>::iterator itVec = values.begin();
+                         itVec != values.end(); ++itVec) {
+                        std::cout << "  Value: " << *itVec << std::endl;
+                    }
                 }
+                std::cout << "=======================" << std::endl;
+
+                if (it->request->isComplete())
+                    switchEpollMode(clientSocket, EPOLLOUT);
             }
             else if (events[i].events == EPOLLOUT) { // we can write to socket
                 if (it->response == NULL)
                     it->response = new Response(&(*it));
-                if (it->request->getRequestType() == HttpParser::POST) {
-                    it->response->sendResponse(http_response.c_str());
-                }
                 it->response->checkMethod();
                 if (it->response->isError()) {
                     closeSocket(&(*it));
                     Clients.erase(Clients.begin() + c);
                     break;
+                    // hh
                 }
                 if (it->response->isComplete()) {
                     resetSocket(&(*it));
                     switchEpollMode(clientSocket, EPOLLIN);
-                    std::cout << "-------------------- back to reading --------------------"
-                              << std::endl;
+                    std::cout << "back to reading" << std::endl;
                 }
                 // check if connection close or keep alive to know
                 // whether to close or in case of keep alive clear data buff falgs etc..
@@ -194,6 +184,77 @@ int Server::checkForClientFd(epoll_event *events, int i)
     return (clientSocket);
 }
 
+// int Server::checkForClientFd(epoll_event *events, int i)
+// {
+//     // This method is to look for the event fd in clientFds
+//     // It then checks if the operation that is is ready for is 'read' or 'write'
+//     //  then reads or writes accordingly
+//
+//     int clientSocket = -1;
+//     char req[1024] = {0};
+//     int b;
+//     int c = 0;
+//
+//     for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end();
+//          it++, c++) {
+//         if (events[i].data.fd == it->fd) {
+//             clientSocket = it->fd;
+//             // std::cout << "already in map clientSocket = " << clientSocket << std::endl;
+//             if (events[i].events == EPOLLIN) { // we can read from socket
+//                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
+//                 if (b == -1 || b == 0) {
+//                     closeSocket(&(*it));
+//                     Clients.erase(Clients.begin() + c);
+//                     break;
+//                 }
+//                 req[b] = 0;
+//                 // std::cout << req << std::endl;
+//                 // it->printInfo();
+//                 it->request->printRaw(req);
+//                 // std::cout << it->request->getServerConfig() << std::endl;
+//                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
+//                 std::cout << it->request->getRequestUriRawPath() << std::endl;
+//
+//                 it->request->printHttpResult(res);
+//                 // std::map<std::string, std::string> foo = it->request->getRequestUriParams();
+//                 // for (std::map<std::string, std::string>::const_iterator it = foo.begin();
+//                 //      it != foo.end(); it++) {
+//                 //     std::cout << "key: " << it->first << std::endl;
+//                 //     std::cout << "value: " << it->second << std::endl;
+//                 // }
+//                 // it->request->printHeaders();
+//
+//                 if (it->request->isComplete()) {
+//                     switchEpollMode(clientSocket, EPOLLOUT);
+//                 }
+//             }
+//             else if (events[i].events == EPOLLOUT) { // we can write to socket
+//                 if (it->response == NULL)
+//                     it->response = new Response(&(*it));
+//                 if (it->request->getRequestType() == HttpParser::POST) {
+//                     it->response->sendResponse(http_response.c_str());
+//                 }
+//                 it->response->checkMethod();
+//                 if (it->response->isError()) {
+//                     closeSocket(&(*it));
+//                     Clients.erase(Clients.begin() + c);
+//                     break;
+//                 }
+//                 if (it->response->isComplete()) {
+//                     resetSocket(&(*it));
+//                     switchEpollMode(clientSocket, EPOLLIN);
+//                     std::cout << "-------------------- back to reading --------------------"
+//                               << std::endl;
+//                 }
+//                 // check if connection close or keep alive to know
+//                 // whether to close or in case of keep alive clear data buff falgs etc..
+//             }
+//             break;
+//         }
+//     }
+//     return (clientSocket);
+// }
+//
 int Server::startServer()
 {
 

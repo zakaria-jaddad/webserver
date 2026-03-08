@@ -76,6 +76,9 @@ public:
   void		craftPageResponse( int, std::string& );
   void	sendHeader( int, std::string& );
 
+  void sendChunkSize( size_t );
+  void serveDirectoryContent( std::string& );
+
 };
 
 #endif

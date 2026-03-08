@@ -1,5 +1,6 @@
 #include "../../includes/response/Response.hpp"
-#include <cerrno>     //todelete
+#include <cerrno> //todelete
+#include <dirent.h>
 #include <sys/stat.h> //todelete
 #include <unistd.h>   //todelete
 
@@ -128,43 +129,141 @@ std::string Response::chooseIndex(std::string &path)
     return "";
 }
 
+std::string generateDirectoryListingHTML(const std::string &path, const std::string &requestPath,
+                                         std::vector<std::string> entries)
+{
+    std::ostringstream html;
+
+    html << "<!DOCTYPE html>\n<html>\n<head>\n";
+    html << "<title>Index of " << requestPath << "</title>\n";
+    html << "</head>\n<body>\n";
+    html << "<h1>Index of " << requestPath << "</h1>\n";
+    html << "<hr>\n<ul>\n";
+
+    std::vector<std::string>::iterator dir_it = entries.begin();
+
+    for (; dir_it != entries.end(); dir_it++) {
+        std::string fullPath = path + "/" + *dir_it;
+        struct stat statbuf;
+
+        if (stat(fullPath.c_str(), &statbuf) == 0) {
+            html << "<li><a href=\"" << *dir_it;
+            if (S_ISDIR(statbuf.st_mode)) {
+                html << "/";
+            }
+            html << "\">" << *dir_it;
+            if (S_ISDIR(statbuf.st_mode)) {
+                html << "/";
+            }
+            html << "</a></li>\n";
+        }
+    }
+    html << "</ul>\n<hr>\n</body>\n</html>";
+    return html.str();
+}
+
+void Response::serveDirectoryContent(std::string &absPath)
+{
+    DIR *dir = opendir(absPath.c_str());
+    std::vector<std::string> entries;
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..")
+            continue;
+        entries.push_back(entry->d_name);
+    }
+    closedir(dir);
+
+    std::string html = generateDirectoryListingHTML(absPath, this->normalizedPath, entries);
+
+    sendHeader(200);
+
+    if (error)
+        return;
+
+    sendChunkSize(html.length());
+
+    if (error)
+        return;
+
+    sendResponse(html.c_str());
+
+    if (error)
+        return;
+
+    sendResponse("\r\n");
+
+    if (error)
+        return;
+
+    sendResponse("0\r\n\r\n");
+
+    if (error)
+        return;
+}
+
 int Response::httpGet(void)
 {
+    char buff[1024] = {0};
     ssize_t r = 0;
     int fd;
-    char buff[1024] = {0};
-    std::stringstream ss;
-    std::string hexStr;
-    std::string txt;
 
     if (this->fileFD == -3) {
         std::string absPath = this->conf.getRoot();
         normalizePath();
         absPath += this->normalizedPath;
 
-        if (absPath == (this->conf.getRoot() + "/"))
-            absPath += chooseIndex(absPath);
+        std::cout << "path requested : " << absPath << std::endl;
 
-        if (absPath.empty()) {
+        struct stat info;
+
+        if (stat(absPath.c_str(), &info) != 0) {
             servePages(404);
             return 1;
         }
-        if (access(absPath.c_str(), W_OK)) {
+
+        if (S_ISDIR(info.st_mode)) {
+            std::string index_to_serve = chooseIndex(absPath);
+
+            if (index_to_serve.empty()) {
+                if (!conf.getDirectoyListing()) {
+                    servePages(403);
+                    return 1;
+                }
+                else {
+                    serveDirectoryContent(absPath);
+                    if (error) {
+                        servePages(500);
+                        return 1;
+                    }
+                    this->status = 1;
+                    return 0;
+                }
+            }
+            else
+                absPath += index_to_serve;
+        }
+
+        if (access(absPath.c_str(), R_OK)) {
             servePages(404);
             return (1);
         }
+
         fd = open(absPath.c_str(), O_RDONLY);
         if (fd == -1) {
-            servePages(404);
+            servePages(500);
             return (1);
         }
         this->fileFD = fd;
     }
+
     if (!this->headerFlag) {
         sendHeader(200);
         this->headerFlag = 1;
         return (0);
     }
+
     r = read(this->fileFD, buff, 1023);
     if (r == -1) {
         close(this->fileFD);
@@ -177,16 +276,12 @@ int Response::httpGet(void)
         close(this->fileFD);
         this->fileFD = -3;
         this->status = 1;
-        // cleanup
         return (2);
     }
     buff[r] = 0;
-    ss << std::hex << r;
-    hexStr = ss.str();
-    hexStr += "\r\n";
-    sendResponse(hexStr.c_str());
+
+    sendChunkSize(r);
     sendResponse(buff);
-    txt = "\r\n";
-    sendResponse(txt.c_str());
+    sendResponse("\r\n");
     return (0);
 }
