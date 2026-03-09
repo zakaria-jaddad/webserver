@@ -95,6 +95,7 @@ class HttpParser {
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
         this->_config = NULL;
+        this->_res = HTTP_RES_OK;
     }
 
     HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body()
@@ -108,6 +109,7 @@ class HttpParser {
         this->_requestVersion[1] = 0;
         this->_requestType = UNKNOWN;
         this->_config = ServerConfig;
+        this->_res = HTTP_RES_OK;
     }
 
     ~HttpParser() {}
@@ -356,9 +358,11 @@ class HttpParser {
         return HTTP_RES_OK;
     };
 
+    // Getters
     requestType getRequestType() const { return this->_requestType; }
     const int *getRequestVersion() const { return this->_requestVersion; }
     std::map<std::string, std::vector<std::string> > getHeaders() const { return this->_headers; }
+    httpResult getRes() const { return this->_res; }
 
     //
     std::string getRequestUriPath() const { return this->_requestURI.getPath(); }
@@ -369,6 +373,9 @@ class HttpParser {
         return this->_requestURI.getParams();
     }
     ServerConfig *getServerConfig() const { return this->_config; }
+
+    // Setters
+    void setRes(httpResult res) { this->_res = res; }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
 
@@ -496,6 +503,7 @@ class HttpParser {
         typedef enum {
             BODY_NOT_STARTED,
             BODY_READING,
+            BODY_PROCESSING,
             BODY_COMPLETE,
         } bodyState;
 
@@ -567,6 +575,22 @@ class HttpParser {
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
+            if (httpParser->_headers.find("Content-Type") != httpParser->_headers.end()) {
+                std::string contentType = httpParser->_headers["Content-Type"][0];
+                this->_mediaType = contentType;
+
+                if (contentType.find("multipart/form-data") != std::string::npos) {
+                    // It MUST have a boundary
+                    if (contentType.find("boundary=") == std::string::npos) {
+                        this->_fileCleanUp();        // Close/remove the file you just opened
+                        return HTTP_RES_BAD_REQUEST; // Reject immediately
+                    }
+
+                    // Store the boundary
+                    this->_boundary = contentType.substr(contentType.find("boundary=") + 9);
+                }
+            }
+
             if (httpParser->_headers.find("Transfer-Encoding") == httpParser->_headers.end() &&
                 httpParser->_headers.find("Content-Length") == httpParser->_headers.end()) {
                 return HTTP_RES_LENGTH_REQUIRED;
@@ -635,6 +659,8 @@ class HttpParser {
                                    signaling that the entire chunked body has been fully read. */
         bool chunkSizeReceived;
         std::string rawChunkSize;
+        std::string _boundary;
+        std::string _mediaType;
 
         Body()
         {
@@ -653,6 +679,8 @@ class HttpParser {
             this->currentChunkComplete = true;
             this->chunkSizeReceived = true;
             this->rawChunkSize = "";
+            this->_body = "";
+            this->_mediaType = "";
         }
 
         ~Body()
@@ -701,7 +729,7 @@ class HttpParser {
                     file.write(rawData.c_str(), rawDataSize);
                     this->_bytesReceived = this->_bytesReceived + rawDataSize;
                     if (this->_bytesReceived == this->_contentLength) {
-                        this->_state = BODY_COMPLETE;
+                        this->_state = BODY_PROCESSING;
                     }
                 }
 
@@ -761,7 +789,7 @@ class HttpParser {
                         if (chunkSize == 0) {
                             file.close();
                             std::cout << "Finished Chunked Body" << std::endl;
-                            this->_state = BODY_COMPLETE;
+                            this->_state = BODY_PROCESSING;
                             // return HTTP_RES_OK;
                             // this->file.close();
                             this->file.clear();
@@ -801,7 +829,8 @@ class HttpParser {
                         this->currentChunkSize = 0;
                     }
 
-                    if (this->_state == BODY_COMPLETE && rawData.find(CRLF) == std::string::npos) {
+                    if (this->_state == BODY_PROCESSING &&
+                        rawData.find(CRLF) == std::string::npos) {
                         return HTTP_RES_OK;
                     }
 
@@ -812,18 +841,10 @@ class HttpParser {
                     }
                 }
 
-                if (this->_state == BODY_COMPLETE) {
-                    // Check for Content-type header after body complete
-                    if (httpParser->_headers.find("Content-Type") == httpParser->_headers.end()) {
-                        return HTTP_RES_OK;
-                    }
+                // TODO: Refactor Logic
+                if (this->_state == BODY_PROCESSING) {
 
-                    std::cout << "\033[33mContent Type Start\033[0m" << std::endl;
-
-                    // retrieve type application/x-www-form-urlencoded or multipart/form-data
-                    std::string contentTypeValue = httpParser->_headers["Content-Type"][0];
-
-                    if (contentTypeValue == "application/x-www-form-urlencoded") {
+                    if (this->_mediaType == "application/x-www-form-urlencoded") {
 
                         std::map<std::string, std::string> params;
 
@@ -847,32 +868,20 @@ class HttpParser {
                         }
 
                         _fileCleanUp();
-
-                        // TODO: Do something after form validation
+                        std::cout << "\033[33mapplication/x-www-form-urlencoded: Parsed\033[0m"
+                                  << std::endl;
+                        this->_state = BODY_COMPLETE;
                         return HTTP_RES_OK;
                     }
 
-                    // check if multipart
-                    std::vector<std::string> parsedContentTypeValue =
-                        httpParser->_getTokens(contentTypeValue, ";");
-
-                    if (parsedContentTypeValue.size() > 2) {
-                        _fileCleanUp();
-                        return HTTP_RES_BAD_REQUEST;
-                    }
-                    if (parsedContentTypeValue.size() == 1) {
-                        // TODO:
+                    if (this->_mediaType == "multipart/form-data") {
+                        std::cout << "multipart/form-data" << std::endl;
+                        this->_state = BODY_COMPLETE;
+                        return HTTP_RES_OK;
                     }
 
-                    // no boundary is provided
-                    if (parsedContentTypeValue[0] == "multipart/form-data" &&
-                        parsedContentTypeValue.size() != 2) {
-                        _fileCleanUp();
-                        return HTTP_RES_BAD_REQUEST;
-                    }
-
-                    std::string boundary = parsedContentTypeValue[1];
-                    std::cout << "Boundary: " << boundary << std::endl;
+                    this->_state = BODY_COMPLETE;
+                    return HTTP_RES_OK;
                 }
             }
             /*
@@ -886,11 +895,6 @@ class HttpParser {
              * std::vector<FilePart> _files;
              */
 
-            /* NOTE: Error When More Body Content Arrives */
-            // if (this->_state == BODY_COMPLETE) {
-            //     this->_fileCleanUp();
-            //     return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
-            // }
             return HTTP_RES_OK;
         }
     } Body;
@@ -902,8 +906,9 @@ class HttpParser {
     ServerConfig *_config;
     std::map<std::string, std::vector<std::string> > _headers;
     Body _body;
+    httpResult _res;
 
-    std::vector<std::string> _getTokens(std::string line, std::string delimiter)
+    static std::vector<std::string> _getTokens(std::string line, std::string delimiter)
     {
         std::vector<std::string> tokens;
         std::string token;

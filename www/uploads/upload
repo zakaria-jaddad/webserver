@@ -1,0 +1,21 @@
+------WebKitFormBoundarysb8aJ6uIHZpqcFzS
+Content-Disposition: form-data; name="username"
+
+zakaria.jaddad@proton.me
+------WebKitFormBoundarysb8aJ6uIHZpqcFzS
+Content-Disposition: form-data; name="password"
+
+hello world
+------WebKitFormBoundarysb8aJ6uIHZpqcFzS
+Content-Disposition: form-data; name="profile"; filename="hello.txt"
+Content-Type: text/plain
+
+hello world
+
+------WebKitFormBoundarysb8aJ6uIHZpqcFzS
+Content-Disposition: form-data; name="code"; filename="hello.txt"
+Content-Type: text/plain
+
+hello world
+
+------WebKitFormBoundarysb8aJ6uIHZpqcFzS--

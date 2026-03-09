@@ -137,7 +137,8 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 std::cout << "--------------start of request----------------" << std::endl;
                 std::cout << req;
                 std::cout << "--------------end of request------------------" << std::endl;
-                it->request->parseHttpRequest(req);
+                HttpParser::httpResult res = it->request->parseHttpRequest(req);
+                it->request->setRes(res);
 
                 // debuggin parsed request
                 std::cout << "=======================" << std::endl;
