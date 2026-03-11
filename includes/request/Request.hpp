@@ -378,6 +378,7 @@ class HttpParser {
     void setRes(httpResult res) { this->_res = res; }
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
+    bool isBodyComplete() { return this->_body._state == Body::BODY_COMPLETE; }
 
   private:
     static char _hexToChar(std::string hex)
@@ -587,6 +588,7 @@ class HttpParser {
                     }
 
                     // Store the boundary
+                    this->_mediaType = contentType.substr(0, contentType.find(";"));
                     this->_boundary = contentType.substr(contentType.find("boundary=") + 9);
                 }
             }
@@ -640,27 +642,49 @@ class HttpParser {
         }
 
       public:
+        /* General Body Info */
         bodyType _type;
         bodyState _state;
         size_t _maxBodySize;
-        size_t _contentLength;
-        size_t _bytesReceived;
         std::string _body;
-        HttpParser *httpParser;
-        ResolvedConfig *conf;
         std::string normalizedPath;
         fstream file;
         string filePath;
-        long currentChunkSize; /* Declared size of the chunk currently being read. Used to resume
-                                  reading when a chunk spans multiple recv() calls. */
-        long currentChunkRead; /* Number of bytes already read for the current chunk. Compared
-                                  against currentChunkSize to verify completeness. */
-        bool currentChunkComplete; /* Set to true when the terminating chunk (size 0) is received,
-                                   signaling that the entire chunked body has been fully read. */
+        ResolvedConfig *conf;
+
+        /*
+         * Transfer-Encoding: chunked
+         * Content-Length: <int>
+         * Info
+         */
+        size_t _contentLength;
+        size_t _bytesReceived;
+        HttpParser *httpParser;
+
+        // Declared size of the chunk currently being read. Used to resume reading when a chunk
+        // spans multiple recv() calls
+        long currentChunkSize;
+        // Number of bytes already read for the current chunk. Compared against currentChunkSize to
+        // verify completeness.
+        long currentChunkRead;
+        // Set to true when the terminating chunk (size 0) is received, signaling that the entire
+        // chunked body has been fully read.
+        bool currentChunkComplete;
         bool chunkSizeReceived;
         std::string rawChunkSize;
+
+        /* Content Type Info */
         std::string _boundary;
         std::string _mediaType;
+
+        // For uploaded files
+        struct FilePart {
+            std::string name;     // Form field name (e.g., "avatar")
+            std::string filename; // Original filename (e.g., "me.png")
+            std::string contentType;
+            std::string filePath; // Path where the final file is saved on server
+        };
+        std::vector<FilePart> _files;
 
         Body()
         {
@@ -730,6 +754,8 @@ class HttpParser {
                     this->_bytesReceived = this->_bytesReceived + rawDataSize;
                     if (this->_bytesReceived == this->_contentLength) {
                         this->_state = BODY_PROCESSING;
+                        this->file.clear();
+                        this->file.seekg(0, ios::beg);
                     }
                 }
 
@@ -793,6 +819,7 @@ class HttpParser {
                             // return HTTP_RES_OK;
                             // this->file.close();
                             this->file.clear();
+                            this->file.seekg(0, ios::beg);
                             break;
                         }
                         this->currentChunkSize = chunkSize;
@@ -841,7 +868,6 @@ class HttpParser {
                     }
                 }
 
-                // TODO: Refactor Logic
                 if (this->_state == BODY_PROCESSING) {
 
                     if (this->_mediaType == "application/x-www-form-urlencoded") {
@@ -875,8 +901,40 @@ class HttpParser {
                     }
 
                     if (this->_mediaType == "multipart/form-data") {
-                        std::cout << "multipart/form-data" << std::endl;
+                        std::cout << "\033[33mmultipart/form-data Processing\033[0m" << std::endl;
+                        // get 2 lines at a time
+                        // check if there is a boundary
+                        std::cout << "this is the boundary: " << this->_boundary << std::endl;
+
+                        std::string line;
+                        // int i = 0;
+
+                        while (std::getline(this->file, line)) {
+
+                            // remove trailing \r
+                            if (line.empty() == false && line[line.size() - 1] == '\r') {
+                                line.erase(line.size() - 1);
+                            }
+
+                            if ("--" + this->_boundary == line) {
+                                while (std::getline(this->file, line)) {
+                                    if (line.empty() == false && line[line.size() - 1] == '\r') {
+                                        line.erase(line.size() - 1);
+                                    }
+                                    if (line.empty() == true) {
+                                        break;
+                                    }
+
+                                    std::cout << "-> ";
+                                    printRaw(line);
+                                }
+                            }
+                            exit(0);
+                        }
+
+                        /*  BUG: state update should be removed from here */
                         this->_state = BODY_COMPLETE;
+
                         return HTTP_RES_OK;
                     }
 
@@ -884,16 +942,6 @@ class HttpParser {
                     return HTTP_RES_OK;
                 }
             }
-            /*
-             * For uploaded files
-             * struct FilePart {
-             * std::string name;       // Form field name (e.g., "avatar")
-             * std::string filename;   // Original filename (e.g., "me.png")
-             * std::string contentType;
-             * std::string filePath;   // Path where the final file is saved on server
-             * };
-             * std::vector<FilePart> _files;
-             */
 
             return HTTP_RES_OK;
         }
@@ -1182,7 +1230,7 @@ class HttpParser {
             }
         }
     }
-    void printRaw(const std::string str)
+    static void printRaw(const std::string str)
     {
         for (size_t i = 0; i < str.size(); i++) {
             switch (str[i]) {

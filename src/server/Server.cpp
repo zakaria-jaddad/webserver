@@ -134,29 +134,30 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     // TODO:check if i must remove from epoll list of interest
                 }
                 req[b] = 0;
-                std::cout << "--------------start of request----------------" << std::endl;
-                std::cout << req;
-                std::cout << "--------------end of request------------------" << std::endl;
+                // std::cout << "--------------start of request----------------" << std::endl;
+                // std::cout << req;
+                // std::cout << "--------------end of request------------------" << std::endl;
                 HttpParser::httpResult res = it->request->parseHttpRequest(req);
                 it->request->setRes(res);
 
-                // debuggin parsed request
-                std::cout << "=======================" << std::endl;
-                std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
-
-                for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
-                     itMap != foo.end(); ++itMap) {
-                    std::string key = itMap->first;
-                    std::vector<std::string> &values = itMap->second;
-
-                    std::cout << "Header: " << key << std::endl;
-
-                    for (std::vector<std::string>::iterator itVec = values.begin();
-                         itVec != values.end(); ++itVec) {
-                        std::cout << "  Value: " << *itVec << std::endl;
-                    }
-                }
-                std::cout << "=======================" << std::endl;
+                // debugging parsed request
+                // std::cout << "=======================" << std::endl;
+                // std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
+                //
+                // for (std::map<std::string, std::vector<std::string> >::iterator itMap =
+                // foo.begin();
+                //      itMap != foo.end(); ++itMap) {
+                //     std::string key = itMap->first;
+                //     std::vector<std::string> &values = itMap->second;
+                //
+                //     std::cout << "Header: " << key << std::endl;
+                //
+                //     for (std::vector<std::string>::iterator itVec = values.begin();
+                //          itVec != values.end(); ++itVec) {
+                //         std::cout << "  Value: " << *itVec << std::endl;
+                //     }
+                // }
+                // std::cout << "=======================" << std::endl;
 
                 if (it->request->isComplete())
                     switchEpollMode(clientSocket, EPOLLOUT);
