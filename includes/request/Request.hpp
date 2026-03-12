@@ -315,7 +315,7 @@ class HttpParser {
                 this->_phase = BODY;
             }
 
-            res = _generateHeadersMap(headerLines);
+            res = _generateHeadersMap(headerLines, this->_headers);
             if (res != HTTP_RES_OK) {
                 return res;
             }
@@ -1088,7 +1088,7 @@ class HttpParser {
      *          / DIGIT / ALPHA
      *          ; any VCHAR, except delimiters
      */
-    bool _isValidToken(const std::string &str)
+    static bool _isValidToken(const std::string &str)
     {
         if (str.empty()) {
             return false;
@@ -1142,7 +1142,9 @@ class HttpParser {
      *  The Extracted header name is inserted to a map
      *  holding the raw (non parsed) header value
      */
-    httpResult _parseRequestHeaderName(std::string headerField)
+    static httpResult
+    _parseRequestHeaderName(std::string headerField,
+                            std::map<std::string, std::vector<std::string> > &_headers)
     {
 
         size_t colonPos = headerField.find_first_of(":");
@@ -1159,19 +1161,20 @@ class HttpParser {
         std::string fieldValue = trim(headerField);
 
         // if the key doesn't exist
-        if (this->_headers.find(fieldName) == this->_headers.end()) {
+        if (_headers.find(fieldName) == _headers.end()) {
             std::vector<std::string> tmp;
             tmp.push_back(fieldValue);
-            this->_headers.insert(
-                std::pair<std::string, std::vector<std::string> >(fieldName, tmp));
+            _headers.insert(std::pair<std::string, std::vector<std::string> >(fieldName, tmp));
             return HTTP_RES_OK;
         }
         // key already exist
-        this->_headers[fieldName].push_back(fieldValue);
+        _headers[fieldName].push_back(fieldValue);
         return HTTP_RES_OK;
     }
 
-    httpResult _generateHeadersMap(std::string headerLines)
+    static httpResult
+    _generateHeadersMap(std::string headerLines,
+                        std::map<std::string, std::vector<std::string> > &_headers)
     {
 
         std::vector<std::string> headers = _getTokens(headerLines, CRLF);
@@ -1183,7 +1186,7 @@ class HttpParser {
         httpResult res;
 
         for (int i = 0; i < int(size); i++) {
-            res = _parseRequestHeaderName(headers[i]);
+            res = _parseRequestHeaderName(headers[i], _headers);
             if (res != HTTP_RES_OK) {
                 return res;
             }

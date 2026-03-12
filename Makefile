@@ -34,7 +34,12 @@ SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)
 OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 PROJECT_OBJ	= $(PROJECT_SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-TEST_SRC_FILES = $(SRC_DIR)/request/Request.cpp
+TEST_SRC_FILES = $(SRC_DIR)/request/Request.cpp \
+								 $(addprefix $(SRC_DIR)/$(CONF_DIR)/, $(CONF_SRC)) \
+								 $(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC)) \
+								 $(addprefix $(SRC_DIR)/$(CGI_DIR)/, $(CGI_SRC)) \
+								 $(addprefix $(SRC_DIR)/$(RSP_DIR)/, $(RSP_SRC))
+
 
 TEST_TEST_FILES = $(TEST_DIR)/request_line_test.cpp \
 									$(TEST_DIR)/request_uri.cpp \

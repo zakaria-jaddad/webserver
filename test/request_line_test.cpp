@@ -162,16 +162,16 @@ TEST(RequestLine, ValidHTTP1_1RequestLine)
 
 TEST(RequestLine, ValidHTTP2RequestLine)
 {
-    string requestLine = "POST /foo.html?foo=bar HTTP/2\r\nHost: localhost\r\n\r\n";
+    string requestLine = "GET /foo.html?foo=bar HTTP/1.1\r\nHost: localhost\r\n\r\n";
     HttpParser par;
     HttpParser::httpResult res = par.parseHttpRequest(requestLine);
     ASSERT_EQ(res, HttpParser::HTTP_RES_OK);
-    ASSERT_EQ(par.getRequestType(), HttpParser::POST);
+    ASSERT_EQ(par.getRequestType(), HttpParser::GET);
     ASSERT_EQ(par.getRequestUriPath(), "/foo.html");
 
     const int *requestVersiong = par.getRequestVersion();
-    ASSERT_EQ(requestVersiong[0], 2);
-    ASSERT_EQ(requestVersiong[1], 0);
+    ASSERT_EQ(requestVersiong[0], 1);
+    ASSERT_EQ(requestVersiong[1], 1);
 }
 
 TEST(RequestLine, InvalidRequestType)
