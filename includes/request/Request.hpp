@@ -22,6 +22,8 @@
 
 #define CRLF "\r\n"
 #define DOUBLE_CRLF "\r\n\r\n"
+#define GREEN "\033[32m"
+#define WHITE "\033[0m"
 
 using namespace std;
 
@@ -175,7 +177,7 @@ class HttpParser {
 
     } httpResult;
 
-    const char *httpResultToString(httpResult result)
+    static const char *httpResultToString(httpResult result)
     {
         switch (result) {
         // 1xx
@@ -635,6 +637,26 @@ class HttpParser {
             this->_type = CHUNKED;
             return HTTP_RES_OK;
         }
+
+        std::string extractPar(const std::string header, std::string key)
+        {
+            std::string searchTarget = key + "=\"";
+
+            size_t startPos = header.find(searchTarget);
+            if (startPos == std::string::npos) {
+                return ""; // Key not found
+            }
+
+            startPos += searchTarget.length();
+
+            size_t endPos = header.find("\"", startPos);
+            if (endPos == std::string::npos) {
+                return "";
+            }
+
+            return header.substr(startPos, endPos - startPos);
+        }
+
         void _fileCleanUp()
         {
             file.close();
@@ -683,7 +705,15 @@ class HttpParser {
             std::string filename; // Original filename (e.g., "me.png")
             std::string contentType;
             std::string filePath; // Path where the final file is saved on server
+            // std::map<std::string, std::vector<std::string> > partLevelHeaders;
         };
+        void printFilePart(const FilePart &part)
+        {
+            std::cout << "Form Name    : [" << part.name << "]" << std::endl;
+            std::cout << "Filename     : [" << part.filename << "]" << std::endl;
+            std::cout << "Content-Type : [" << part.contentType << "]" << std::endl;
+            std::cout << "Saved Path   : [" << part.filePath << "]" << std::endl;
+        }
         std::vector<FilePart> _files;
 
         Body()
@@ -917,6 +947,10 @@ class HttpParser {
                             }
 
                             if ("--" + this->_boundary == line) {
+
+                                // Start parsing Part-level headers
+                                std::map<std::string, std::vector<std::string> > partLevelHeaders;
+
                                 while (std::getline(this->file, line)) {
                                     if (line.empty() == false && line[line.size() - 1] == '\r') {
                                         line.erase(line.size() - 1);
@@ -924,12 +958,61 @@ class HttpParser {
                                     if (line.empty() == true) {
                                         break;
                                     }
-
-                                    std::cout << "-> ";
-                                    printRaw(line);
+                                    _generateHeadersMap(line, partLevelHeaders);
                                 }
+
+                                if (partLevelHeaders.size() == 0) {
+
+                                    /* NOTE: I SHOULD REMOVE THE INPUT FILE + OTHER WRITTEN FILES*/
+                                    this->_fileCleanUp();
+                                    return HTTP_RES_BAD_REQUEST;
+                                }
+
+                                /* NOTE:In a multipart body, the Content-Disposition header must be
+                                 * used on each subpart to provide information about its
+                                 * corresponding field */
+
+                                if (partLevelHeaders.find("Content-Disposition") ==
+                                    partLevelHeaders.end()) {
+
+                                    this->_fileCleanUp();
+                                    return HTTP_RES_BAD_REQUEST;
+                                }
+
+                                if (partLevelHeaders["Content-Disposition"].size() != 1) {
+                                    this->_fileCleanUp();
+                                    return HTTP_RES_BAD_REQUEST;
+                                }
+
+                                std::string contentDispositionValue =
+                                    partLevelHeaders["Content-Disposition"][0];
+
+                                FilePart current;
+
+                                current.name = extractPar(contentDispositionValue, "name");
+                                current.filename = extractPar(contentDispositionValue, "filename");
+
+                                /* BUG: this might lead to a problem adding file to prev directories
+                                 */
+                                current.filePath =
+                                    this->conf->getUploadPath() + "/" + current.filename;
+
+                                if (partLevelHeaders.find("Content-Type") !=
+                                        partLevelHeaders.end() &&
+                                    partLevelHeaders["Content-Type"].size() != 0) {
+                                    current.contentType = partLevelHeaders["Content-Type"][0];
+                                }
+
+                                this->_files.push_back(current);
+
+                                cout << GREEN
+                                     << "part level headers: size: " << partLevelHeaders.size()
+                                     << std::endl;
+
+                                printHeaders(partLevelHeaders);
+                                printFilePart(current);
+                                std::cout << WHITE << std::endl;
                             }
-                            exit(0);
                         }
 
                         /*  BUG: state update should be removed from here */
@@ -1212,13 +1295,13 @@ class HttpParser {
     }
 
   public:
-    void printHttpResult(httpResult result)
+    static void printHttpResult(httpResult result)
     {
         std::cerr << "HTTP: " << httpResultToString(result) << std::endl;
     }
-    void printHeaders()
+    static void printHeaders(std::map<std::string, std::vector<std::string> > _headers)
     {
-        std::map<std::string, std::vector<std::string> > foo = this->_headers;
+        std::map<std::string, std::vector<std::string> > foo = _headers;
 
         for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
              itMap != foo.end(); ++itMap) {
