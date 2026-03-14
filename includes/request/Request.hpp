@@ -498,17 +498,26 @@ class HttpParser {
     } parserPhase;
 
     typedef struct Body {
+
         typedef enum {
             NONE,
             CONTENT_LENGTH,
             CHUNKED,
         } bodyType;
+
         typedef enum {
             BODY_NOT_STARTED,
             BODY_READING,
             BODY_PROCESSING,
             BODY_COMPLETE,
         } bodyState;
+
+        typedef enum {
+            MP_EXPECTING_BOUNDARY,
+            MP_READING_HEADERS,
+            MP_READING_BODY,
+            MP_COMPLETE,
+        } multiPartState;
 
       private:
         void normalizePath(void)
@@ -663,6 +672,25 @@ class HttpParser {
             remove(this->filePath.c_str());
         }
 
+      private:
+        /* Content Type Info */
+        std::string _boundary;
+        std::string _mediaType;
+        multiPartState _mpState;
+
+        // For uploaded files
+        struct FilePart {
+            std::string name;     // Form field name (e.g., "avatar")
+            std::string filename; // Original filename (e.g., "me.png")
+            std::string contentType;
+            std::string filePath; // Path where the final file is saved on server
+            std::fstream file;
+        };
+        FilePart _currentPart;
+        std::map<std::string, std::vector<std::string> > _partLevelHeaders;
+        std::string _mpCurrentLine;
+        std::vector<FilePart> _files;
+
       public:
         /* General Body Info */
         bodyType _type;
@@ -695,18 +723,6 @@ class HttpParser {
         bool chunkSizeReceived;
         std::string rawChunkSize;
 
-        /* Content Type Info */
-        std::string _boundary;
-        std::string _mediaType;
-
-        // For uploaded files
-        struct FilePart {
-            std::string name;     // Form field name (e.g., "avatar")
-            std::string filename; // Original filename (e.g., "me.png")
-            std::string contentType;
-            std::string filePath; // Path where the final file is saved on server
-            // std::map<std::string, std::vector<std::string> > partLevelHeaders;
-        };
         void printFilePart(const FilePart &part)
         {
             std::cout << "Form Name    : [" << part.name << "]" << std::endl;
@@ -714,7 +730,6 @@ class HttpParser {
             std::cout << "Content-Type : [" << part.contentType << "]" << std::endl;
             std::cout << "Saved Path   : [" << part.filePath << "]" << std::endl;
         }
-        std::vector<FilePart> _files;
 
         Body()
         {
@@ -931,103 +946,146 @@ class HttpParser {
                     }
 
                     if (this->_mediaType == "multipart/form-data") {
+
                         std::cout << "\033[33mmultipart/form-data Processing\033[0m" << std::endl;
-                        // get 2 lines at a time
-                        // check if there is a boundary
                         std::cout << "this is the boundary: " << this->_boundary << std::endl;
 
                         std::string line;
-                        // int i = 0;
+                        int linesProcessed = 0;
+                        int serverLoop = 30;
 
-                        while (std::getline(this->file, line)) {
+                        while (linesProcessed < serverLoop && this->_mpState != MP_COMPLETE) {
 
-                            // remove trailing \r
+                            if (!std::getline(this->file, line)) {
+                                return HTTP_RES_BAD_REQUEST;
+                            }
+                            linesProcessed++;
+
+                            bool hadCr = false;
                             if (line.empty() == false && line[line.size() - 1] == '\r') {
-                                line.erase(line.size() - 1);
+                                line.erase((line.size() - 1));
+                                hadCr = true;
                             }
 
-                            if ("--" + this->_boundary == line) {
+                            if (this->_mpState == MP_EXPECTING_BOUNDARY) {
+                                if ("--" + this->_boundary == line) {
+                                    this->_mpState = MP_READING_HEADERS;
+                                    this->_currentPart = FilePart();
+                                    this->_partLevelHeaders.clear();
+                                }
+                                else if ("--" + this->_boundary + "--" == line) {
+                                    this->_mpState = MP_COMPLETE;
+                                    this->_state = BODY_COMPLETE;
+                                    return HTTP_RES_OK;
+                                }
+                                continue;
+                            }
 
-                                // Start parsing Part-level headers
-                                std::map<std::string, std::vector<std::string> > partLevelHeaders;
+                            if (this->_mpState == MP_READING_HEADERS) {
+                                if (line.empty()) {
 
-                                while (std::getline(this->file, line)) {
-                                    if (line.empty() == false && line[line.size() - 1] == '\r') {
-                                        line.erase(line.size() - 1);
+                                    if (this->_partLevelHeaders.find("Content-Disposition") ==
+                                            this->_partLevelHeaders.end() ||
+                                        this->_partLevelHeaders["Content-Disposition"].size() !=
+                                            1) {
+                                        return HTTP_RES_BAD_REQUEST;
                                     }
-                                    if (line.empty() == true) {
-                                        break;
+
+                                    std::string contentDispositionValue =
+                                        this->_partLevelHeaders["Content-Disposition"][0];
+                                    this->_currentPart.name =
+                                        extractPar(contentDispositionValue, "name");
+                                    this->_currentPart.filename =
+                                        extractPar(contentDispositionValue, "filename");
+                                    this->_currentPart.filePath = this->conf->getUploadPath() +
+                                                                  "/" + this->_currentPart.filename;
+
+                                    // if contentType found add it
+                                    if (this->_partLevelHeaders.find("Content-Type") !=
+                                            this->_partLevelHeaders.end() &&
+                                        this->_partLevelHeaders["Content-Type"].empty() == false) {
+                                        this->_currentPart.contentType =
+                                            this->_partLevelHeaders["Content-Type"][0];
                                     }
-                                    _generateHeadersMap(line, partLevelHeaders);
+
+                                    /* open output file */
+                                    this->_currentPart.file.open(
+                                        this->_currentPart.filePath.c_str(),
+                                        std::ios::out | std::ios::binary);
+                                    if (this->_currentPart.file.is_open() == false) {
+                                        return HTTP_RES_INTERNAL_SERVER_ERROR;
+                                    }
+
+                                    this->_mpState = MP_READING_BODY;
+                                    this->_mpCurrentLine = "";
+                                    continue;
                                 }
 
-                                if (partLevelHeaders.size() == 0) {
+                                /* Parse The Header */
+                                _generateHeadersMap(line, this->_partLevelHeaders);
+                                continue;
+                            }
 
-                                    /* NOTE: I SHOULD REMOVE THE INPUT FILE + OTHER WRITTEN FILES*/
-                                    this->_fileCleanUp();
-                                    return HTTP_RES_BAD_REQUEST;
+                            if (this->_mpState == MP_READING_BODY) {
+                                /* Check if got boundary , if so save the file then store it in the
+                                 * vector */
+                                if ("--" + this->_boundary == line ||
+                                    "--" + this->_boundary + "--" == line) {
+
+                                    if (this->_mpCurrentLine.empty() == false) {
+                                        size_t writeLen = this->_mpCurrentLine.size();
+                                        // Remove \n and \r from the end of the buffer before
+                                        // writing
+                                        if (writeLen >= 1 &&
+                                            this->_mpCurrentLine[writeLen - 1] == '\n')
+                                            writeLen--;
+                                        if (writeLen >= 1 &&
+                                            this->_mpCurrentLine[writeLen - 1] == '\r')
+                                            writeLen--;
+
+                                        this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
+                                                                      writeLen);
+                                    }
+                                    this->_currentPart.file.close();
+                                    this->_files.push_back(this->_currentPart);
+
+                                    /* if normal boundary found reset the state machine */
+                                    if ("--" + this->_boundary == line) {
+                                        this->_mpState = MP_READING_HEADERS;
+                                        this->_currentPart = FilePart();
+                                        this->_partLevelHeaders.clear();
+                                        continue;
+                                    }
+                                    /* if end boundary found set body complete */
+                                    this->_mpState = MP_COMPLETE;
+                                    this->_state = BODY_COMPLETE;
+                                    return HTTP_RES_OK;
                                 }
 
-                                /* NOTE:In a multipart body, the Content-Disposition header must be
-                                 * used on each subpart to provide information about its
-                                 * corresponding field */
-
-                                if (partLevelHeaders.find("Content-Disposition") ==
-                                    partLevelHeaders.end()) {
-
-                                    this->_fileCleanUp();
-                                    return HTTP_RES_BAD_REQUEST;
+                                // NOTE: What the hack is this
+                                if (this->_mpCurrentLine.empty() == false) {
+                                    this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
+                                                                  this->_mpCurrentLine.size());
                                 }
 
-                                if (partLevelHeaders["Content-Disposition"].size() != 1) {
-                                    this->_fileCleanUp();
-                                    return HTTP_RES_BAD_REQUEST;
+                                // NOTE: What the hack is this
+                                this->_mpCurrentLine = line;
+                                if (hadCr == true) {
+                                    this->_mpCurrentLine += "\r";
                                 }
-
-                                std::string contentDispositionValue =
-                                    partLevelHeaders["Content-Disposition"][0];
-
-                                FilePart current;
-
-                                current.name = extractPar(contentDispositionValue, "name");
-                                current.filename = extractPar(contentDispositionValue, "filename");
-
-                                /* BUG: this might lead to a problem adding file to prev directories
-                                 */
-                                current.filePath =
-                                    this->conf->getUploadPath() + "/" + current.filename;
-
-                                if (partLevelHeaders.find("Content-Type") !=
-                                        partLevelHeaders.end() &&
-                                    partLevelHeaders["Content-Type"].size() != 0) {
-                                    current.contentType = partLevelHeaders["Content-Type"][0];
-                                }
-
-                                this->_files.push_back(current);
-
-                                cout << GREEN
-                                     << "part level headers: size: " << partLevelHeaders.size()
-                                     << std::endl;
-
-                                printHeaders(partLevelHeaders);
-                                printFilePart(current);
-                                std::cout << WHITE << std::endl;
+                                this->_mpCurrentLine += "\n";
                             }
                         }
-
-                        /*  BUG: state update should be removed from here */
-                        this->_state = BODY_COMPLETE;
-
                         return HTTP_RES_OK;
                     }
-
-                    this->_state = BODY_COMPLETE;
                     return HTTP_RES_OK;
                 }
             }
 
             return HTTP_RES_OK;
         }
+        // Here is how i have tried to parse the request body in multi part form data, since i store
+        // the whole body in a temp file
     } Body;
 
     parserPhase _phase;
