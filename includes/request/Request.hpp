@@ -23,6 +23,8 @@
 #define CRLF "\r\n"
 #define DOUBLE_CRLF "\r\n\r\n"
 #define GREEN "\033[32m"
+#define RED "\033[31m"
+#define YELLOW "\033[33m"
 #define WHITE "\033[0m"
 
 using namespace std;
@@ -344,10 +346,7 @@ class HttpParser {
                 this->_body.init(this);
             }
 
-            std::cout << "Parsing Body" << std::endl;
             res = this->_body.parseRequestBody(rawData);
-            std::cout << "body Parsed, res: ";
-            printHttpResult(res);
             if (res != HTTP_RES_OK) {
                 return res;
             }
@@ -381,6 +380,11 @@ class HttpParser {
 
     bool isComplete() { return this->_phase == HttpParser::COMPLETE; }
     bool isBodyComplete() { return this->_body._state == Body::BODY_COMPLETE; }
+
+    bool isProcessingBody()
+    {
+        return this->_phase == HttpParser::BODY && this->_body._state == Body::BODY_PROCESSING;
+    }
 
   private:
     static char _hexToChar(std::string hex)
@@ -685,6 +689,47 @@ class HttpParser {
             std::string contentType;
             std::string filePath; // Path where the final file is saved on server
             std::fstream file;
+
+            // Default constructor
+            FilePart() {}
+
+            // Copy constructor (C++98 friendly)
+            FilePart(const FilePart &other)
+                : name(other.name), filename(other.filename), contentType(other.contentType),
+                  filePath(other.filePath)
+            {
+                if (!other.filePath.empty() && other.file.is_open()) {
+                    // Re-open a new stream on the same path with same flags
+                    this->file.open(other.filePath.c_str());
+                }
+            }
+
+            // Copy-assignment operator (C++98 friendly)
+            FilePart &operator=(const FilePart &other)
+            {
+                if (this != &other) {
+                    // Close existing stream first
+                    if (file.is_open())
+                        file.close();
+
+                    name = other.name;
+                    filename = other.filename;
+                    contentType = other.contentType;
+                    filePath = other.filePath;
+
+                    if (!other.filePath.empty() && other.file.is_open()) {
+                        file.open(other.filePath.c_str());
+                    }
+                }
+                return *this;
+            }
+
+            // Destructor
+            ~FilePart()
+            {
+                if (file.is_open())
+                    file.close();
+            }
         };
         FilePart _currentPart;
         std::map<std::string, std::vector<std::string> > _partLevelHeaders;
@@ -750,6 +795,7 @@ class HttpParser {
             this->rawChunkSize = "";
             this->_body = "";
             this->_mediaType = "";
+            this->_mpState = MP_EXPECTING_BOUNDARY;
         }
 
         ~Body()
@@ -789,7 +835,7 @@ class HttpParser {
 
                 // Content-Length Body Parsing
                 if (this->_type == CONTENT_LENGTH) {
-                    std::cout << "\033[33mProcessing Body using Content-Length value\033[0m"
+                    std::cout << YELLOW << "Reading body using Content-Length" << WHITE
                               << std::endl;
                     if (rawDataSize + this->_bytesReceived > this->_contentLength) {
                         this->_fileCleanUp();
@@ -797,8 +843,14 @@ class HttpParser {
                     }
                     file.write(rawData.c_str(), rawDataSize);
                     this->_bytesReceived = this->_bytesReceived + rawDataSize;
+                    std::cout << YELLOW << "_bytesReceived: " << this->_bytesReceived << WHITE
+                              << std::endl;
                     if (this->_bytesReceived == this->_contentLength) {
+
+                        std::cout << YELLOW << "Finished Reading body using Content-Length" << WHITE
+                                  << std::endl;
                         this->_state = BODY_PROCESSING;
+                        exit(0);
                         this->file.clear();
                         this->file.seekg(0, ios::beg);
                     }
@@ -914,6 +966,8 @@ class HttpParser {
                 }
 
                 if (this->_state == BODY_PROCESSING) {
+                    std::cout << GREEN << "Finished processing the body" << std::endl;
+                    exit(0);
 
                     if (this->_mediaType == "application/x-www-form-urlencoded") {
 
@@ -947,8 +1001,9 @@ class HttpParser {
 
                     if (this->_mediaType == "multipart/form-data") {
 
-                        std::cout << "\033[33mmultipart/form-data Processing\033[0m" << std::endl;
+                        std::cout << YELLOW << "multipart/form-data Processing" << std::endl;
                         std::cout << "this is the boundary: " << this->_boundary << std::endl;
+                        std::cout << WHITE << std::endl;
 
                         std::string line;
                         int linesProcessed = 0;
@@ -957,6 +1012,7 @@ class HttpParser {
                         while (linesProcessed < serverLoop && this->_mpState != MP_COMPLETE) {
 
                             if (!std::getline(this->file, line)) {
+                                std::cout << "bad request from here" << std::endl;
                                 return HTTP_RES_BAD_REQUEST;
                             }
                             linesProcessed++;
@@ -1076,16 +1132,11 @@ class HttpParser {
                                 this->_mpCurrentLine += "\n";
                             }
                         }
-                        return HTTP_RES_OK;
                     }
-                    return HTTP_RES_OK;
                 }
             }
-
             return HTTP_RES_OK;
         }
-        // Here is how i have tried to parse the request body in multi part form data, since i store
-        // the whole body in a temp file
     } Body;
 
     parserPhase _phase;

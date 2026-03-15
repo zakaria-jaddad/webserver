@@ -47,7 +47,7 @@ class Server {
     std::map<int, ServerConfig *> vServers;
     // std::vector<int> clientFds;
     // std::map<int, HttpParser *> clientFds;
-    std::vector<t_client> Clients;
+    std::vector<t_client> clients;
 
   public:
     Server(std::string &file);
@@ -65,8 +65,8 @@ class Server {
         std::cout << "========== Server Info ==========" << std::endl;
         std::cout << "epoll_fd: " << this->epoll_fd << endl;
         std::cout << "Clients: " << std::endl;
-        for (std::vector<t_client>::const_iterator it = this->Clients.begin();
-             it != this->Clients.end(); it++) {
+        for (std::vector<t_client>::const_iterator it = this->clients.begin();
+             it != this->clients.end(); it++) {
             std::cout << "t_client fd: " << it->fd << std::endl;
             std::cout << "t_client config address : " << it->config << std::endl;
             std::cout << "t_client request address : " << it->request << std::endl;
