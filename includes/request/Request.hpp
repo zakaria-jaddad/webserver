@@ -523,6 +523,38 @@ class HttpParser {
             MP_COMPLETE,
         } multiPartState;
 
+        static std::string getBodyStateString(bodyState state)
+        {
+            switch (state) {
+            case BODY_NOT_STARTED:
+                return "BODY_NOT_STARTED";
+            case BODY_READING:
+                return "BODY_READING";
+            case BODY_PROCESSING:
+                return "BODY_PROCESSING";
+            case BODY_COMPLETE:
+                return "BODY_COMPLETE";
+            default:
+                return "UNKNOWN_BODY_STATE";
+            }
+        }
+
+        static std::string getMultiPartStateString(multiPartState state)
+        {
+            switch (state) {
+            case MP_EXPECTING_BOUNDARY:
+                return "MP_EXPECTING_BOUNDARY";
+            case MP_READING_HEADERS:
+                return "MP_READING_HEADERS";
+            case MP_READING_BODY:
+                return "MP_READING_BODY";
+            case MP_COMPLETE:
+                return "MP_COMPLETE";
+            default:
+                return "UNKNOWN_MULTIPART_STATE";
+            }
+        }
+
       private:
         void normalizePath(void)
         {
@@ -580,6 +612,7 @@ class HttpParser {
             }
 
             if (access(uploadPath.c_str(), R_OK) == -1) {
+                cerr << RED << "Error: Unvable to open file " << uploadPath << WHITE << endl;
                 return HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
@@ -829,6 +862,10 @@ class HttpParser {
 
             std::cout << "max body size: " << this->_maxBodySize << std::endl;
             std::cout << "content-length: " << this->_contentLength << std::endl;
+            //
+            std::cout << getBodyStateString(this->_state) << std::endl;
+            std::cout << getMultiPartStateString(this->_mpState) << std::endl;
+            //
             size_t rawDataSize = rawData.size();
             if (this->_state == BODY_READING) {
                 std::cout << "\033[33mProcessing Body\033[0m" << std::endl;
@@ -841,7 +878,7 @@ class HttpParser {
                         this->_fileCleanUp();
                         return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                     }
-                    file.write(rawData.c_str(), rawDataSize);
+                    file.write(rawData.data(), rawDataSize);
                     this->_bytesReceived = this->_bytesReceived + rawDataSize;
                     std::cout << YELLOW << "_bytesReceived: " << this->_bytesReceived << WHITE
                               << std::endl;
@@ -850,7 +887,6 @@ class HttpParser {
                         std::cout << YELLOW << "Finished Reading body using Content-Length" << WHITE
                                   << std::endl;
                         this->_state = BODY_PROCESSING;
-                        exit(0);
                         this->file.clear();
                         this->file.seekg(0, ios::beg);
                     }
@@ -868,7 +904,7 @@ class HttpParser {
                                 this->_maxBodySize) {
                                 return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                             }
-                            file.write(rawData.c_str(), rawData.size());
+                            file.write(rawData.data(), rawData.size());
                             this->_bytesReceived += rawData.size();
                             this->currentChunkRead += rawData.size();
                             return HTTP_RES_OK;
@@ -881,7 +917,7 @@ class HttpParser {
                             return HTTP_RES_BAD_REQUEST;
                         }
 
-                        file.write(chunkData.c_str(), chunkData.size());
+                        file.write(chunkData.data(), chunkData.size());
                         this->_bytesReceived += chunkData.size();
                         rawData.erase(0, crlfPos + strlen(CRLF));
 
@@ -936,7 +972,7 @@ class HttpParser {
                                 this->_fileCleanUp();
                                 return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                             }
-                            file.write(rawData.c_str(), rawData.size());
+                            file.write(rawData.data(), rawData.size());
                             this->_bytesReceived += rawData.size();
                             this->currentChunkRead += rawData.size();
                             return HTTP_RES_OK;
@@ -947,7 +983,7 @@ class HttpParser {
                             this->_fileCleanUp();
                             return HTTP_RES_BAD_REQUEST;
                         }
-                        file.write(chunkedData.c_str(), chunkedData.size());
+                        file.write(chunkedData.data(), chunkedData.size());
                         this->_bytesReceived = this->_bytesReceived + chunkedData.size();
                         this->currentChunkRead = 0;
                         this->currentChunkSize = 0;
@@ -964,173 +1000,176 @@ class HttpParser {
                         this->rawChunkSize += rawData;
                     }
                 }
+            }
+            if (this->_state == BODY_PROCESSING) {
+                std::cout << GREEN << "Finished processing the body" << std::endl;
 
-                if (this->_state == BODY_PROCESSING) {
-                    std::cout << GREEN << "Finished processing the body" << std::endl;
-                    exit(0);
+                if (this->_mediaType == "application/x-www-form-urlencoded") {
 
-                    if (this->_mediaType == "application/x-www-form-urlencoded") {
+                    std::map<std::string, std::string> params;
 
-                        std::map<std::string, std::string> params;
+                    std::string urlEncodedForm;
 
-                        std::string urlEncodedForm;
+                    this->file.seekg(0, ios::beg);
+                    this->file >> urlEncodedForm;
 
-                        this->file.seekg(0, ios::beg);
-                        this->file >> urlEncodedForm;
+                    std::cout << "urlEncodedForm: " << urlEncodedForm << std::endl;
 
-                        std::cout << "urlEncodedForm: " << urlEncodedForm << std::endl;
-
-                        _parseQueryString(urlEncodedForm, params);
-                        if (params.size() == 0) {
-                            return HTTP_RES_BAD_REQUEST;
-                        }
-
-                        std::cout << "Url decode form" << std::endl;
-                        for (std::map<std::string, std::string>::const_iterator it = params.begin();
-                             it != params.end(); it++) {
-                            std::cout << "key: " << it->first << ", value: " << it->second
-                                      << std::endl;
-                        }
-
-                        _fileCleanUp();
-                        std::cout << "\033[33mapplication/x-www-form-urlencoded: Parsed\033[0m"
-                                  << std::endl;
-                        this->_state = BODY_COMPLETE;
-                        return HTTP_RES_OK;
+                    _parseQueryString(urlEncodedForm, params);
+                    if (params.size() == 0) {
+                        return HTTP_RES_BAD_REQUEST;
                     }
 
-                    if (this->_mediaType == "multipart/form-data") {
+                    std::cout << "Url decode form" << std::endl;
+                    for (std::map<std::string, std::string>::const_iterator it = params.begin();
+                         it != params.end(); it++) {
+                        std::cout << "key: " << it->first << ", value: " << it->second << std::endl;
+                    }
 
-                        std::cout << YELLOW << "multipart/form-data Processing" << std::endl;
-                        std::cout << "this is the boundary: " << this->_boundary << std::endl;
-                        std::cout << WHITE << std::endl;
+                    _fileCleanUp();
+                    std::cout << "\033[33mapplication/x-www-form-urlencoded: Parsed\033[0m"
+                              << std::endl;
+                    this->_state = BODY_COMPLETE;
+                    return HTTP_RES_OK;
+                }
 
-                        std::string line;
-                        int linesProcessed = 0;
-                        int serverLoop = 30;
+                if (this->_mediaType == "multipart/form-data") {
 
-                        while (linesProcessed < serverLoop && this->_mpState != MP_COMPLETE) {
+                    std::cout << YELLOW << "multipart/form-data Processing" << std::endl;
+                    std::cout << "this is the boundary: " << this->_boundary << std::endl;
+                    std::cout << WHITE << std::endl;
 
-                            if (!std::getline(this->file, line)) {
-                                std::cout << "bad request from here" << std::endl;
-                                return HTTP_RES_BAD_REQUEST;
+                    std::string line;
+                    int linesProcessed = 0;
+                    int serverLoop = 30;
+
+                    while (linesProcessed < serverLoop && this->_mpState != MP_COMPLETE) {
+
+                        if (!std::getline(this->file, line)) {
+                            std::cout << "bad request from here" << std::endl;
+                            return HTTP_RES_BAD_REQUEST;
+                        }
+                        linesProcessed++;
+
+                        bool hadCr = false;
+                        if (line.empty() == false && line[line.size() - 1] == '\r') {
+                            line.erase((line.size() - 1));
+                            hadCr = true;
+                        }
+
+                        if (this->_mpState == MP_EXPECTING_BOUNDARY) {
+                            if ("--" + this->_boundary == line) {
+                                this->_mpState = MP_READING_HEADERS;
+                                this->_currentPart = FilePart();
+                                this->_partLevelHeaders.clear();
                             }
-                            linesProcessed++;
+                            else if ("--" + this->_boundary + "--" == line) {
+                                this->_mpState = MP_COMPLETE;
+                                this->_state = BODY_COMPLETE;
+                                return HTTP_RES_OK;
+                            }
+                            continue;
+                        }
 
-                            bool hadCr = false;
-                            if (line.empty() == false && line[line.size() - 1] == '\r') {
-                                line.erase((line.size() - 1));
-                                hadCr = true;
+                        if (this->_mpState == MP_READING_HEADERS) {
+                            if (line.empty()) {
+
+                                if (this->_partLevelHeaders.find("Content-Disposition") ==
+                                        this->_partLevelHeaders.end() ||
+                                    this->_partLevelHeaders["Content-Disposition"].size() != 1) {
+                                    return HTTP_RES_BAD_REQUEST;
+                                }
+
+                                std::string contentDispositionValue =
+                                    this->_partLevelHeaders["Content-Disposition"][0];
+                                this->_currentPart.name =
+                                    extractPar(contentDispositionValue, "name");
+                                this->_currentPart.filename =
+                                    extractPar(contentDispositionValue, "filename");
+
+                                // if filename is not provided meaning it's just a form value
+                                if (this->_currentPart.filename.empty() == true) {
+                                    this->_currentPart.filePath = this->conf->getUploadPath() +
+                                                                  "/" + "hardcoded_filename.txt";
+                                }
+                                else {
+                                    this->_currentPart.filePath = this->conf->getUploadPath() +
+                                                                  "/" + this->_currentPart.filename;
+                                }
+
+                                // if contentType found add it
+                                if (this->_partLevelHeaders.find("Content-Type") !=
+                                        this->_partLevelHeaders.end() &&
+                                    this->_partLevelHeaders["Content-Type"].empty() == false) {
+                                    this->_currentPart.contentType =
+                                        this->_partLevelHeaders["Content-Type"][0];
+                                }
+
+                                /* open output file */
+                                this->_currentPart.file.open(this->_currentPart.filePath.c_str(),
+                                                             std::ios::out | std::ios::binary);
+                                if (this->_currentPart.file.is_open() == false) {
+                                    cerr << RED << "Error: Unable to open file "
+                                         << this->_currentPart.filePath << WHITE << endl;
+                                    return HTTP_RES_INTERNAL_SERVER_ERROR;
+                                }
+
+                                this->_mpState = MP_READING_BODY;
+                                this->_mpCurrentLine = "";
+                                continue;
                             }
 
-                            if (this->_mpState == MP_EXPECTING_BOUNDARY) {
+                            /* Parse The Header */
+                            _generateHeadersMap(line, this->_partLevelHeaders);
+                            continue;
+                        }
+
+                        if (this->_mpState == MP_READING_BODY) {
+                            /* Check if got boundary , if so save the file then store it in the
+                             * vector */
+                            if ("--" + this->_boundary == line ||
+                                "--" + this->_boundary + "--" == line) {
+
+                                if (this->_mpCurrentLine.empty() == false) {
+                                    size_t writeLen = this->_mpCurrentLine.size();
+                                    // Remove \n and \r from the end of the buffer before
+                                    // writing
+                                    if (writeLen >= 1 && this->_mpCurrentLine[writeLen - 1] == '\n')
+                                        writeLen--;
+                                    if (writeLen >= 1 && this->_mpCurrentLine[writeLen - 1] == '\r')
+                                        writeLen--;
+
+                                    this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
+                                                                  writeLen);
+                                }
+                                this->_currentPart.file.close();
+                                this->_files.push_back(this->_currentPart);
+
+                                /* if normal boundary found reset the state machine */
                                 if ("--" + this->_boundary == line) {
                                     this->_mpState = MP_READING_HEADERS;
                                     this->_currentPart = FilePart();
                                     this->_partLevelHeaders.clear();
-                                }
-                                else if ("--" + this->_boundary + "--" == line) {
-                                    this->_mpState = MP_COMPLETE;
-                                    this->_state = BODY_COMPLETE;
-                                    return HTTP_RES_OK;
-                                }
-                                continue;
-                            }
-
-                            if (this->_mpState == MP_READING_HEADERS) {
-                                if (line.empty()) {
-
-                                    if (this->_partLevelHeaders.find("Content-Disposition") ==
-                                            this->_partLevelHeaders.end() ||
-                                        this->_partLevelHeaders["Content-Disposition"].size() !=
-                                            1) {
-                                        return HTTP_RES_BAD_REQUEST;
-                                    }
-
-                                    std::string contentDispositionValue =
-                                        this->_partLevelHeaders["Content-Disposition"][0];
-                                    this->_currentPart.name =
-                                        extractPar(contentDispositionValue, "name");
-                                    this->_currentPart.filename =
-                                        extractPar(contentDispositionValue, "filename");
-                                    this->_currentPart.filePath = this->conf->getUploadPath() +
-                                                                  "/" + this->_currentPart.filename;
-
-                                    // if contentType found add it
-                                    if (this->_partLevelHeaders.find("Content-Type") !=
-                                            this->_partLevelHeaders.end() &&
-                                        this->_partLevelHeaders["Content-Type"].empty() == false) {
-                                        this->_currentPart.contentType =
-                                            this->_partLevelHeaders["Content-Type"][0];
-                                    }
-
-                                    /* open output file */
-                                    this->_currentPart.file.open(
-                                        this->_currentPart.filePath.c_str(),
-                                        std::ios::out | std::ios::binary);
-                                    if (this->_currentPart.file.is_open() == false) {
-                                        return HTTP_RES_INTERNAL_SERVER_ERROR;
-                                    }
-
-                                    this->_mpState = MP_READING_BODY;
-                                    this->_mpCurrentLine = "";
                                     continue;
                                 }
-
-                                /* Parse The Header */
-                                _generateHeadersMap(line, this->_partLevelHeaders);
-                                continue;
+                                /* if end boundary found set body complete */
+                                this->_mpState = MP_COMPLETE;
+                                this->_state = BODY_COMPLETE;
+                                return HTTP_RES_OK;
                             }
 
-                            if (this->_mpState == MP_READING_BODY) {
-                                /* Check if got boundary , if so save the file then store it in the
-                                 * vector */
-                                if ("--" + this->_boundary == line ||
-                                    "--" + this->_boundary + "--" == line) {
-
-                                    if (this->_mpCurrentLine.empty() == false) {
-                                        size_t writeLen = this->_mpCurrentLine.size();
-                                        // Remove \n and \r from the end of the buffer before
-                                        // writing
-                                        if (writeLen >= 1 &&
-                                            this->_mpCurrentLine[writeLen - 1] == '\n')
-                                            writeLen--;
-                                        if (writeLen >= 1 &&
-                                            this->_mpCurrentLine[writeLen - 1] == '\r')
-                                            writeLen--;
-
-                                        this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
-                                                                      writeLen);
-                                    }
-                                    this->_currentPart.file.close();
-                                    this->_files.push_back(this->_currentPart);
-
-                                    /* if normal boundary found reset the state machine */
-                                    if ("--" + this->_boundary == line) {
-                                        this->_mpState = MP_READING_HEADERS;
-                                        this->_currentPart = FilePart();
-                                        this->_partLevelHeaders.clear();
-                                        continue;
-                                    }
-                                    /* if end boundary found set body complete */
-                                    this->_mpState = MP_COMPLETE;
-                                    this->_state = BODY_COMPLETE;
-                                    return HTTP_RES_OK;
-                                }
-
-                                // NOTE: What the hack is this
-                                if (this->_mpCurrentLine.empty() == false) {
-                                    this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
-                                                                  this->_mpCurrentLine.size());
-                                }
-
-                                // NOTE: What the hack is this
-                                this->_mpCurrentLine = line;
-                                if (hadCr == true) {
-                                    this->_mpCurrentLine += "\r";
-                                }
-                                this->_mpCurrentLine += "\n";
+                            // NOTE: What the hack is this
+                            if (this->_mpCurrentLine.empty() == false) {
+                                this->_currentPart.file.write(this->_mpCurrentLine.data(),
+                                                              this->_mpCurrentLine.size());
                             }
+
+                            // NOTE: What the hack is this
+                            this->_mpCurrentLine = line;
+                            if (hadCr == true) {
+                                this->_mpCurrentLine += "\r";
+                            }
+                            this->_mpCurrentLine += "\n";
                         }
                     }
                 }

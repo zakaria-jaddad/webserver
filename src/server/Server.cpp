@@ -119,7 +119,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
     int clientSocket = -1;
     char req[1024] = {0};
-    int b;
+    int bytesRead;
     int c = 0;
 
     for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
@@ -128,15 +128,16 @@ int Server::checkForClientFd(epoll_event *events, int i)
             clientSocket = it->fd;
             // std::cout << "already in map clientSocket = " << clientSocket << std::endl;
             if (events[i].events == EPOLLIN) { // we can read from socket
-                b = recv(clientSocket, req, sizeof(req) - 1, 0);
-                if (b == -1 || b == 0) {
+                bytesRead = recv(clientSocket, req, sizeof(req) - 1, 0);
+                if (bytesRead == -1 || bytesRead == 0) {
                     closeSocket(&(*it));
                     clients.erase(clients.begin() + c);
                     break;
                     // TODO:check if i must remove from epoll list of interest
                 }
-                req[b] = 0;
-                HttpParser::httpResult res = it->request->parseHttpRequest(req);
+                req[bytesRead] = 0;
+                std::string rawData(req, bytesRead);
+                HttpParser::httpResult res = it->request->parseHttpRequest(rawData);
                 it->request->setRes(res);
                 if (res != HttpParser::HTTP_RES_OK) {
                     std::cout << RED << std::endl;
@@ -211,30 +212,29 @@ int Server::startServer()
 
         /* Zakaria Add This Section */
 
-        // bool backgroundWork = false;
-        // for (size_t i = 0; i < this->clients.size(); i++) {
-        //
-        //     // if client is found and body is processing
-        //     if (this->clients[i].request->isProcessingBody() == true) {
-        //         backgroundWork = true;
-        //     }
-        //
-        //     /* NOTE: Since we read from the file no data need to be passed to the parser */
-        //     this->clients[i].request->parseHttpRequest("");
-        //
-        //     if (this->clients[i].request->isComplete() == true) {
-        //         switchEpollMode(this->clients[i].fd, EPOLLOUT);
-        //     }
-        // }
-        //
-        // /* NOTE: If we have clients processing local files, we CANNOT let epoll block the server.
-        // We
-        //  * set timeout to 0 (non-blocking). Otherwise, we block for 30s to save CPU. */
-        // int timeout = backgroundWork ? 0 : 30000;
+        bool backgroundWork = false;
+        for (size_t i = 0; i < this->clients.size(); i++) {
+
+            // if client is found and body is processing
+            if (this->clients[i].request->isProcessingBody() == true) {
+                backgroundWork = true;
+            }
+
+            /* NOTE: Since we read from the file no data need to be passed to the parser */
+            this->clients[i].request->parseHttpRequest("");
+
+            if (this->clients[i].request->isComplete() == true) {
+                switchEpollMode(this->clients[i].fd, EPOLLOUT);
+            }
+        }
+
+        /* NOTE: If we have clients processing local files, we CANNOT let epoll block the server.
+         * set timeout to 0 (non-blocking). Otherwise, we block for 30s to save CPU. */
+        int timeout = backgroundWork ? 0 : 30000;
 
         /* End of Zakaria Add This Section */
 
-        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 30000);
+        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout);
         if (event_count == -1) {
             std::cerr << "epoll_wait Failed!" << std::endl;
             return (1);
