@@ -15,6 +15,7 @@ std::string Response::getStatusMessage(int code)
         case 408: return "Request Timeout";
         case 500: return "Internal Server Error";
         case 405: return "Method Not Allowed";
+        case 504: return "Gateway timeout";
         case 501: return "Not Implemented";
         case 505: return "HTTP Version Not Supported";
         default:  return "Error";

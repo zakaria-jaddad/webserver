@@ -1,4 +1,5 @@
 #include "../../includes/server/Server.hpp"
+#include <fstream>
 #include <sstream>
 
 Server::Server(std::string &path) {
@@ -121,124 +122,150 @@ int Server::checkClientTimeout(t_client *client)
 }
 
 int Server::checkForClientFd(epoll_event *events, int i) {
-	//This method is to look for the event fd in clientFds
-	//It then checks if the operation that is is ready for is 'read' or 'write'
-	// then reads or writes accordingly
+  //This method is to look for the event fd in clientFds
+  //It then checks if the operation that is is ready for is 'read' or 'write'
+  // then reads or writes accordingly
 
-	int clientSocket = -1;
-	char req[1024] = {0}; 
-	int b;
-	int c = 0;
+  int clientSocket = -1;
+  char req[1024] = {0}; 
+  int b;
+  int c = 0;
 
-	for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); c++) 
-	{
-		// std::cout << "looping thru clients" << std::endl;
+  for (std::vector<t_client>::iterator it = this->Clients.begin(); it != this->Clients.end(); c++) 
+  {
+    // std::cout << "looping thru clients" << std::endl;
 
-		int isTimeout = checkClientTimeout(&(*it));
-		if (isTimeout)
-		{
-			std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-			switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-			closeSocket(&(*it));
-			it = Clients.erase(Clients.begin() + c);
-			continue ;
-		}
+    int isTimeout = checkClientTimeout(&(*it));
+    if (isTimeout)
+    {
+      std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+      switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+      closeSocket(&(*it));
+      it = Clients.erase(Clients.begin() + c);
+      continue ;
+    }
 
-		if (events[i].data.fd == it->fd) 
-		{
-			clientSocket = it->fd;
-			//std::cout << "already in map clientSocket = " << clientSocket << std::endl;
-			if (events[i].events == EPOLLIN) 
-			{ 
-				// we can read from socket
+    if (events[i].data.fd == it->fd) 
+    {
+      clientSocket = it->fd;
+      //std::cout << "already in map clientSocket = " << clientSocket << std::endl;
+      if (events[i].events == EPOLLIN) 
+      { 
+        // we can read from socket
 
-				int time_out = checkClientTimeout(&(*it));
-				if (time_out)
-				{
-					std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-					switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-					closeSocket(&(*it));
-					it = Clients.erase(Clients.begin() + c);
-					continue ;
-				}
-				
-				b = recv(clientSocket, req, sizeof(req) - 1, 0);
-				if (b == -1 || b == 0) {
-					closeSocket(&(*it));
-					Clients.erase(Clients.begin() + c);
-					return 1;
-					//TODO:check if i must remove from epoll list of interest
-				}
-				req[b] = 0;
-				it->last_activity = time(NULL);
-				std::cout << "--------------start of request----------------" << std::endl;
-				std::cout << req;
-				std::cout << "--------------end of request------------------" << std::endl;
-				it->request->parseHttpRequest(req);
-				
-				//debuggin parsed request
-				std::cout << "=======================" << std::endl;
-				std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
+        int time_out = checkClientTimeout(&(*it));
+        if (time_out)
+        {
+          std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+          closeSocket(&(*it));
+          it = Clients.erase(Clients.begin() + c);
+          continue ;
+        }
 
-				for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
-					itMap != foo.end();
-					++itMap)
-				{
-					std::string key = itMap->first;
-					std::vector<std::string>& values = itMap->second;
+        b = recv(clientSocket, req, sizeof(req) - 1, 0);
+        if (b == -1 || b == 0) {
+          closeSocket(&(*it));
+          Clients.erase(Clients.begin() + c);
+          return 1;
+          //TODO:check if i must remove from epoll list of interest
+        }
+        req[b] = 0;
+        it->last_activity = time(NULL);
+        std::cout << "--------------start of request----------------" << std::endl;
+        std::cout << req;
+        std::cout << "--------------end of request------------------" << std::endl;
+        it->request->parseHttpRequest(req);
 
-					std::cout << "Header: " << key << std::endl;
+        //debuggin parsed request
+        std::cout << "=======================" << std::endl;
+        std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
 
-					for (std::vector<std::string>::iterator itVec = values.begin();
-						itVec != values.end();
-						++itVec)
-					{
-						std::cout << "  Value: " << *itVec << std::endl;
-					}
-				}
-				std::cout << "=======================" << std::endl;
-				
-				if (it->request->isComplete())
-					switchEpollMode(clientSocket, EPOLLOUT);
-			}
-			else if (events[i].events == EPOLLOUT) 
-			{ 
-				// we can write to socket
-				if (it->response == NULL)
-					it->response = new Response(&(*it));
-				HttpParser::httpResult res = it->response->checkMethod();
-				if (res == HttpParser::HTTP_VERSION_NOT_SUPPORTED)
-				{
-					std::cout << "cgi timed out" << std::endl;
-					it->response->servePages(408);
-					if(it->response->isComplete())
-					{
-						std::cout << "cleaned socket" << std::endl;
-						switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-						closeSocket(&(*it));
-						it = Clients.erase(Clients.begin() + c);
-					}
-					break ;
-				}
-				if (it->response->isError()) {
-					closeSocket(&(*it));
-					Clients.erase(Clients.begin() + c);
-					break;
-					//hh
-				}
-				if (it->response->isComplete()) {
-					resetSocket(&(*it));
-					switchEpollMode(clientSocket, EPOLLIN);
-					std::cout << "back to reading" << std::endl;
-				}
-				//check if connection close or keep alive to know
-				//whether to close or in case of keep alive clear data buff falgs etc..
-			}
-			break;
-		}
-		it++;
-	}
-	return (clientSocket);
+        for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
+        itMap != foo.end();
+        ++itMap)
+        {
+          std::string key = itMap->first;
+          std::vector<std::string>& values = itMap->second;
+
+          std::cout << "Header: " << key << std::endl;
+
+          for (std::vector<std::string>::iterator itVec = values.begin();
+          itVec != values.end();
+          ++itVec)
+          {
+            std::cout << "  Value: " << *itVec << std::endl;
+          }
+        }
+        std::cout << "=======================" << std::endl;
+
+        if (it->request->isComplete())
+          switchEpollMode(clientSocket, EPOLLOUT);
+      }
+      else if (events[i].events == EPOLLOUT) 
+      { 
+        // we can write to socket
+        if (it->response == NULL)
+          it->response = new Response(&(*it));
+        HttpParser::httpResult res = it->response->checkMethod();
+        if (res == HttpParser::HTTP_VERSION_NOT_SUPPORTED)
+        {
+          std::cout << "cgi timed out" << std::endl;
+
+          std::ifstream file("pages/504.html", std::ios::in | std::ios::binary);
+          std::string body;
+
+          if (file)
+          {
+            std::ostringstream ss;
+            ss << file.rdbuf();
+            body = ss.str();
+            file.close();
+          }
+          else
+            body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
+
+          // 2️⃣ Build HTTP response with proper Content-Length
+          std::ostringstream response;
+          response << "HTTP/1.1 504 Gateway Timeout\r\n"
+            << "Content-Type: text/html\r\n"
+            << "Content-Length: " << body.size() << "\r\n"
+            << "Connection: close\r\n"
+            << "\r\n"
+            << body;
+          
+          it->response->sendResponse(response.str().c_str());
+
+          //it->response->servePages(504);
+
+          /*if(it->response->isComplete())
+          {*/
+          std::cout << "cleaned socket" << std::endl;
+          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+          closeSocket(&(*it));
+          it = Clients.erase(Clients.begin() + c);
+          //}
+          break ;
+        }
+        if (it->response->isError()) {
+          closeSocket(&(*it));
+          Clients.erase(Clients.begin() + c);
+          break;
+          //hh
+        }
+        if (it->response->isComplete()) {
+          resetSocket(&(*it));
+          switchEpollMode(clientSocket, EPOLLIN);
+          std::cout << "back to reading" << std::endl;
+        }
+        //check if connection close or keep alive to know
+        //whether to close or in case of keep alive clear data buff falgs etc..
+      }
+      break;
+    }
+    it++;
+  }
+  return (clientSocket);
 }
 
 int Server::startServer() 
