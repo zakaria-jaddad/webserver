@@ -80,7 +80,7 @@ int Server::checkForServerFd(epoll_event *events, int i) {
 				std::cerr << "failed to accept" << std::endl;
 			if (addToEpoll(clientSocket, EPOLLIN))
 				std::cerr << "failed to add to epoll" << std::endl;
-			obj = new HttpParser();
+			obj = new HttpParser(it->second);
 			client.fd = clientSocket;
 			client.config = it->second;
 			client.request = obj;
@@ -184,7 +184,8 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         std::cout << "--------------start of request----------------" << std::endl;
         std::cout << req;
         std::cout << "--------------end of request------------------" << std::endl;
-        it->request->parseHttpRequest(req);
+        std::string rawData(req, b);
+        it->request->parseHttpRequest(rawData);
 
         //debuggin parsed request
         std::cout << "=======================" << std::endl;
