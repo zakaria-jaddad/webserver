@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <algorithm>
 
+#define CGI_TIMEOUT 200
+
 class Cgi;
 struct t_client;
 
@@ -37,9 +39,13 @@ class Response{
 	bool						status;
 	bool						exec_status;
 	bool						error;
+	bool						timed_out;
+
+	time_t 						start_time;
 
 public:
 	Response( t_client* client );
+	~Response( void );
 
 	HttpParser::httpResult	checkMethod( void );
 	HttpParser::httpResult	routeMethod( HttpParser::requestType );

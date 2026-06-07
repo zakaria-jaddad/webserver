@@ -19,10 +19,16 @@
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
+#define REQUEST_TIMEOUT 2000
+#define IDLE_TIMEOUT 1000
 class Response;
 
 struct t_client {
     int fd;
+
+    time_t	last_activity;
+	time_t	connection_time;
+
     ServerConfig *config;
     HttpParser *request;
     Response *response;
@@ -59,12 +65,15 @@ class Server {
     int checkForClientFd(epoll_event *events, int i);
     void resetSocket(t_client *client);
     void closeSocket(t_client *client);
+
+    int checkClientTimeout( t_client* );
+
     // int setup_epoll(config &conf);
     void printInfo() const
     {
         std::cout << "========== Server Info ==========" << std::endl;
         std::cout << "epoll_fd: " << this->epoll_fd << endl;
-        std::cout << "Clients: " << std::endl;
+        std::cout << "clients: " << std::endl;
         for (std::vector<t_client>::const_iterator it = this->clients.begin();
              it != this->clients.end(); it++) {
             std::cout << "t_client fd: " << it->fd << std::endl;

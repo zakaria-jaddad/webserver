@@ -2,31 +2,23 @@
 
 std::string Response::getStatusMessage(int code)
 {
-    switch (code) {
-    case 200:
-        return "OK";
-    case 301:
-        return "Moved Permanently";
-    case 302:
-        return "Found";
-    case 303:
-        return "See Other";
-    case 307:
-        return "Temporary Redirect";
-    case 308:
-        return "Permanent Redirect";
-    case 404:
-        return "Not Found";
-    case 500:
-        return "Internal Server Error";
-    case 405:
-        return "Method Not Allowed";
-    case 501:
-        return "Not Implemented";
-    case 505:
-        return "HTTP Version Not Supported";
-    default:
-        return "Error";
+    switch (code)
+    {
+        case 200: return "OK";
+        case 301: return "Moved Permanently";
+        case 302: return "Found";
+        case 303: return "See Other";
+        case 307: return "Temporary Redirect";
+        case 308: return "Permanent Redirect";
+        case 403: return "Forbidden";
+        case 404: return "Not Found";
+        case 408: return "Request Timeout";
+        case 500: return "Internal Server Error";
+        case 405: return "Method Not Allowed";
+        case 504: return "Gateway timeout";
+        case 501: return "Not Implemented";
+        case 505: return "HTTP Version Not Supported";
+        default:  return "Error";
     }
 }
 

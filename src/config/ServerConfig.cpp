@@ -33,8 +33,10 @@ void ServerConfig::init_error_pages()
   error_pages[403] = "pages/403.html";
   error_pages[404] = "pages/404.html";
   error_pages[405] = "pages/405.html";
+  error_pages[408] = "pages/408.html";
   error_pages[500] = "pages/500.html";
   error_pages[501] = "pages/501.html";
+  error_pages[504] = "pages/504.html";
   error_pages[505] = "pages/505.html";
 }
 

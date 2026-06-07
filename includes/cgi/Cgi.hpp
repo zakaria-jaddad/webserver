@@ -28,6 +28,8 @@ class Cgi{
 		int 						*in_fds;
 		int 						*out_fds;
 		char**					env;
+		pid_t					child;
+		int						child_status;
 		// phase				_phase;
 
 	public:
@@ -47,6 +49,8 @@ class Cgi{
 		void executor( void );
 		
 		int* getPipe( void );
+		int	 getChild( void );
+		int	 getChildStatus( void );
 
 		// void craftHeader( std::string&  );
 		// void craftBody( std::string&  );

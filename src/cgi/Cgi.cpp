@@ -2,7 +2,7 @@
 
 // constructor/destructor
 Cgi::Cgi(int *in, int *out, t_client *client) 
-:  request(client->request), in_fds(in), out_fds(out)
+:  request(client->request), in_fds(in), out_fds(out), child(-10), child_status(-5)
 {
     std::cout << "--------------start of cgi constructor----------------" << std::endl;
 
@@ -28,44 +28,50 @@ Cgi::~Cgi()
 // execution
 void Cgi::executor(void)
 {
-	const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
-
-    pid_t child = fork();
-
-    if (child == 0) {
-        close(out_fds[0]);
-        close(in_fds[1]);
-
-        dup2(out_fds[1], STDOUT_FILENO);
-        dup2(in_fds[0], STDIN_FILENO);
-
-        execve(cgiPath.c_str(), const_cast<char *const *>(argv), env);
-    }
-    else {
-        int status;
-
-        if (methodToString(request->getRequestType()) == "GET") {
-            close(in_fds[0]);
-            close(out_fds[1]);
-
+    if (child == -10)
+    {
+        const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
+    
+        child = fork();
+    
+        if (child == 0) {
+            close(out_fds[0]);
             close(in_fds[1]);
+    
+            dup2(out_fds[1], STDOUT_FILENO);
+            dup2(in_fds[0], STDIN_FILENO);
+    
+            execve(cgiPath.c_str(), const_cast<char *const *>(argv), env);
         }
-        else if (methodToString(request->getRequestType()) == "POST") {
-            close(in_fds[0]);
-            close(out_fds[1]);
-
-            // write(in_fds[1], request.getBody(), request.getBodyLength());
-            //  write(in_fds[1], fake_body.c_str(), fake_body_len);
-
-            close(in_fds[1]);
+        else {
+    
+            std::cout << "child created : " << child << std::endl;
+            if (methodToString(request->getRequestType()) == "GET") {
+                close(in_fds[0]);
+                close(out_fds[1]);
+    
+                close(in_fds[1]);
+            }
+            else if (methodToString(request->getRequestType()) == "POST") {
+                close(in_fds[0]);
+                close(out_fds[1]);
+    
+                // write(in_fds[1], request.getBody(), request.getBodyLength());
+                //  write(in_fds[1], fake_body.c_str(), fake_body_len);
+    
+                close(in_fds[1]);
+            }
+    
         }
-
-        waitpid(child, &status, 0);
-        std::cout << "finished executing" << std::endl;
     }
+
+    int status;
+    child_status = waitpid(child, &status, WNOHANG);
 }
 
 int *Cgi::getPipe(void) { return out_fds; }
+int Cgi::getChild(void) { return child; }
+int Cgi::getChildStatus(void) { return child_status; }
 
 // int main()
 // {
