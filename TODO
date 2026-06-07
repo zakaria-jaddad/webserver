@@ -1,0 +1,2 @@
+- check use after free in the case of :
+	. running a php script in one tab and in a new tab requesting something else (ex: GET)
