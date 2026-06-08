@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <algorithm>
 
-#define CGI_TIMEOUT 200
+#define CGI_TIMEOUT 10
 
 class Cgi;
 struct t_client;

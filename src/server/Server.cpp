@@ -142,8 +142,10 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 
   for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
   {
-    // std::cout << "looping thru clients" << std::endl;
+    std::cout << "looping thru clients" << std::endl;
 
+    // Request timeout/client idling too long 
+    // Need to still look into if I should send a 408 response or not to client
     int isTimeout = checkClientTimeout(&(*it));
     if (isTimeout)
     {
@@ -157,11 +159,10 @@ int Server::checkForClientFd(epoll_event *events, int i) {
     if (events[i].data.fd == it->fd) 
     {
       clientSocket = it->fd;
-      //std::cout << "already in map clientSocket = " << clientSocket << std::endl;
-      if (events[i].events == EPOLLIN) 
+      if (events[i].events == EPOLLIN)
       { 
         // we can read from socket
-
+        // for some reason im looking into timeout again here?? check later
         int time_out = checkClientTimeout(&(*it));
         if (time_out)
         {
@@ -181,33 +182,9 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         }
         req[b] = 0;
         it->last_activity = time(NULL);
-        // std::cout << "--------------start of request----------------" << std::endl;
-        // std::cout << req;
-        // std::cout << "--------------end of request------------------" << std::endl;
+        
         std::string rawData(req, b);
         it->request->parseHttpRequest(rawData);
-
-        //debuggin parsed request
-        // std::cout << "=======================" << std::endl;
-        // std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
-
-        // for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
-        // itMap != foo.end();
-        // ++itMap)
-        // {
-        //   std::string key = itMap->first;
-        //   std::vector<std::string>& values = itMap->second;
-
-        //   std::cout << "Header: " << key << std::endl;
-
-        //   for (std::vector<std::string>::iterator itVec = values.begin();
-        //   itVec != values.end();
-        //   ++itVec)
-        //   {
-        //     std::cout << "  Value: " << *itVec << std::endl;
-        //   }
-        // }
-        // std::cout << "=======================" << std::endl;
 
         if (it->request->isComplete())
           switchEpollMode(clientSocket, EPOLLOUT);
@@ -217,52 +194,28 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         // we can write to socket
         if (it->response == NULL)
           it->response = new Response(&(*it));
+        
+        // start the response crafting and sending process from the checkMethod parent method
         HttpParser::httpResult res = it->response->checkMethod();
+
+        // check for timeout 
+        // check later if internal server errors should be handled the same way as timeout
         if (res == HttpParser::HTTP_RES_GATEWAY_TIMEOUT)
         {
           std::cout << "cgi timed out" << std::endl;
-
-          // std::ifstream file("pages/504.html", std::ios::in | std::ios::binary);
-          // std::string body;
-
-          // if (file)
-          // {
-          //   std::ostringstream ss;
-          //   ss << file.rdbuf();
-          //   body = ss.str();
-          //   file.close();
-          // }
-          // else
-          //   body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
-
-          // // 2️⃣ Build HTTP response with proper Content-Length
-          // std::ostringstream response;
-          // response << "HTTP/1.1 504 Gateway Timeout\r\n"
-          //   << "Content-Type: text/html\r\n"
-          //   << "Content-Length: " << body.size() << "\r\n"
-          //   << "Connection: close\r\n"
-          //   << "\r\n"
-          //   << body;
-          
-          // it->response->sendResponse(response.str().c_str());
-
-          //it->response->servePages(504);
-
-          /*if(it->response->isComplete())
-          {*/
-          std::cout << "cleaned socket" << std::endl;
           switchEpollMode((*it).fd, EPOLL_CTL_DEL);
           closeSocket(&(*it));
           it = clients.erase(clients.begin() + c);
-          //}
+          std::cout << "cleaned socket" << std::endl;
           break ;
         }
+        
         if (it->response->isError()) {
           closeSocket(&(*it));
           clients.erase(clients.begin() + c);
           break;
-          //hh
         }
+        
         if (it->response->isComplete()) {
           resetSocket(&(*it));
           switchEpollMode(clientSocket, EPOLLIN);

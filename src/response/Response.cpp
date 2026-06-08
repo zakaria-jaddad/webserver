@@ -154,10 +154,5 @@ HttpParser::httpResult Response::checkMethod(void)
 		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	}
 
-	HttpParser::httpResult res = routeMethod(req_method);
-	
-	// if (res == HttpParser::HTTP_RES_GATEWAY_TIMEOUT)
-	// 	servePages(504);
-
-	return res;
+	return routeMethod(req_method);
 }

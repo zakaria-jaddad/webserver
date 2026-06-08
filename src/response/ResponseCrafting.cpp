@@ -79,7 +79,7 @@ HttpParser::httpResult Response::craftResponse( void )
 
 	while (this->_phase == HEADERS && !this->error)
 	{
-		ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
+		ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
 
 		if (bytes == 0)
 		{
@@ -106,7 +106,7 @@ HttpParser::httpResult Response::craftResponse( void )
 	{
 		if (val.empty())
 		{
-			ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);//check errors
+			ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
 
 			if (bytes == 0)
 			{
