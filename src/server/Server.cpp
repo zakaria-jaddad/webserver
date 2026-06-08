@@ -201,20 +201,14 @@ int Server::checkForClientFd(epoll_event *events, int i) {
 
         // check for timeout 
         // check later if internal server errors should be handled the same way as timeout
-        if (res == HttpParser::HTTP_RES_GATEWAY_TIMEOUT)
+        if (res != HttpParser::HTTP_RES_OK)
         {
-          std::cout << "cgi timed out" << std::endl;
+          // std::cout << "cgi timed out" << std::endl;
           switchEpollMode((*it).fd, EPOLL_CTL_DEL);
           closeSocket(&(*it));
           it = clients.erase(clients.begin() + c);
           std::cout << "cleaned socket" << std::endl;
           break ;
-        }
-        
-        if (it->response->isError()) {
-          closeSocket(&(*it));
-          clients.erase(clients.begin() + c);
-          break;
         }
         
         if (it->response->isComplete()) {
