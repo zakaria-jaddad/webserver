@@ -121,10 +121,15 @@ int Server::checkClientTimeout(t_client *client)
 	// std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
 	// std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
 
-	if (!client->request->isComplete() && idle_time > REQUEST_TIMEOUT)//placeholder request timeout
-		return 1;
+	if (client->request && \
+      !client->request->isComplete() && \
+      idle_time > REQUEST_TIMEOUT)
+		return 2;
 	
-	if (client->request->isComplete() && idle_time > IDLE_TIMEOUT)//placeholder idle timeout
+	if (client->request && \
+      client->request->isComplete() && \
+      !client->response && \
+      idle_time > IDLE_TIMEOUT)
 		return 1;
 	
 	return 0;
@@ -145,10 +150,18 @@ int Server::checkForClientFd(epoll_event *events, int i) {
     std::cout << "looping thru clients" << std::endl;
 
     // Request timeout/client idling too long 
-    // Need to still look into if I should send a 408 response or not to client
     int isTimeout = checkClientTimeout(&(*it));
     if (isTimeout)
     {
+      // for request timeout
+      if (isTimeout == 2)
+      {
+        it->response = new Response(&(*it));
+        it->response->servePages(408);
+        std::cout << "request timed out!!\n";
+      }
+
+      // general cleanup (either idle or request timeout)
       std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
       switchEpollMode((*it).fd, EPOLL_CTL_DEL);
       closeSocket(&(*it));
@@ -160,19 +173,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
     {
       clientSocket = it->fd;
       if (events[i].events == EPOLLIN)
-      { 
-        // we can read from socket
-        // for some reason im looking into timeout again here?? check later
-        int time_out = checkClientTimeout(&(*it));
-        if (time_out)
-        {
-          std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-          closeSocket(&(*it));
-          it = clients.erase(clients.begin() + c);
-          continue ;
-        }
-
+      {
         b = recv(clientSocket, req, sizeof(req) - 1, 0);
         if (b == -1 || b == 0) {
           closeSocket(&(*it));
@@ -282,9 +283,19 @@ int Server::startServer()
 			{
 				std::cout << "looping thru clients" << std::endl;
 
+        // check possibility to keep this and remove the above timeout check
 				int isTimeout = checkClientTimeout(&(*it));
 				if (isTimeout)
 				{
+
+          // for request timeout
+          if (isTimeout == 2)
+          {
+            it->response = new Response(&(*it));
+            it->response->servePages(408);
+            std::cout << "request timed out!!\n";
+          }
+
 					std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
 					std::cout << "done sending timeout resetting socket..." << std::endl;
 					switchEpollMode(it->fd, EPOLL_CTL_DEL);

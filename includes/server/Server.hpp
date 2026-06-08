@@ -19,7 +19,7 @@
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
-#define REQUEST_TIMEOUT 2000
+#define REQUEST_TIMEOUT 2
 #define IDLE_TIMEOUT 1000
 class Response;
 
