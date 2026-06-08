@@ -1,2 +1,11 @@
 - check use after free in the case of :
 	. running a php script in one tab and in a new tab requesting something else (ex: GET)
+
+
+- conf file problem:
+	. when there is a space between upload store path :
+		###################
+		host : localhost
+		terminate called after throwing an instance of 'std::runtime_error'
+		what():  Invalid number of arguments in "upload_store" directive
+		[1]    1792591 IOT instruction (core dumped)  ./ft_webserver

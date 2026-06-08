@@ -76,7 +76,8 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 			kill(childpid, SIGKILL);
 			waitpid(childpid, NULL, 0);
-			return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
+			servePages(504);
+			return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
     }
 
 		if (!this->exec_status)
@@ -118,12 +119,12 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 			case HttpParser::GET:
 				httpGet();
 				break;
-      case HttpParser::POST:
-        httpPost();
-        break;
-			default:
-				servePages(405);
-		}
+			case HttpParser::POST:
+				httpPost();
+				break;
+					default:
+						servePages(405);
+				}
 	}
 
 	return HttpParser::HTTP_RES_OK;
@@ -155,8 +156,8 @@ HttpParser::httpResult Response::checkMethod(void)
 
 	HttpParser::httpResult res = routeMethod(req_method);
 	
-	if (res != HttpParser::HTTP_RES_OK)
-		return res;
-	
-	return (HttpParser::HTTP_RES_OK);
+	// if (res == HttpParser::HTTP_RES_GATEWAY_TIMEOUT)
+	// 	servePages(504);
+
+	return res;
 }
