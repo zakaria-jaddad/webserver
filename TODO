@@ -9,3 +9,12 @@
 		terminate called after throwing an instance of 'std::runtime_error'
 		what():  Invalid number of arguments in "upload_store" directive
 		[1]    1792591 IOT instruction (core dumped)  ./ft_webserver
+
+
+- check GET method:
+	. when trying to visit "http://localhost:8080/in" - which is inexistant
+	-> the first time it display a white page with only "l> " written in it, 
+		 second time it displays nothing, third time it displays the 404 not found page
+		 and loops over if requested multiples times
+	suspicions: I suspect its becuz of the new way get works now, it returns http codes 
+				instead of random digits that anas designed

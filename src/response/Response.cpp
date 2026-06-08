@@ -114,17 +114,14 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 	{
 		switch (req_method) {
 			case HttpParser::DELETE:
-				httpDelete();
-				break;
+				return (httpDelete());
 			case HttpParser::GET:
-				httpGet();
-				break;
+				return (httpGet());
 			case HttpParser::POST:
-				httpPost();
-				break;
-					default:
-						servePages(405);
-				}
+				return (httpPost());
+			default:
+				servePages(405);
+		}
 	}
 
 	return HttpParser::HTTP_RES_OK;
@@ -133,14 +130,18 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 HttpParser::httpResult Response::checkMethod(void)
 {
-	if (this->timed_out)
-		return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
+	// check if its needed 
+	// if (this->timed_out)
+	// 	return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
 
 	std::pair<int, std::string> redir = conf.getRedir();
 	if (!redir.second.empty())
 	{
 		if (servePages(redir.first, redir.second))
+		{
+			servePages(500);
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+		}
 		return HttpParser::HTTP_RES_OK;
 	}
 	HttpParser::requestType req_method = client->request->getRequestType();
@@ -150,7 +151,7 @@ HttpParser::httpResult Response::checkMethod(void)
 																						allowed_methods.end(), \
 																						methodToString(req_method)) == allowed_methods.end())
 	{
-		servePages(405);
+		servePages(500);
 		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	}
 

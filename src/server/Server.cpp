@@ -199,8 +199,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         // start the response crafting and sending process from the checkMethod parent method
         HttpParser::httpResult res = it->response->checkMethod();
 
-        // check for timeout 
-        // check later if internal server errors should be handled the same way as timeout
+        // cleanup after an error/timeout
         if (res != HttpParser::HTTP_RES_OK)
         {
           // std::cout << "cgi timed out" << std::endl;
