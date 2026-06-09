@@ -216,7 +216,6 @@ HttpParser::httpResult Response::httpGet(void)
         struct stat info;
 
         if (stat(absPath.c_str(), &info) != 0) {
-            std::cout << "\nNOT FOUND\n\n";
             servePages(404);
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
@@ -244,7 +243,6 @@ HttpParser::httpResult Response::httpGet(void)
         }
 
         if (access(absPath.c_str(), R_OK)) {
-            std::cout << "\nNOT FOUND\n\n";
             servePages(404);
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
@@ -263,7 +261,7 @@ HttpParser::httpResult Response::httpGet(void)
         return HttpParser::HTTP_RES_OK;
     }
 
-    r = read(this->fileFD, buff, 1023);
+    r = read(this->fileFD, buff, READ_BYTES - 1);
     if (r == -1) {
         close(this->fileFD);
         this->error = 1;
