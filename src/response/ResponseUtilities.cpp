@@ -30,7 +30,7 @@ void Response::craftPageResponse(int code, int fd)
         this->headerFlag = 1;
     }
 
-    char buff[1024];
+    char buff[READ_BYTES];
     ssize_t bytes = read(fd, buff, sizeof(buff)-1);
     if (bytes == 0)
     {
@@ -57,10 +57,16 @@ void Response::craftPageResponse(int code, int fd)
     hexStr += "\r\n";
     sendResponse(hexStr.c_str());
 
-    // std::cout << "++++++++sending body++++++++" << std::endl;
-    // std::cout << buff << std::endl;
+    std::cout << "++++++++sending body++++++++" << std::endl;
+    std::cout << buff << std::endl;
 
     sendResponse(buff);
+
+    if (bytes < READ_BYTES - 1)
+    {
+        this->_phase = COMPLETE;
+        return;
+    }
 }
 
 // redir overload
@@ -98,7 +104,7 @@ void Response::craftPageResponse(int code, std::string &location)
 int Response::servePages(int code)
 {
 
-    // std::cout << "---------------------Serving error" << code << " ------------" << std::endl;
+    std::cout << "---------------------Serving error" << code << " ------------" << std::endl;
 
     static int fd = -1;
     std::string errorPath = this->conf.getErrorPages(code);
@@ -135,8 +141,7 @@ int Response::servePages(int code)
         close(fd);
         this->status = 1;
         fd = -1;
-        // // std::cout << "---------------------Finished Serving error" << code << " ------------"
-        // << std::endl;
+        std::cout << "---------------------Finished Serving error" << code << " ------------" << std::endl;
     }
 
     return 0;

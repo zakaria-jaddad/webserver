@@ -21,6 +21,8 @@ typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
 #define REQUEST_TIMEOUT 30
 #define IDLE_TIMEOUT 60
+#define READ_BYTES 2048
+
 class Response;
 
 struct t_client {

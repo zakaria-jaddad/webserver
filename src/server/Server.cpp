@@ -141,7 +141,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
   // then reads or writes accordingly
 
   int clientSocket = -1;
-  char req[1024] = {0}; 
+  char req[READ_BYTES] = {0}; 
   int b;
   int c = 0;
 

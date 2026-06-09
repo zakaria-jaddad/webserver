@@ -202,7 +202,7 @@ void Response::serveDirectoryContent(std::string &absPath)
 
 HttpParser::httpResult Response::httpGet(void)
 {
-    char buff[1024] = {0};
+    char buff[READ_BYTES] = {0};
     ssize_t r = 0;
     int fd;
 
@@ -216,6 +216,7 @@ HttpParser::httpResult Response::httpGet(void)
         struct stat info;
 
         if (stat(absPath.c_str(), &info) != 0) {
+            std::cout << "\nNOT FOUND\n\n";
             servePages(404);
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
@@ -243,6 +244,7 @@ HttpParser::httpResult Response::httpGet(void)
         }
 
         if (access(absPath.c_str(), R_OK)) {
+            std::cout << "\nNOT FOUND\n\n";
             servePages(404);
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
