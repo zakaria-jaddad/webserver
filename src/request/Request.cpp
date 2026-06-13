@@ -1,4 +1,5 @@
 #include "../../includes/request/Request.hpp"
+#include <map>
 
 /* ===================================================================================== */
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
@@ -58,6 +59,11 @@ std::map<std::string, std::string> HttpParser::getRequestUriParams() const
 }
 
 ServerConfig *HttpParser::getServerConfig() const { return this->_config; }
+
+const std::map<std::string, HttpParser::FilePart> &HttpParser::getBodyFormFields() const
+{
+    return this->_body._formFields;
+}
 
 /* ---- SETTERS ----*/
 
@@ -270,11 +276,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
     }
 
     std::cout << "max body size: " << this->_maxBodySize << std::endl;
-    std::cout << "content-length: " << this->_contentLength << std::endl;
-    //
     std::cout << getBodyStateString(this->_state) << std::endl;
-    std::cout << getMultiPartStateString(this->_mpState) << std::endl;
-    //
+
     size_t rawDataSize = rawData.size();
     if (this->_state == BODY_READING) {
         std::cout << "\033[33mProcessing Body\033[0m" << std::endl;
@@ -282,6 +285,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         // Content-Length Body Parsing
         if (this->_type == CONTENT_LENGTH) {
             std::cout << YELLOW << "Reading body using Content-Length" << WHITE << std::endl;
+            std::cout << "content-length: " << this->_contentLength << std::endl;
             if (rawDataSize + this->_bytesReceived > this->_contentLength) {
                 this->_fileCleanUp();
                 return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
@@ -302,6 +306,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         // Chunked Body Parsing
         if (this->_type == CHUNKED) {
 
+            std::cout << YELLOW << "Reading body using Chunked Encoding" << WHITE << std::endl;
             size_t crlfPos;
             if (this->currentChunkComplete == false) {
                 // complete reading the chunk
@@ -354,10 +359,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 
                 if (chunkSize == 0) {
                     file.close();
-                    std::cout << "Finished Chunked Body" << std::endl;
+                    std::cout << GREEN << "Finished Chunked Body" << WHITE << std::endl;
                     this->_state = BODY_PROCESSING;
-                    // return HTTP_RES_OK;
-                    // this->file.close();
                     this->file.clear();
                     this->file.seekg(0, ios::beg);
                     break;
@@ -444,16 +447,13 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             std::cout << WHITE << std::endl;
 
             std::string line;
-            int linesProcessed = 0;
-            int serverLoop = 30;
 
-            while (linesProcessed < serverLoop && this->_mpState != MP_COMPLETE) {
+            while (this->_mpState != MP_COMPLETE) {
 
                 if (!std::getline(this->file, line)) {
                     std::cout << "bad request from here" << std::endl;
                     return HTTP_RES_BAD_REQUEST;
                 }
-                linesProcessed++;
 
                 bool hadCr = false;
                 if (line.empty() == false && line[line.size() - 1] == '\r') {
@@ -491,11 +491,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             extractPar(contentDispositionValue, "filename");
 
                         // if filename is not provided meaning it's just a form value
-                        if (this->_currentPart.filename.empty() == true) {
-                            this->_currentPart.filePath =
-                                this->conf->getUploadPath() + "/" + "hardcoded_filename.txt";
-                        }
-                        else {
+                        if (this->_currentPart.filename.empty() == false) {
                             this->_currentPart.filePath =
                                 this->conf->getUploadPath() + "/" + this->_currentPart.filename;
                         }
@@ -508,13 +504,15 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                                 this->_partLevelHeaders["Content-Type"][0];
                         }
 
-                        /* open output file */
-                        this->_currentPart.file.open(this->_currentPart.filePath.c_str(),
-                                                     std::ios::out | std::ios::binary);
-                        if (this->_currentPart.file.is_open() == false) {
-                            cerr << RED << "Error: Unable to open file "
-                                 << this->_currentPart.filePath << WHITE << endl;
-                            return HTTP_RES_INTERNAL_SERVER_ERROR;
+                        /* open output file if exist */
+                        if (this->_currentPart.filename.empty() == false) {
+                            this->_currentPart.file.open(this->_currentPart.filePath.c_str(),
+                                                         std::ios::out | std::ios::binary);
+                            if (this->_currentPart.file.is_open() == false) {
+                                cerr << RED << "Error: Unable to open file "
+                                     << this->_currentPart.filePath << WHITE << endl;
+                                return HTTP_RES_INTERNAL_SERVER_ERROR;
+                            }
                         }
 
                         this->_mpState = MP_READING_BODY;
@@ -528,8 +526,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                 }
 
                 if (this->_mpState == MP_READING_BODY) {
-                    /* Check if got boundary , if so save the file then store it in the
-                     * vector */
+                    /* Check if got boundary, if so save the file then store it in the vector */
                     if ("--" + this->_boundary == line || "--" + this->_boundary + "--" == line) {
 
                         if (this->_mpCurrentLine.empty() == false) {
@@ -541,10 +538,21 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             if (writeLen >= 1 && this->_mpCurrentLine[writeLen - 1] == '\r')
                                 writeLen--;
 
-                            this->_currentPart.file.write(this->_mpCurrentLine.c_str(), writeLen);
+                            // if no filename write in the buffer
+                            if (this->_currentPart.filename.empty() == false) {
+                                this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
+                                                              writeLen);
+                            }
+                            else {
+                                this->_currentPart.buffer += this->_mpCurrentLine;
+                            }
                         }
-                        this->_currentPart.file.close();
-                        this->_files.push_back(this->_currentPart);
+                        if (this->_currentPart.filename.empty() == false) {
+                            this->_currentPart.file.close();
+                        }
+
+                        // TODO: Check if the name already exist
+                        this->_formFields[this->_currentPart.name] = this->_currentPart;
 
                         /* if normal boundary found reset the state machine */
                         if ("--" + this->_boundary == line) {
@@ -646,7 +654,7 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
     }
 
     if (access(uploadPath.c_str(), R_OK) == -1) {
-        cerr << RED << "Error: Unvable to open file " << uploadPath << WHITE << endl;
+        cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << endl;
         return HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
@@ -747,11 +755,11 @@ void HttpParser::Body::_fileCleanUp()
 /* ------------------- NESTED HttpParser -> Body CLASS FilePart  ----------------------- */
 /* ===================================================================================== */
 
-HttpParser::Body::FilePart::FilePart() {}
+HttpParser::FilePart::FilePart() {}
 
-HttpParser::Body::FilePart::FilePart(const FilePart &other)
+HttpParser::FilePart::FilePart(const FilePart &other)
     : name(other.name), filename(other.filename), contentType(other.contentType),
-      filePath(other.filePath)
+      filePath(other.filePath), buffer(other.buffer)
 {
     if (!other.filePath.empty() && other.file.is_open()) {
         // Re-open a new stream on the same path with same flags
@@ -759,7 +767,7 @@ HttpParser::Body::FilePart::FilePart(const FilePart &other)
     }
 }
 
-HttpParser::Body::FilePart &HttpParser::Body::FilePart::operator=(const FilePart &other)
+HttpParser::FilePart &HttpParser::FilePart::operator=(const FilePart &other)
 {
     if (this != &other) {
         // Close existing stream first
@@ -770,6 +778,7 @@ HttpParser::Body::FilePart &HttpParser::Body::FilePart::operator=(const FilePart
         filename = other.filename;
         contentType = other.contentType;
         filePath = other.filePath;
+        buffer = other.buffer;
 
         if (!other.filePath.empty() && other.file.is_open()) {
             file.open(other.filePath.c_str());
@@ -778,10 +787,18 @@ HttpParser::Body::FilePart &HttpParser::Body::FilePart::operator=(const FilePart
     return *this;
 }
 
-HttpParser::Body::FilePart::~FilePart()
+HttpParser::FilePart::~FilePart()
 {
-    if (file.is_open())
+    if (filename.empty() == false && file.is_open())
         file.close();
+}
+
+void HttpParser::FilePart::printInfo() const
+{
+    std::cout << "name:         " << this->name << std::endl;
+    std::cout << "filename:     " << this->filename << std::endl;
+    std::cout << "contentType:  " << this->contentType << std::endl;
+    std::cout << "buffer:       " << this->buffer << std::endl;
 }
 
 /* ===================================================================================== */

@@ -175,6 +175,29 @@ class HttpParser {
     } httpResult;
     static const char *httpResultToString(httpResult result);
 
+    /*
+     * FilePart Holds file information
+     * case1: file exist body content will be stored in the file.
+     * case2: file don't exist since it's a simpe form data content would be in the buffer
+     * */
+    struct FilePart {
+        std::string name;     // Form field name (e.g., "avatar")
+        std::string filename; // Original filename (e.g., "me.png")
+        std::string contentType;
+        std::string filePath; // Path where the final file is saved on server
+        std::fstream file;
+        std::string buffer;
+
+        void printInfo() const;
+
+        // Default constructor
+        FilePart();
+        FilePart(const FilePart &other);
+        FilePart &operator=(const FilePart &other);
+
+        // Destructor
+        ~FilePart();
+    };
     /* ---- GETTERS ----*/
     requestType getRequestType() const;
     const int *getRequestVersion() const;
@@ -186,6 +209,7 @@ class HttpParser {
     std::string getRequestUriRawParams() const;
     std::map<std::string, std::string> getRequestUriParams() const;
     ServerConfig *getServerConfig() const;
+    const std::map<std::string, FilePart> &getBodyFormFields() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
@@ -255,25 +279,9 @@ class HttpParser {
         multiPartState _mpState;
 
         // For uploaded files
-        struct FilePart {
-            std::string name;     // Form field name (e.g., "avatar")
-            std::string filename; // Original filename (e.g., "me.png")
-            std::string contentType;
-            std::string filePath; // Path where the final file is saved on server
-            std::fstream file;
-
-            // Default constructor
-            FilePart();
-            FilePart(const FilePart &other);
-            FilePart &operator=(const FilePart &other);
-
-            // Destructor
-            ~FilePart();
-        };
         FilePart _currentPart;
         std::map<std::string, std::vector<std::string> > _partLevelHeaders;
         std::string _mpCurrentLine;
-        std::vector<FilePart> _files;
 
       public:
         /* General Body Info */
@@ -285,6 +293,7 @@ class HttpParser {
         fstream file;
         string filePath;
         ResolvedConfig *conf;
+        std::map<std::string, FilePart> _formFields;
 
         /*
          * Transfer-Encoding: chunked

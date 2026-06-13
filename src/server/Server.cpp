@@ -1,6 +1,7 @@
 #include "../../includes/server/Server.hpp"
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <sys/epoll.h>
 
@@ -55,43 +56,46 @@ int Server::switchEpollMode(int clientSocket, uint32_t flag)
     // This method is to switch epoll mode (read or write)
     epoll_event_t event;
 
-	event.events = flag;
-	event.data.fd = clientSocket;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, clientSocket, &event) == -1) {
-		perror("ctl failed");
-		std::cerr << "epoll_ctl Failed!" << std::endl;
-		return (1);
-	}
-	return (0);
+    event.events = flag;
+    event.data.fd = clientSocket;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, clientSocket, &event) == -1) {
+        perror("ctl failed");
+        std::cerr << "epoll_ctl Failed!" << std::endl;
+        return (1);
+    }
+    return (0);
 }
 
-int Server::checkForServerFd(epoll_event *events, int i) {
-	//This method is just to look for fd in serverFds
-	// in case it is a serverFd it accepts and gets clientSocket and adds it to epoll & clientFds for next connection
-	int clientSocket = -1;
-	HttpParser *obj;
-	t_client client;
-	time_t now = time(NULL);
+int Server::checkForServerFd(epoll_event *events, int i)
+{
+    // This method is just to look for fd in serverFds
+    //  in case it is a serverFd it accepts and gets clientSocket and adds it to epoll & clientFds
+    //  for next connection
+    int clientSocket = -1;
+    HttpParser *obj;
+    t_client client;
+    time_t now = time(NULL);
 
-	for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin(); it != this->vServers.end(); it++) {
-		if (events[i].data.fd == it->first) {
-			clientSocket = accept(it->first, NULL, NULL);
-			if (clientSocket == -1)
-				std::cerr << "failed to accept" << std::endl;
-			if (addToEpoll(clientSocket, EPOLLIN))
-				std::cerr << "failed to add to epoll" << std::endl;
-			obj = new HttpParser(it->second);
-			client.fd = clientSocket;
-			client.config = it->second;
-			client.request = obj;
-			client.response = NULL;
-			client.connection_time = now;
-			client.last_activity = now;
-			clients.push_back(client);
-			break;
-		}
-	}
-	return (clientSocket);
+    for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
+         it != this->vServers.end(); it++) {
+        if (events[i].data.fd == it->first) {
+            clientSocket = accept(it->first, NULL, NULL);
+            if (clientSocket == -1)
+                std::cerr << "failed to accept" << std::endl;
+            if (addToEpoll(clientSocket, EPOLLIN))
+                std::cerr << "failed to add to epoll" << std::endl;
+            obj = new HttpParser(it->second);
+            client.fd = clientSocket;
+            client.config = it->second;
+            client.request = obj;
+            client.response = NULL;
+            client.connection_time = now;
+            client.last_activity = now;
+            clients.push_back(client);
+            break;
+        }
+    }
+    return (clientSocket);
 }
 
 void Server::resetSocket(t_client *client)
@@ -115,174 +119,157 @@ void Server::closeSocket(t_client *client)
 
 int Server::checkClientTimeout(t_client *client)
 {
-	time_t now = time(NULL);
-	time_t idle_time = now - client->last_activity;
-	
-	// std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
-	// std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
+    time_t now = time(NULL);
+    time_t idle_time = now - client->last_activity;
 
-	if (!client->request->isComplete() && idle_time > REQUEST_TIMEOUT)//placeholder request timeout
-		return 1;
-	
-	if (client->request->isComplete() && idle_time > IDLE_TIMEOUT)//placeholder idle timeout
-		return 1;
-	
-	return 0;
+    // std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
+    // std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
+
+    if (!client->request->isComplete() && idle_time > REQUEST_TIMEOUT) // placeholder request
+                                                                       // timeout
+        return 1;
+
+    if (client->request->isComplete() && idle_time > IDLE_TIMEOUT) // placeholder idle timeout
+        return 1;
+
+    return 0;
 }
 
-int Server::checkForClientFd(epoll_event *events, int i) {
-  //This method is to look for the event fd in clientFds
-  //It then checks if the operation that is is ready for is 'read' or 'write'
-  // then reads or writes accordingly
-
-  int clientSocket = -1;
-  char req[1024] = {0}; 
-  int b;
-  int c = 0;
-
-  for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
-  {
-    // std::cout << "looping thru clients" << std::endl;
-
-    int isTimeout = checkClientTimeout(&(*it));
-    if (isTimeout)
-    {
-      std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-      switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-      closeSocket(&(*it));
-      it = clients.erase(clients.begin() + c);
-      continue ;
-    }
-
-    if (events[i].data.fd == it->fd) 
-    {
-      clientSocket = it->fd;
-      //std::cout << "already in map clientSocket = " << clientSocket << std::endl;
-      if (events[i].events == EPOLLIN) 
-      { 
-        // we can read from socket
-
-        int time_out = checkClientTimeout(&(*it));
-        if (time_out)
-        {
-          std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-          closeSocket(&(*it));
-          it = clients.erase(clients.begin() + c);
-          continue ;
-        }
-
-        b = recv(clientSocket, req, sizeof(req) - 1, 0);
-        if (b == -1 || b == 0) {
-          closeSocket(&(*it));
-          clients.erase(clients.begin() + c);
-          return 1;
-          //TODO:check if i must remove from epoll list of interest
-        }
-        req[b] = 0;
-        it->last_activity = time(NULL);
-        std::cout << "--------------start of request----------------" << std::endl;
-        std::cout << req;
-        std::cout << "--------------end of request------------------" << std::endl;
-        std::string rawData(req, b);
-        it->request->parseHttpRequest(rawData);
-
-        //debuggin parsed request
-        std::cout << "=======================" << std::endl;
-        std::map<std::string, std::vector<std::string> > foo = it->request->getHeaders();
-
-        for (std::map<std::string, std::vector<std::string> >::iterator itMap = foo.begin();
-        itMap != foo.end();
-        ++itMap)
-        {
-          std::string key = itMap->first;
-          std::vector<std::string>& values = itMap->second;
-
-          std::cout << "Header: " << key << std::endl;
-
-          for (std::vector<std::string>::iterator itVec = values.begin();
-          itVec != values.end();
-          ++itVec)
-          {
-            std::cout << "  Value: " << *itVec << std::endl;
-          }
-        }
-        std::cout << "=======================" << std::endl;
-
-        if (it->request->isComplete())
-          switchEpollMode(clientSocket, EPOLLOUT);
-      }
-      else if (events[i].events == EPOLLOUT) 
-      { 
-        // we can write to socket
-        if (it->response == NULL)
-          it->response = new Response(&(*it));
-        HttpParser::httpResult res = it->response->checkMethod();
-        if (res == HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED)
-        {
-          std::cout << "cgi timed out" << std::endl;
-
-          std::ifstream file("pages/504.html", std::ios::in | std::ios::binary);
-          std::string body;
-
-          if (file)
-          {
-            std::ostringstream ss;
-            ss << file.rdbuf();
-            body = ss.str();
-            file.close();
-          }
-          else
-            body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
-
-          // 2️⃣ Build HTTP response with proper Content-Length
-          std::ostringstream response;
-          response << "HTTP/1.1 504 Gateway Timeout\r\n"
-            << "Content-Type: text/html\r\n"
-            << "Content-Length: " << body.size() << "\r\n"
-            << "Connection: close\r\n"
-            << "\r\n"
-            << body;
-          
-          it->response->sendResponse(response.str().c_str());
-
-          //it->response->servePages(504);
-
-          /*if(it->response->isComplete())
-          {*/
-          std::cout << "cleaned socket" << std::endl;
-          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-          closeSocket(&(*it));
-          it = clients.erase(clients.begin() + c);
-          //}
-          break ;
-        }
-        if (it->response->isError()) {
-          closeSocket(&(*it));
-          clients.erase(clients.begin() + c);
-          break;
-          //hh
-        }
-        if (it->response->isComplete()) {
-          resetSocket(&(*it));
-          switchEpollMode(clientSocket, EPOLLIN);
-          std::cout << "back to reading" << std::endl;
-        }
-        //check if connection close or keep alive to know
-        //whether to close or in case of keep alive clear data buff falgs etc..
-      }
-      break;
-    }
-    it++;
-  }
-  return (clientSocket);
-}
-
-int Server::startServer() 
+int Server::checkForClientFd(epoll_event *events, int i)
 {
-	setupServerFds();
-	int clientSocket;
-	int event_count;
+    // This method is to look for the event fd in clientFds
+    // It then checks if the operation that is is ready for is 'read' or 'write'
+    //  then reads or writes accordingly
+
+    int clientSocket = -1;
+    char req[1024] = {0};
+    int b;
+    int c = 0;
+
+    for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
+         c++) {
+        // std::cout << "looping thru clients" << std::endl;
+
+        int isTimeout = checkClientTimeout(&(*it));
+        if (isTimeout) {
+            std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+            closeSocket(&(*it));
+            it = clients.erase(clients.begin() + c);
+            continue;
+        }
+
+        if (events[i].data.fd == it->fd) {
+            clientSocket = it->fd;
+            // std::cout << "already in map clientSocket = " << clientSocket << std::endl;
+            if (events[i].events == EPOLLIN) {
+                // we can read from socket
+
+                int time_out = checkClientTimeout(&(*it));
+                if (time_out) {
+                    std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+                    switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                    closeSocket(&(*it));
+                    it = clients.erase(clients.begin() + c);
+                    continue;
+                }
+
+                b = recv(clientSocket, req, sizeof(req) - 1, 0);
+                if (b == -1 || b == 0) {
+                    closeSocket(&(*it));
+                    clients.erase(clients.begin() + c);
+                    return 1;
+                    // TODO:check if i must remove from epoll list of interest
+                }
+                req[b] = 0;
+                it->last_activity = time(NULL);
+
+                std::string rawData(req, b);
+                it->request->parseHttpRequest(rawData);
+
+                if (it->request->isComplete()) {
+
+                    // -- debugging
+                    const std::map<std::string, HttpParser::FilePart> formFields =
+                        this->clients[i].request->getBodyFormFields();
+                    if (formFields.size() != 0) {
+                        for (std::map<std::string, HttpParser::FilePart>::const_iterator hello =
+                                 formFields.begin();
+                             hello != formFields.end(); hello++) {
+                            hello->second.printInfo();
+                        }
+                        std::cout << " ----- " << endl;
+                    }
+                    // -- debugging
+                    std::cout << "Finished Parsing" << std::endl;
+                    switchEpollMode(clientSocket, EPOLLOUT);
+                }
+            }
+            else if (events[i].events == EPOLLOUT) {
+                // we can write to socket
+                if (it->response == NULL)
+                    it->response = new Response(&(*it));
+                HttpParser::httpResult res = it->response->checkMethod();
+                if (res == HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED) {
+                    std::cout << "cgi timed out" << std::endl;
+
+                    std::ifstream file("pages/504.html", std::ios::in | std::ios::binary);
+                    std::string body;
+
+                    if (file) {
+                        std::ostringstream ss;
+                        ss << file.rdbuf();
+                        body = ss.str();
+                        file.close();
+                    }
+                    else
+                        body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
+
+                    // 2️⃣ Build HTTP response with proper Content-Length
+                    std::ostringstream response;
+                    response << "HTTP/1.1 504 Gateway Timeout\r\n"
+                             << "Content-Type: text/html\r\n"
+                             << "Content-Length: " << body.size() << "\r\n"
+                             << "Connection: close\r\n"
+                             << "\r\n"
+                             << body;
+
+                    it->response->sendResponse(response.str().c_str());
+
+                    // it->response->servePages(504);
+                    std::cout << "cleaned socket" << std::endl;
+                    switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                    closeSocket(&(*it));
+                    it = clients.erase(clients.begin() + c);
+                    //}
+                    break;
+                }
+                if (it->response->isError()) {
+                    closeSocket(&(*it));
+                    clients.erase(clients.begin() + c);
+                    break;
+                    // hh
+                }
+                if (it->response->isComplete()) {
+                    resetSocket(&(*it));
+                    switchEpollMode(clientSocket, EPOLLIN);
+                    std::cout << "back to reading" << std::endl;
+                }
+                // check if connection close or keep alive to know
+                // whether to close or in case of keep alive clear data buff falgs etc..
+            }
+            break;
+        }
+        it++;
+    }
+    return (clientSocket);
+}
+
+int Server::startServer()
+{
+    setupServerFds();
+    int clientSocket;
+    int event_count;
 
     epoll_fd = epoll_create1(0);
     epoll_event_t events[MAX_EVENTS];
@@ -293,65 +280,42 @@ int Server::startServer()
             return (1);
     }
 
-	while (1) {
+    while (1) {
 
-        bool backgroundWork = false;
-        for (size_t i = 0; i < this->clients.size(); i++) {
+        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 0);
 
-            // if client is found and body is processing
-            if (this->clients[i].request->isProcessingBody() == true) {
-                backgroundWork = true;
-            }
+        if (event_count == -1) {
+            std::cerr << "epoll_wait Failed!" << std::endl;
+            return (1);
+        }
+        if (event_count == 0) {
+            int c = 0;
+            for (std::vector<t_client>::iterator it = this->clients.begin();
+                 it != this->clients.end(); c++) {
+                // std::cout << "looping thru clients" << std::endl;
 
-            /* NOTE: Since we read from the file no data need to be passed to the parser */
-            this->clients[i].request->parseHttpRequest("");
-
-            if (this->clients[i].request->isComplete() == true) {
-                switchEpollMode(this->clients[i].fd, EPOLLOUT);
+                int isTimeout = checkClientTimeout(&(*it));
+                if (isTimeout) {
+                    std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+                    std::cout << "done sending timeout resetting socket..." << std::endl;
+                    switchEpollMode(it->fd, EPOLL_CTL_DEL);
+                    closeSocket(&(*it));
+                    it = clients.erase(clients.begin() + c);
+                    continue;
+                }
+                it++;
             }
         }
 
-        /* NOTE: If we have clients processing local files, we CANNOT let epoll block the server.
-         * set timeout to 0 (non-blocking). Otherwise, we block for 30s to save CPU. */
-        int timeout = backgroundWork ? 0 : 30000;
+        for (int i = 0; i < event_count; i++) {
 
-		event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout);
-
-		if (event_count == -1) {
-			std::cerr << "epoll_wait Failed!" << std::endl;
-			return (1);
-		}
-		// std::cout << "event_count = " << event_count << std::endl;
-		if (event_count == 0)
-		{
-			int c = 0;
-			for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
-			{
-				std::cout << "looping thru clients" << std::endl;
-
-				int isTimeout = checkClientTimeout(&(*it));
-				if (isTimeout)
-				{
-					std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-					std::cout << "done sending timeout resetting socket..." << std::endl;
-					switchEpollMode(it->fd, EPOLL_CTL_DEL);
-					closeSocket(&(*it));
-					it = clients.erase(clients.begin() + c);
-					continue ;
-				}
-				it++;
-			}
-		}
-
-		for (int i = 0; i < event_count; i++) {
-
-			clientSocket = checkForServerFd(events, i);
-			if (clientSocket != -1) //found fd in serverFds
-				continue;
-			clientSocket = checkForClientFd(events, i);
-			if (clientSocket == -1)
-				std::cerr << "error clienSocket Not Found!" << std::endl;
-		}
-	}
-	return (0);
+            clientSocket = checkForServerFd(events, i);
+            if (clientSocket != -1) // found fd in serverFds
+                continue;
+            clientSocket = checkForClientFd(events, i);
+            if (clientSocket == -1)
+                std::cerr << "error clienSocket Not Found!" << std::endl;
+        }
+    }
+    return (0);
 }
