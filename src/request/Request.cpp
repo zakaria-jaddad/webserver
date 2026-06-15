@@ -1,11 +1,15 @@
 #include "../../includes/request/Request.hpp"
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <ios>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
+#include <vector>
 
 /* ===================================================================================== */
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
@@ -23,6 +27,8 @@ HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
     this->_requestType = UNKNOWN;
     this->_config = NULL;
     this->_res = HTTP_RES_OK;
+    this->_requestLineBuffer = "";
+    this->_headerBuffer = "";
     this->_mimeToExt["image/png"] = ".png";
     this->_mimeToExt["image/jpeg"] = ".jpg";
     this->_mimeToExt["image/gif"] = ".gif";
@@ -45,6 +51,8 @@ HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body
     this->_requestType = UNKNOWN;
     this->_config = ServerConfig;
     this->_res = HTTP_RES_OK;
+    this->_requestLineBuffer = "";
+    this->_headerBuffer = "";
     this->_mimeToExt["image/png"] = ".png";
     this->_mimeToExt["image/jpeg"] = ".jpg";
     this->_mimeToExt["image/gif"] = ".gif";
@@ -82,7 +90,8 @@ std::map<std::string, std::string> HttpParser::getRequestUriParams() const
 
 ServerConfig *HttpParser::getServerConfig() const { return this->_config; }
 
-const std::map<std::string, HttpParser::FilePart> &HttpParser::getBodyFormFields() const
+const std::map<std::string, std::vector<HttpParser::FilePart> > &
+HttpParser::getBodyFormFields() const
 {
     return this->_body._formFields;
 }
@@ -107,17 +116,27 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 {
 
     httpResult res;
-    // cout << " ==== " << endl;
-    // std::cout << rawData << std::endl;
-    // cout << " ==== " << endl;
 
+    /* NOTE: This should be refactor since i don't buffer the requestLine and headers */
     if (this->_phase == REQUEST_LINE) {
 
-        std::string requestLine = rawData.substr(0, rawData.find(CRLF));
-        rawData.erase(0, requestLine.size() + strlen(CRLF));
+        this->_requestLineBuffer += rawData;
+
+        size_t crlfPos = this->_requestLineBuffer.find(CRLF);
+        if (crlfPos == std::string::npos) {
+            // Need More Data
+            return HTTP_RES_OK;
+        }
+
+        std::string requestLine = this->_requestLineBuffer.substr(0, crlfPos);
+
+        rawData = this->_requestLineBuffer.substr(crlfPos + strlen(CRLF));
+
+        this->_requestLineBuffer.clear();
 
         /* parse Request-Line ... */
         res = _parseRequestLine(requestLine);
+
         if (res != HTTP_RES_OK) {
             return res;
         }
@@ -127,30 +146,35 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
     if (this->_phase == HEADERS) {
 
-        std::string headerLines = rawData;
+        this->_headerBuffer += rawData;
 
-        size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
+        size_t doubleCrlfPos = this->_headerBuffer.find(DOUBLE_CRLF);
 
-        if (doubleCrlfPos != std::string::npos) {
-            headerLines = rawData.substr(0, doubleCrlfPos);
-            rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
-            this->_phase = BODY;
+        if (doubleCrlfPos == std::string::npos) {
+            // Need more Data
+            return HTTP_RES_OK;
         }
+
+        std::string headerLines = this->_headerBuffer.substr(0, doubleCrlfPos);
+
+        rawData = this->_headerBuffer.substr(doubleCrlfPos + strlen(DOUBLE_CRLF));
+
+        this->_headerBuffer.clear();
 
         res = _generateHeadersMap(headerLines, this->_headers);
         if (res != HTTP_RES_OK) {
             return res;
         }
+        this->_phase = BODY;
     }
 
     if (this->_phase == BODY) {
 
         if (this->_body._state == Body::BODY_NOT_STARTED) {
 
-            std::cout << "Parsing Headers" << std::endl;
+            std::cout << "Start Parsing Headers" << std::endl;
             res = _parseRequestHeaderValue();
-            std::cout << "headers Parsed, res: ";
-            printHttpResult(res);
+            std::cout << "Finished Parsing Headers" << std::endl;
             if (res != HTTP_RES_OK) {
                 return res;
             }
@@ -308,7 +332,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                 this->_fileCleanUp();
                 return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
             }
-            file.write(rawData.data(), rawDataSize);
+            file.write(rawData.c_str(), rawDataSize);
             this->_bytesReceived = this->_bytesReceived + rawDataSize;
             if (this->_bytesReceived == this->_contentLength) {
 
@@ -373,7 +397,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 
                     long bytesToTake = std::min(byteRemaining, bytesAvailable);
 
-                    this->file.write(data.data(), bytesToTake);
+                    this->file.write(data.c_str(), bytesToTake);
 
                     this->currentChunkRead += bytesToTake;
 
@@ -424,6 +448,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         std::cout << GREEN << "Finished Chunked Body" << WHITE << std::endl;
 
                         this->_state = BODY_PROCESSING;
+                        this->_chunkBuffer.clear();
                         // No need to call in my case this->file.clear();
                     }
                     break;
@@ -439,9 +464,12 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             std::map<std::string, std::string> params;
 
             std::string urlEncodedForm;
+            std::stringstream ss;
 
             this->file.seekg(0, ios::beg);
-            this->file >> urlEncodedForm;
+            ss << this->file.rdbuf();
+
+            urlEncodedForm = ss.str();
 
             _parseQueryString(urlEncodedForm, params);
             if (params.size() == 0) {
@@ -572,7 +600,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         }
 
                         // TODO: Check if the name already exist
-                        this->_formFields[this->_currentPart.name] = this->_currentPart;
+                        this->_formFields[this->_currentPart.name].push_back(this->_currentPart);
 
                         /* if normal boundary found reset the state machine */
                         if ("--" + this->_boundary == line) {
@@ -590,7 +618,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 
                     // NOTE: What the hack is this
                     if (this->_mpCurrentLine.empty() == false) {
-                        this->_currentPart.file.write(this->_mpCurrentLine.data(),
+                        this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
                                                       this->_mpCurrentLine.size());
                     }
 
@@ -667,6 +695,7 @@ void HttpParser::Body::_normalizePath(void)
 std::string HttpParser::Body::_resolveFilePath(std::string &upload_store)
 {
     std::string uri = this->normalizedPath;
+    std::cout << "This is the normalized Path: " << uri << std::endl;
     std::string relative_path = uri;
     std::string location_prefix = this->conf->getLocPath();
 
@@ -698,7 +727,15 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
         return HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
-    this->filePath = _resolveFilePath(uploadPath);
+    /* NOTE: Fixed a bug here When fileuPath is a directory */
+    std::string filePath = _resolveFilePath(uploadPath);
+    if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
+        std::stringstream ss;
+        srand(time(NULL));
+        ss << filePath << "upload_" << time(NULL) << "_" << rand();
+        filePath = ss.str();
+    }
+    this->filePath = filePath;
 
     file.open(this->filePath.c_str(), ios::out | ios::in | ios::trunc);
     if (file.is_open() == false) {
@@ -719,7 +756,15 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
 
             // Store the boundary
             this->_mediaType = contentType.substr(0, contentType.find(";"));
-            this->_boundary = contentType.substr(contentType.find("boundary=") + 9);
+
+            // NOTO: Since RFC allows boundaries to be either with or without quotes
+            std::string boundary = contentType.substr(contentType.find("boundary=") + 9);
+
+            if (boundary.size() >= 2 && boundary[0] == '"' &&
+                boundary[boundary.size() - 1] == '"') {
+                boundary = boundary.substr(1, boundary.size() - 2);
+            }
+            this->_boundary = boundary;
         }
     }
 
@@ -736,17 +781,22 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
             return HTTP_RES_BAD_REQUEST;
         }
 
-        size_t contentLengthValue = std::atoi(contentLength[0].c_str());
+        size_t contentLengthValue = std::atol(contentLength[0].c_str());
 
-        // ignored for now
-        if (contentLengthValue <= 0) {
+        this->_type = CONTENT_LENGTH;
+        if (contentLengthValue < 0) {
             return HTTP_RES_LENGTH_REQUIRED;
+        }
+        else if (contentLengthValue == 0) {
+
+            this->_state = BODY_COMPLETE; /* Since Body is 0 Nothing to read */
+            this->_contentLength = 0;
+            return HTTP_RES_OK;
         }
 
         if (contentLengthValue > this->_maxBodySize) {
             return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
         }
-        this->_type = CONTENT_LENGTH;
         this->_contentLength = contentLengthValue;
         return HTTP_RES_OK;
     }
@@ -767,29 +817,41 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
     return HTTP_RES_OK;
 }
 
-std::string HttpParser::Body::extractPar(const std::string header, std::string key)
+std::string extractPar(const std::string &header, const std::string &key)
 {
-    std::string searchTarget = key + "=\"";
-
-    size_t startPos = header.find(searchTarget);
-    if (startPos == std::string::npos) {
-        return ""; // Key not found
-    }
-
-    startPos += searchTarget.length();
-
-    size_t endPos = header.find("\"", startPos);
-    if (endPos == std::string::npos) {
+    size_t pos = header.find(key);
+    if (pos == std::string::npos)
         return "";
-    }
 
-    return header.substr(startPos, endPos - startPos);
+    pos += key.length();
+    while (pos < header.size() && (header[pos] == ' ' || header[pos] == '='))
+        pos++;
+
+    if (pos >= header.size())
+        return "";
+
+    if (header[pos] == '"') {
+        pos++;
+        size_t end = header.find('"', pos);
+        if (end == std::string::npos)
+            return "";
+        return header.substr(pos, end - pos);
+    }
+    else {
+        size_t end = header.find(';', pos);
+        if (end == std::string::npos)
+            end = header.size();
+        std::string value = header.substr(pos, end - pos);
+        return trim(value);
+    }
 }
 
 void HttpParser::Body::_fileCleanUp()
 {
     file.close();
-    remove(this->filePath.c_str());
+    if (this->filePath.empty() == false) {
+        remove(this->filePath.c_str());
+    }
 }
 
 /* ===================================================================================== */
@@ -1155,6 +1217,15 @@ bool HttpParser::_isValidPercentEncoding(std::string str)
     return _isHex(str[0]) && _isHex(str[1]);
 }
 
+void HttpParser::_replacePlusWithSpace(std::string &str)
+{
+    for (size_t i = 0; i < str.size(); i++) {
+        if (str[i] == '+') {
+            str[i] = ' ';
+        }
+    }
+}
+
 std::string HttpParser::_urlDecode(std::string str)
 {
     std::string dec = "";
@@ -1192,6 +1263,8 @@ void HttpParser::_parseQueryString(std::string &query, std::map<std::string, std
             getline(paramStream, value);
 
             // docode key and value
+            _replacePlusWithSpace(key);
+            _replacePlusWithSpace(value);
             key = _urlDecode(key);
             value = _urlDecode(value);
             store[key] = value;

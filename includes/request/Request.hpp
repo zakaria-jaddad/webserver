@@ -27,8 +27,6 @@
 #define YELLOW "\033[33m"
 #define WHITE "\033[0m"
 
-using namespace std;
-
 /* inline only for development */
 inline std::string trim(const std::string &str)
 {
@@ -209,7 +207,7 @@ class HttpParser {
     std::string getRequestUriRawParams() const;
     std::map<std::string, std::string> getRequestUriParams() const;
     ServerConfig *getServerConfig() const;
-    const std::map<std::string, FilePart> &getBodyFormFields() const;
+    const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
@@ -226,6 +224,7 @@ class HttpParser {
     static bool _isHex(char c);
     static bool _isValidPercentEncoding(std::string str);
     static std::string _urlDecode(std::string str);
+    static void _replacePlusWithSpace(std::string &str);
     static void _parseQueryString(std::string &query, std::map<std::string, std::string> &store);
 
     /*
@@ -304,7 +303,7 @@ class HttpParser {
         fstream file;
         string filePath;
         ResolvedConfig *conf;
-        std::map<std::string, FilePart> _formFields;
+        std::map<std::string, std::vector<FilePart> > _formFields;
 
         /*
          * Transfer-Encoding: chunked
@@ -334,6 +333,7 @@ class HttpParser {
     } Body;
 
   private:
+    /* HttpParser private attributes */
     parserPhase _phase;
     requestType _requestType;
 
@@ -359,6 +359,8 @@ class HttpParser {
     Body _body;
     httpResult _res;
     std::map<std::string, std::string> _mimeToExt;
+    std::string _requestLineBuffer;
+    std::string _headerBuffer;
 
     /*
      * Request-Line = Method SP Request-URI SP HTTP-Version CRLF
