@@ -1,5 +1,11 @@
 #include "../../includes/request/Request.hpp"
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <ios>
+#include <iostream>
 #include <map>
+#include <string>
 
 /* ===================================================================================== */
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
@@ -17,6 +23,14 @@ HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
     this->_requestType = UNKNOWN;
     this->_config = NULL;
     this->_res = HTTP_RES_OK;
+    this->_mimeToExt["image/png"] = ".png";
+    this->_mimeToExt["image/jpeg"] = ".jpg";
+    this->_mimeToExt["image/gif"] = ".gif";
+    this->_mimeToExt["text/plain"] = ".txt";
+    this->_mimeToExt["text/html"] = ".html";
+    this->_mimeToExt["application/json"] = ".json";
+    this->_mimeToExt["application/pdf"] = ".pdf";
+    this->_mimeToExt["application/octet-stream"] = ".bin";
 }
 
 HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body()
@@ -31,6 +45,14 @@ HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body
     this->_requestType = UNKNOWN;
     this->_config = ServerConfig;
     this->_res = HTTP_RES_OK;
+    this->_mimeToExt["image/png"] = ".png";
+    this->_mimeToExt["image/jpeg"] = ".jpg";
+    this->_mimeToExt["image/gif"] = ".gif";
+    this->_mimeToExt["text/plain"] = ".txt";
+    this->_mimeToExt["text/html"] = ".html";
+    this->_mimeToExt["application/json"] = ".json";
+    this->_mimeToExt["application/pdf"] = ".pdf";
+    this->_mimeToExt["application/octet-stream"] = ".bin";
 }
 
 HttpParser::~HttpParser() {}
@@ -110,8 +132,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         size_t doubleCrlfPos = rawData.find(DOUBLE_CRLF);
 
         if (doubleCrlfPos != std::string::npos) {
-            // WARNING: A + 2 was after doubleCrlfPos no idea why it was there.
-            // removed it to get the first body part
             headerLines = rawData.substr(0, doubleCrlfPos);
             rawData.erase(0, headerLines.size() + strlen(DOUBLE_CRLF));
             this->_phase = BODY;
@@ -221,6 +241,8 @@ HttpParser::Body::Body()
     this->_body = "";
     this->_mediaType = "";
     this->_mpState = MP_EXPECTING_BOUNDARY;
+    this->_chunkState = CHUNK_READ_SIZE;
+    this->_chunkBuffer = "";
 }
 
 HttpParser::Body::~Body()
@@ -275,27 +297,22 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         this->_state = BODY_READING;
     }
 
-    std::cout << "max body size: " << this->_maxBodySize << std::endl;
-    std::cout << getBodyStateString(this->_state) << std::endl;
-
     size_t rawDataSize = rawData.size();
     if (this->_state == BODY_READING) {
-        std::cout << "\033[33mProcessing Body\033[0m" << std::endl;
+        std::cout << YELLOW << "Processing Body" << WHITE << std::endl;
 
         // Content-Length Body Parsing
         if (this->_type == CONTENT_LENGTH) {
             std::cout << YELLOW << "Reading body using Content-Length" << WHITE << std::endl;
-            std::cout << "content-length: " << this->_contentLength << std::endl;
             if (rawDataSize + this->_bytesReceived > this->_contentLength) {
                 this->_fileCleanUp();
                 return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
             }
             file.write(rawData.data(), rawDataSize);
             this->_bytesReceived = this->_bytesReceived + rawDataSize;
-            std::cout << YELLOW << "_bytesReceived: " << this->_bytesReceived << WHITE << std::endl;
             if (this->_bytesReceived == this->_contentLength) {
 
-                std::cout << YELLOW << "Finished Reading body using Content-Length" << WHITE
+                std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
                           << std::endl;
                 this->_state = BODY_PROCESSING;
                 this->file.clear();
@@ -307,110 +324,115 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         if (this->_type == CHUNKED) {
 
             std::cout << YELLOW << "Reading body using Chunked Encoding" << WHITE << std::endl;
-            size_t crlfPos;
-            if (this->currentChunkComplete == false) {
-                // complete reading the chunk
-                crlfPos = rawData.find(CRLF);
-                if (crlfPos == std::string::npos) {
-                    if (this->_bytesReceived + this->currentChunkRead + rawData.size() >
-                        this->_maxBodySize) {
-                        return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+
+            this->_chunkBuffer += rawData;
+            std::string &data = this->_chunkBuffer;
+
+            while (data.empty() == false) {
+
+                switch (this->_chunkState) {
+
+                case CHUNK_READ_SIZE: {
+                    // get current chun size
+                    size_t crlfPos = data.find(CRLF);
+                    if (crlfPos != std::string::npos) {
+                        std::string encodedChunkSize = data.substr(0, crlfPos);
+                        data.erase(0, encodedChunkSize.size() + strlen(CRLF));
+                        long chunkSize = hex_to_decimal(this->rawChunkSize + encodedChunkSize);
+                        this->rawChunkSize = "";
+
+                        if (chunkSize < 0) {
+                            return HTTP_RES_BAD_REQUEST;
+                        }
+                        if (chunkSize == 0) {
+                            this->_chunkState = CHUNK_DONE;
+                        }
+                        else {
+                            this->_chunkState = CHUNK_READ_DATA;
+                        }
+                        this->currentChunkSize = chunkSize;
+
+                        if (this->_bytesReceived + this->currentChunkSize > this->_maxBodySize) {
+                            this->_fileCleanUp();
+                            return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                        }
                     }
-                    file.write(rawData.data(), rawData.size());
-                    this->_bytesReceived += rawData.size();
-                    this->currentChunkRead += rawData.size();
-                    return HTTP_RES_OK;
-                }
-                std::string chunkData = rawData.substr(0, crlfPos);
-                this->currentChunkRead += chunkData.size();
-
-                if (this->currentChunkRead != this->currentChunkSize) {
-                    this->_fileCleanUp();
-                    return HTTP_RES_BAD_REQUEST;
-                }
-
-                file.write(chunkData.data(), chunkData.size());
-                this->_bytesReceived += chunkData.size();
-                rawData.erase(0, crlfPos + strlen(CRLF));
-
-                this->currentChunkComplete = true;
-                this->currentChunkRead = 0;
-                this->currentChunkSize = 0;
-            }
-
-            while ((crlfPos = rawData.find(CRLF)) != std::string::npos) {
-
-                string encodedChunkSize = rawData.substr(0, crlfPos);
-                if (this->chunkSizeReceived == false) {
-                    encodedChunkSize = this->rawChunkSize + encodedChunkSize;
-
-                    // reset
-                    this->rawChunkSize = "";
-                    this->chunkSizeReceived = true;
-                }
-
-                rawData.erase(0, encodedChunkSize.size() + strlen(CRLF));
-                long chunkSize = hex_to_decimal(encodedChunkSize);
-                std::cout << "chunkSize: " << chunkSize << std::endl;
-
-                if (chunkSize == -1) {
-                    return HTTP_RES_BAD_REQUEST;
-                }
-
-                if (chunkSize == 0) {
-                    file.close();
-                    std::cout << GREEN << "Finished Chunked Body" << WHITE << std::endl;
-                    this->_state = BODY_PROCESSING;
-                    this->file.clear();
-                    this->file.seekg(0, ios::beg);
+                    else {
+                        this->rawChunkSize += data;
+                        data.clear();
+                        return HTTP_RES_OK;
+                    }
                     break;
                 }
-                this->currentChunkSize = chunkSize;
 
-                if (this->_bytesReceived + this->currentChunkSize > this->_maxBodySize) {
-                    this->_fileCleanUp();
-                    return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
-                }
+                case CHUNK_READ_DATA: {
 
-                crlfPos = rawData.find(CRLF);
+                    long byteRemaining = this->currentChunkSize - this->currentChunkRead;
 
-                // if CRLF  Not Found
-                if (crlfPos == std::string::npos) {
-                    this->currentChunkComplete = false;
-                    if (this->currentChunkRead + long(rawData.size()) > this->currentChunkSize) {
-                        this->_fileCleanUp();
-                        return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+                    long bytesAvailable = data.size();
+
+                    long bytesToTake = std::min(byteRemaining, bytesAvailable);
+
+                    this->file.write(data.data(), bytesToTake);
+
+                    this->currentChunkRead += bytesToTake;
+
+                    data.erase(0, bytesToTake);
+
+                    if (this->currentChunkRead == this->currentChunkSize) {
+                        this->_chunkState = CHUNK_READ_CRLF;
+
+                        this->currentChunkRead = 0;
                     }
-                    file.write(rawData.data(), rawData.size());
-                    this->_bytesReceived += rawData.size();
-                    this->currentChunkRead += rawData.size();
-                    return HTTP_RES_OK;
+                    else {
+                        // Need more data for this chunk
+                        // keep leftovers in _chunkBuffer for next time
+                        return HTTP_RES_OK;
+                    }
+                    break;
                 }
-                std::string chunkedData = rawData.substr(0, crlfPos);
-                rawData.erase(0, chunkedData.size() + strlen(CRLF));
-                if (this->currentChunkSize != long(chunkedData.size())) {
-                    this->_fileCleanUp();
-                    return HTTP_RES_BAD_REQUEST;
+
+                case CHUNK_READ_CRLF: {
+
+                    if (data.size() < 2) {
+                        // again i need more data keep leftovers and return
+                        return HTTP_RES_OK;
+                    }
+                    if (data.substr(0, 2) != CRLF) {
+                        this->_fileCleanUp();
+                        return HTTP_RES_BAD_REQUEST;
+                    }
+                    data.erase(0, 2);
+                    this->_chunkState = CHUNK_READ_SIZE;
+                    break;
                 }
-                file.write(chunkedData.data(), chunkedData.size());
-                this->_bytesReceived = this->_bytesReceived + chunkedData.size();
-                this->currentChunkRead = 0;
-                this->currentChunkSize = 0;
-            }
+                case CHUNK_DONE: {
 
-            if (this->_state == BODY_PROCESSING && rawData.find(CRLF) == std::string::npos) {
-                return HTTP_RES_OK;
-            }
+                    size_t crlfPos = data.find(CRLF);
 
-            // NOTE: I only got the first part of the size
-            if (rawData.empty() == false && rawData.find(CRLF) == std::string::npos) {
-                this->chunkSizeReceived = false;
-                this->rawChunkSize += rawData;
+                    if (crlfPos == std::string::npos) {
+                        return HTTP_RES_OK;
+                    }
+
+                    std::string line = data.substr(0, crlfPos);
+                    data.erase(0, crlfPos + strlen(CRLF));
+
+                    if (line.empty() == true) {
+                        // consumed the CRLF trailler
+                        this->file.flush();
+                        this->file.seekg(0, std::ios::beg);
+                        std::cout << GREEN << "Finished Chunked Body" << WHITE << std::endl;
+
+                        this->_state = BODY_PROCESSING;
+                        // No need to call in my case this->file.clear();
+                    }
+                    break;
+                }
+                }
             }
         }
     }
     if (this->_state == BODY_PROCESSING) {
-        std::cout << GREEN << "Finished processing the body" << std::endl;
 
         if (this->_mediaType == "application/x-www-form-urlencoded") {
 
@@ -421,10 +443,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             this->file.seekg(0, ios::beg);
             this->file >> urlEncodedForm;
 
-            std::cout << "urlEncodedForm: " << urlEncodedForm << std::endl;
-
             _parseQueryString(urlEncodedForm, params);
             if (params.size() == 0) {
+                std::cout << "helllllllllllo" << std::endl;
                 return HTTP_RES_BAD_REQUEST;
             }
 
@@ -442,9 +463,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 
         if (this->_mediaType == "multipart/form-data") {
 
-            std::cout << YELLOW << "multipart/form-data Processing" << std::endl;
-            std::cout << "this is the boundary: " << this->_boundary << std::endl;
-            std::cout << WHITE << std::endl;
+            std::cout << YELLOW << "multipart/form-data Processing" << WHITE << std::endl;
+            std::cout << "boundary: " << this->_boundary << std::endl;
 
             std::string line;
 
@@ -564,6 +584,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         /* if end boundary found set body complete */
                         this->_mpState = MP_COMPLETE;
                         this->_state = BODY_COMPLETE;
+
                         return HTTP_RES_OK;
                     }
 
@@ -581,6 +602,25 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                     this->_mpCurrentLine += "\n";
                 }
             }
+        }
+        else {
+            std::string fileExtension = "";
+            if (httpParser->_mimeToExt.find(this->_mediaType) == httpParser->_mimeToExt.end()) {
+                fileExtension = ".bin";
+            }
+            else {
+                fileExtension = httpParser->_mimeToExt[this->_mediaType];
+            }
+
+            // add Extension to file name
+            std::string newFileWithExtension = this->filePath + fileExtension;
+
+            if (std::rename(this->filePath.c_str(), newFileWithExtension.c_str()) != 0) {
+                std::cerr << "Error: renaming file" << std::endl;
+                return HTTP_RES_INTERNAL_SERVER_ERROR;
+            }
+            this->_state = BODY_COMPLETE;
+            return HTTP_RES_OK;
         }
     }
     return HTTP_RES_OK;
@@ -723,6 +763,7 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
         return HTTP_RES_NOT_IMPLEMENTED;
     }
     this->_type = CHUNKED;
+    this->_chunkState = CHUNK_READ_SIZE;
     return HTTP_RES_OK;
 }
 

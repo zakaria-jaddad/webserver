@@ -262,6 +262,13 @@ class HttpParser {
             MP_COMPLETE,
         } multiPartState;
 
+        typedef enum {
+            CHUNK_READ_SIZE,
+            CHUNK_READ_DATA,
+            CHUNK_READ_CRLF,
+            CHUNK_DONE,
+        } chunkState;
+
         static std::string getBodyStateString(bodyState state);
         static std::string getMultiPartStateString(multiPartState state);
 
@@ -282,6 +289,10 @@ class HttpParser {
         FilePart _currentPart;
         std::map<std::string, std::vector<std::string> > _partLevelHeaders;
         std::string _mpCurrentLine;
+
+        /* Chunk Encoding */
+        chunkState _chunkState;
+        std::string _chunkBuffer;
 
       public:
         /* General Body Info */
@@ -347,6 +358,7 @@ class HttpParser {
     std::map<std::string, std::vector<std::string> > _headers;
     Body _body;
     httpResult _res;
+    std::map<std::string, std::string> _mimeToExt;
 
     /*
      * Request-Line = Method SP Request-URI SP HTTP-Version CRLF
