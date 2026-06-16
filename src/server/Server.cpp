@@ -139,7 +139,6 @@ int Server::checkForClientFd(epoll_event *events, int i) {
   //This method is to look for the event fd in clientFds
   //It then checks if the operation that is is ready for is 'read' or 'write'
   // then reads or writes accordingly
-
   int clientSocket = -1;
   char req[READ_BYTES] = {0}; 
   int b;
@@ -185,22 +184,47 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         it->last_activity = time(NULL);
         
         std::string rawData(req, b);
-        it->request->parseHttpRequest(rawData);
+        req_res = it->request->parseHttpRequest(rawData);
+        
+        /* testing a new way of handling req errors
+        if (res != HttpParser::HTTP_RES_OK)
+        {
+          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+          closeSocket(&(*it));
+          it = clients.erase(clients.begin() + c);
+          std::cout << "cleaned socket" << std::endl;
+          break ;
+        }
+        */
 
-        if (it->request->isComplete())
+        if (it->request->isComplete() || req_res != HttpParser::HTTP_RES_OK)
           switchEpollMode(clientSocket, EPOLLOUT);
       }
-      else if (events[i].events == EPOLLOUT) 
+      else if (events[i].events == EPOLLOUT)
       { 
         // we can write to socket
         if (it->response == NULL)
           it->response = new Response(&(*it));
         
+        if (req_res != HttpParser::HTTP_RES_OK)
+        {
+          std::cout << "req_res : " << req_res << std::endl;
+          it->response->servePages(req_res);
+          if (it->response->isComplete())
+          {
+            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+            closeSocket(&(*it));
+            it = clients.erase(clients.begin() + c);
+            std::cout << "cleaned socket" << std::endl;
+          }
+          break ;
+        }
+
         // start the response crafting and sending process from the checkMethod parent method
-        HttpParser::httpResult res = it->response->checkMethod();
+        resp_res = it->response->checkMethod();
 
         // cleanup after an error/timeout
-        if (res != HttpParser::HTTP_RES_OK)
+        if (resp_res != HttpParser::HTTP_RES_OK)
         {
           // std::cout << "cgi timed out" << std::endl;
           switchEpollMode((*it).fd, EPOLL_CTL_DEL);

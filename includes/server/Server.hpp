@@ -51,6 +51,7 @@ class Server {
   private:
     Config conf;
     int epoll_fd;
+  HttpParser::httpResult req_res, resp_res;
     // std::vector<int> serverFds;
     std::map<int, ServerConfig *> vServers;
     // std::vector<int> clientFds;

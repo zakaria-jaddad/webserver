@@ -44,3 +44,4 @@
 ft_webserver
 obj/
 external/googletest/
+www/uploads/
