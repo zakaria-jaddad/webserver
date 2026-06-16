@@ -1,15 +1,4 @@
 #include "../../includes/request/Request.hpp"
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <ios>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <string>
-#include <vector>
 
 /* ===================================================================================== */
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
@@ -340,7 +329,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                           << std::endl;
                 this->_state = BODY_PROCESSING;
                 this->file.clear();
-                this->file.seekg(0, ios::beg);
+                this->file.seekg(0, std::ios::beg);
             }
         }
 
@@ -466,7 +455,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             std::string urlEncodedForm;
             std::stringstream ss;
 
-            this->file.seekg(0, ios::beg);
+            this->file.seekg(0, std::ios::beg);
             ss << this->file.rdbuf();
 
             urlEncodedForm = ss.str();
@@ -557,8 +546,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             this->_currentPart.file.open(this->_currentPart.filePath.c_str(),
                                                          std::ios::out | std::ios::binary);
                             if (this->_currentPart.file.is_open() == false) {
-                                cerr << RED << "Error: Unable to open file "
-                                     << this->_currentPart.filePath << WHITE << endl;
+                                std::cerr << RED << "Error: Unable to open file "
+                                          << this->_currentPart.filePath << WHITE << std::endl;
                                 return HTTP_RES_INTERNAL_SERVER_ERROR;
                             }
                         }
@@ -723,7 +712,7 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
     }
 
     if (access(uploadPath.c_str(), R_OK) == -1) {
-        cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << endl;
+        std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
         return HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
@@ -737,9 +726,9 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
     }
     this->filePath = filePath;
 
-    file.open(this->filePath.c_str(), ios::out | ios::in | ios::trunc);
+    file.open(this->filePath.c_str(), std::ios::out | std::ios::in | std::ios::trunc);
     if (file.is_open() == false) {
-        cerr << "Error: " << this->filePath << " Failed to open file" << endl;
+        std::cerr << "Error: " << this->filePath << " Failed to open file" << std::endl;
         return HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
@@ -817,7 +806,7 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
     return HTTP_RES_OK;
 }
 
-std::string extractPar(const std::string &header, const std::string &key)
+std::string HttpParser::Body::extractPar(const std::string header, const std::string key)
 {
     size_t pos = header.find(key);
     if (pos == std::string::npos)

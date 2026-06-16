@@ -27,6 +27,8 @@
 #define YELLOW "\033[33m"
 #define WHITE "\033[0m"
 
+using namespace std;
+
 /* inline only for development */
 inline std::string trim(const std::string &str)
 {
@@ -52,7 +54,7 @@ inline bool is_all_digits(const std::string str)
     return str.find_first_not_of("0123456789") == std::string::npos;
 }
 
-inline int hex_to_decimal(string hex)
+inline int hex_to_decimal(std::string hex)
 {
     int decimal = 0;
     int base = 1;
@@ -300,8 +302,8 @@ class HttpParser {
         size_t _maxBodySize;
         std::string _body;
         std::string normalizedPath;
-        fstream file;
-        string filePath;
+        std::fstream file;
+        std::string filePath;
         ResolvedConfig *conf;
         std::map<std::string, std::vector<FilePart> > _formFields;
 

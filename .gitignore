@@ -44,3 +44,11 @@
 ft_webserver
 obj/
 external/googletest/
+
+www/uploads/
+
+.gitignore
+
+subject.md
+dokerfile
+run.sh
