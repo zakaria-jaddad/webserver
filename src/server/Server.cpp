@@ -184,7 +184,11 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         it->last_activity = time(NULL);
         
         std::string rawData(req, b);
-        req_res = it->request->parseHttpRequest(rawData);
+       HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
+        std::cout << "old=" << it->req_res
+          << " new=" << r
+          << std::endl;
+        it->req_res = r;
         
         /* testing a new way of handling req errors
         if (res != HttpParser::HTTP_RES_OK)
@@ -197,7 +201,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         }
         */
 
-        if (it->request->isComplete() || req_res != HttpParser::HTTP_RES_OK)
+        if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
           switchEpollMode(clientSocket, EPOLLOUT);
       }
       else if (events[i].events == EPOLLOUT)
@@ -206,10 +210,10 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         if (it->response == NULL)
           it->response = new Response(&(*it));
         
-        if (req_res != HttpParser::HTTP_RES_OK)
+        if (it->req_res != HttpParser::HTTP_RES_OK)
         {
-          std::cout << "req_res : " << req_res << std::endl;
-          it->response->servePages(req_res);
+          std::cout << "req_res : " << it->req_res << std::endl;
+          it->response->servePages(it->req_res);
           if (it->response->isComplete())
           {
             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
@@ -221,10 +225,10 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         }
 
         // start the response crafting and sending process from the checkMethod parent method
-        resp_res = it->response->checkMethod();
+        it->resp_res = it->response->checkMethod();
 
         // cleanup after an error/timeout
-        if (resp_res != HttpParser::HTTP_RES_OK)
+        if (it->resp_res != HttpParser::HTTP_RES_OK)
         {
           // std::cout << "cgi timed out" << std::endl;
           switchEpollMode((*it).fd, EPOLL_CTL_DEL);

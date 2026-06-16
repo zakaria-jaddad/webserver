@@ -32,6 +32,8 @@ struct t_client {
 	time_t	connection_time;
 
     ServerConfig *config;
+    HttpParser::httpResult req_res;// check later should be changed and included in the request & resp objects themselves
+    HttpParser::httpResult resp_res;
     HttpParser *request;
     Response *response;
     void printInfo() const
@@ -51,7 +53,6 @@ class Server {
   private:
     Config conf;
     int epoll_fd;
-  HttpParser::httpResult req_res, resp_res;
     // std::vector<int> serverFds;
     std::map<int, ServerConfig *> vServers;
     // std::vector<int> clientFds;

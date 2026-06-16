@@ -91,6 +91,7 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         /* parse Request-Line ... */
         res = _parseRequestLine(requestLine);
         if (res != HTTP_RES_OK) {
+            std::cout << "FROM HTTP PARSING request line, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -113,6 +114,7 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = _generateHeadersMap(headerLines, this->_headers);
         if (res != HTTP_RES_OK) {
+            std::cout << "FROM HTTP PARSING generate headers, RESULT : " << res << std::endl;
             return res;
         }
     }
@@ -126,12 +128,14 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
             std::cout << "headers Parsed, res: ";
             printHttpResult(res);
             if (res != HTTP_RES_OK) {
+              std::cout << "FROM HTTP PARSING body header value, RESULT : " << res << std::endl;
                 return res;
             }
 
             /* If request type other than POST ignore the body */
             if (this->_requestType != POST) {
                 this->_phase = COMPLETE;
+            std::cout << "FROM HTTP PARSING ignoring body, RESULT : " << HTTP_RES_OK << std::endl;
                 return HTTP_RES_OK;
             }
 
@@ -140,6 +144,7 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = this->_body.parseRequestBody(rawData);
         if (res != HTTP_RES_OK) {
+            std::cout << "FROM HTTP PARSING request body, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -148,6 +153,7 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         }
     }
 
+            std::cout << "FROM HTTP PARSING after finishing everything, RESULT : " << HTTP_RES_OK << std::endl;
     return HTTP_RES_OK;
 };
 

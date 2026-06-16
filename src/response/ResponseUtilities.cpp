@@ -61,6 +61,7 @@ void Response::craftPageResponse(int code, int fd)
     std::cout << buff << std::endl;
 
     sendResponse(buff);
+    sendResponse("\r\n");
 
     if (bytes < READ_BYTES - 1)
     {
