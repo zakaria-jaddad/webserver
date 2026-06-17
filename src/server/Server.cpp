@@ -144,7 +144,7 @@ int Server::checkForClientFd(epoll_event *events, int i) {
   int b;
   int c = 0;
 
-  for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
+  for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
   {
     std::cout << "looping thru clients" << std::endl;
 
@@ -300,7 +300,7 @@ int Server::startServer()
 		if (event_count == 0)
 		{
 			int c = 0;
-			for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
+			for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end(); c++) 
 			{
 				std::cout << "looping thru clients" << std::endl;
 
