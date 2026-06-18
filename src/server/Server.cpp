@@ -185,23 +185,13 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 it->last_activity = time(NULL);
 
                 std::string rawData(req, b);
-                it->request->parseHttpRequest(rawData);
+                HttpParser::httpResult res = it->request->parseHttpRequest(rawData);
+                if (res != HttpParser::HTTP_RES_OK) {
+                    return res;
+                }
 
                 if (it->request->isComplete()) {
 
-                    // -- debugging
-                    const std::map<std::string, HttpParser::FilePart> formFields =
-                        this->clients[i].request->getBodyFormFields();
-                    if (formFields.size() != 0) {
-                        for (std::map<std::string, HttpParser::FilePart>::const_iterator hello =
-                                 formFields.begin();
-                             hello != formFields.end(); hello++) {
-                            hello->second.printInfo();
-                        }
-                        std::cout << " ----- " << endl;
-                    }
-                    // -- debugging
-                    std::cout << "Finished Parsing" << std::endl;
                     switchEpollMode(clientSocket, EPOLLOUT);
                 }
             }

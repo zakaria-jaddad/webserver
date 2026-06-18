@@ -1,4 +1,5 @@
 #include "../../includes/request/Request.hpp"
+#include <cstddef>
 
 /* ===================================================================================== */
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
@@ -18,6 +19,7 @@ HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
     this->_res = HTTP_RES_OK;
     this->_requestLineBuffer = "";
     this->_headerBuffer = "";
+    this->_pendingData = "";
     this->_mimeToExt["image/png"] = ".png";
     this->_mimeToExt["image/jpeg"] = ".jpg";
     this->_mimeToExt["image/gif"] = ".gif";
@@ -42,6 +44,7 @@ HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body
     this->_res = HTTP_RES_OK;
     this->_requestLineBuffer = "";
     this->_headerBuffer = "";
+    this->_pendingData = "";
     this->_mimeToExt["image/png"] = ".png";
     this->_mimeToExt["image/jpeg"] = ".jpg";
     this->_mimeToExt["image/gif"] = ".gif";
@@ -85,6 +88,8 @@ HttpParser::getBodyFormFields() const
     return this->_body._formFields;
 }
 
+std::string HttpParser::getPendingData() const { return this->_pendingData; }
+
 /* ---- SETTERS ----*/
 
 void HttpParser::setRes(httpResult res) { this->_res = res; }
@@ -105,6 +110,10 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 {
 
     httpResult res;
+
+    // Preapending leftover data to rawData
+    rawData = this->_pendingData + rawData;
+    this->_pendingData.clear();
 
     /* NOTE: This should be refactor since i don't buffer the requestLine and headers */
     if (this->_phase == REQUEST_LINE) {
@@ -170,6 +179,8 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
             /* If request type other than POST ignore the body */
             if (this->_requestType != POST) {
+                // Save pending Data if pipelined request
+                _savePendingData(rawData);
                 this->_phase = COMPLETE;
                 return HTTP_RES_OK;
             }
@@ -183,6 +194,8 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         }
 
         if (this->_body._state == Body::BODY_COMPLETE) {
+            // Body is done save remaining rawData for the next request
+            _savePendingData(rawData);
             this->_phase = COMPLETE;
         }
     }
@@ -317,10 +330,22 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         // Content-Length Body Parsing
         if (this->_type == CONTENT_LENGTH) {
             std::cout << YELLOW << "Reading body using Content-Length" << WHITE << std::endl;
-            if (rawDataSize + this->_bytesReceived > this->_contentLength) {
-                this->_fileCleanUp();
-                return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
+            size_t byteRemaining = this->_contentLength - this->_bytesReceived;
+            if (rawDataSize > byteRemaining) {
+                this->file.write(rawData.c_str(), rawDataSize);
+                this->_bytesReceived += byteRemaining;
+
+                // Save leftover rawData for next request if pipelined
+                httpParser->_pendingData = rawData.substr(byteRemaining);
+
+                std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
+                          << std::endl;
+
+                this->_state = BODY_PROCESSING;
+                this->file.flush();
+                this->file.seekg(0, std::ios::beg);
             }
+
             file.write(rawData.c_str(), rawDataSize);
             this->_bytesReceived = this->_bytesReceived + rawDataSize;
             if (this->_bytesReceived == this->_contentLength) {
@@ -328,7 +353,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                 std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
                           << std::endl;
                 this->_state = BODY_PROCESSING;
-                this->file.clear();
+                this->file.flush();
                 this->file.seekg(0, std::ios::beg);
             }
         }
@@ -439,6 +464,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         this->_state = BODY_PROCESSING;
                         this->_chunkBuffer.clear();
                         // No need to call in my case this->file.clear();
+
+                        // Save leftover data for the next pipelined request
+                        httpParser->_pendingData = data;
                     }
                     break;
                 }

@@ -210,6 +210,7 @@ class HttpParser {
     std::map<std::string, std::string> getRequestUriParams() const;
     ServerConfig *getServerConfig() const;
     const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
+    std::string getPendingData() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
@@ -228,6 +229,12 @@ class HttpParser {
     static std::string _urlDecode(std::string str);
     static void _replacePlusWithSpace(std::string &str);
     static void _parseQueryString(std::string &query, std::map<std::string, std::string> &store);
+    void _savePendingData(std::string &pendingData)
+    {
+        if (pendingData.empty() == false) {
+            this->_pendingData = pendingData;
+        }
+    }
 
     /*
      *
@@ -363,6 +370,7 @@ class HttpParser {
     std::map<std::string, std::string> _mimeToExt;
     std::string _requestLineBuffer;
     std::string _headerBuffer;
+    std::string _pendingData;
 
     /*
      * Request-Line = Method SP Request-URI SP HTTP-Version CRLF
