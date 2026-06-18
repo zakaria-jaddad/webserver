@@ -6,8 +6,8 @@
 
 Server::Server(std::string &path)
 {
-    this->conf.tokenize(path);
-    this->conf.loadServers();
+  this->conf.tokenize(path);
+  this->conf.loadServers();
 }
 
 void Server::setupServerFds()
@@ -123,14 +123,20 @@ int Server::checkClientTimeout(t_client *client)
 
 	if (client->request && \
       !client->request->isComplete() && \
-      idle_time > REQUEST_TIMEOUT)
+      idle_time > REQUEST_TIMEOUT) // check if i should just not implement the request timeout
+  {
+    std::cout << "Request status: " << client->request->isComplete() << " and timed out\n";
 		return 2;
+  }
 	
 	if (client->request && \
       client->request->isComplete() && \
       !client->response && \
       idle_time > IDLE_TIMEOUT)
+  {
+    std::cout << "Request status: " << client->request->isComplete() << " and idle timeout\n";
 		return 1;
+  }
 	
 	return 0;
 }
@@ -184,28 +190,19 @@ int Server::checkForClientFd(epoll_event *events, int i) {
         it->last_activity = time(NULL);
         
         std::string rawData(req, b);
-       HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
+        
+        HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
         std::cout << "old=" << it->req_res
           << " new=" << r
           << std::endl;
-        it->req_res = r;
         
-        /* testing a new way of handling req errors
-        if (res != HttpParser::HTTP_RES_OK)
-        {
-          switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-          closeSocket(&(*it));
-          it = clients.erase(clients.begin() + c);
-          std::cout << "cleaned socket" << std::endl;
-          break ;
-        }
-        */
+          it->req_res = r;
 
         if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
           switchEpollMode(clientSocket, EPOLLOUT);
       }
       else if (events[i].events == EPOLLOUT)
-      { 
+      {
         // we can write to socket
         if (it->response == NULL)
           it->response = new Response(&(*it));
@@ -270,25 +267,25 @@ int Server::startServer()
 
 	while (1) {
 
-        bool backgroundWork = false;
-        for (size_t i = 0; i < this->clients.size(); i++) {
+    bool backgroundWork = false;
+    for (size_t i = 0; i < this->clients.size(); i++) {
 
-            // if client is found and body is processing
-            if (this->clients[i].request->isProcessingBody() == true) {
-                backgroundWork = true;
-            }
-
-            /* NOTE: Since we read from the file no data need to be passed to the parser */
-            this->clients[i].request->parseHttpRequest("");
-
-            if (this->clients[i].request->isComplete() == true) {
-                switchEpollMode(this->clients[i].fd, EPOLLOUT);
-            }
+        // if client is found and body is processing
+        if (this->clients[i].request->isProcessingBody() == true) {
+            backgroundWork = true;
         }
 
-        /* NOTE: If we have clients processing local files, we CANNOT let epoll block the server.
-         * set timeout to 0 (non-blocking). Otherwise, we block for 30s to save CPU. */
-        int timeout = backgroundWork ? 0 : 30000;
+        /* NOTE: Since we read from the file no data need to be passed to the parser */
+        this->clients[i].request->parseHttpRequest("");
+
+        if (this->clients[i].request->isComplete() == true) {
+            switchEpollMode(this->clients[i].fd, EPOLLOUT);
+        }
+    }
+
+    /* NOTE: If we have clients processing local files, we CANNOT let epoll block the server.
+      * set timeout to 0 (non-blocking). Otherwise, we block for 30s to save CPU. */
+    int timeout = backgroundWork ? 0 : 30000;
 
 		event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout);
 

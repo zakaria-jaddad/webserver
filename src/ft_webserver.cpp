@@ -8,7 +8,13 @@ int main(int argc, char **argv)
 	else
 		file = argv[1];
 
-	Server s(file);
-	s.startServer();
+	try
+	{
+		Server s(file);
+		s.startServer();
+	}
+	catch(std::exception &e){
+		std::cout << "exception caught : " << e.what() << std::endl;
+	}
 	return 0;
 }

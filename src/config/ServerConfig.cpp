@@ -256,9 +256,6 @@ void ServerConfig::checkServerName( const std::string& name )
 
     val.push_back(std::tolower(c));
   }
-
-  std::cout <<"###################"<< std::endl;
-  std::cout << "host : " << val << std::endl;
   this->server_name.push_back(val);
 }
 

@@ -137,10 +137,11 @@ HttpParser::httpResult Response::craftResponse( void )
 }
 
 int Response::sendResponse(const char *resp) {
-	if (send(client->fd, resp, strlen(resp), 0) == -1) { // check later this function's errors should be taken into consideration
+	int bytes_sent = send(client->fd, resp, strlen(resp), 0);
+	if (bytes_sent == -1) { // check later this function's errors should be taken into consideration
 		std::cerr << "failed to send" << std::endl;
 		this->error = 1;
-		return (1);
+		return (-1);
 	}
-	return (0);
+	return (bytes_sent);
 }
