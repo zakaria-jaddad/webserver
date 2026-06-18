@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <algorithm>
 
-#define CGI_TIMEOUT 200
+#define CGI_TIMEOUT 10
 
 class Cgi;
 struct t_client;
@@ -57,9 +57,9 @@ public:
 //   int   createUploadFolder( std::string&, std::string& );
 
   //static methods
-	int	httpDelete( void );
-	int	httpGet( void );
-	int httpPost( void );
+	HttpParser::httpResult	httpDelete( void );
+	HttpParser::httpResult	httpGet( void );
+	HttpParser::httpResult	httpPost( void );
 
 	std::string chooseIndex( std::string& );
   void	sendHeader( int );

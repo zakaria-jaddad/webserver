@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstring>
+#include <deque>
 #include <fcntl.h>
 #include <iostream>
 #include <map>
@@ -19,8 +20,10 @@
 
 typedef struct epoll_event epoll_event_t;
 #define MAX_EVENTS 100
-#define REQUEST_TIMEOUT 2000
-#define IDLE_TIMEOUT 1000
+#define REQUEST_TIMEOUT 30
+#define IDLE_TIMEOUT 60
+#define READ_BYTES 2048
+
 class Response;
 
 struct t_client {
@@ -30,6 +33,8 @@ struct t_client {
 	time_t	connection_time;
 
     ServerConfig *config;
+    HttpParser::httpResult req_res;// check later should be changed and included in the request & resp objects themselves
+    HttpParser::httpResult resp_res;
     HttpParser *request;
     Response *response;
     void printInfo() const
@@ -53,7 +58,7 @@ class Server {
     std::map<int, ServerConfig *> vServers;
     // std::vector<int> clientFds;
     // std::map<int, HttpParser *> clientFds;
-    std::vector<t_client> clients;
+    std::deque<t_client> clients;
 
   public:
     Server(std::string &file);
@@ -74,7 +79,7 @@ class Server {
         std::cout << "========== Server Info ==========" << std::endl;
         std::cout << "epoll_fd: " << this->epoll_fd << endl;
         std::cout << "clients: " << std::endl;
-        for (std::vector<t_client>::const_iterator it = this->clients.begin();
+        for (std::deque<t_client>::const_iterator it = this->clients.begin();
              it != this->clients.end(); it++) {
             std::cout << "t_client fd: " << it->fd << std::endl;
             std::cout << "t_client config address : " << it->config << std::endl;

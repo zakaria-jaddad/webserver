@@ -52,7 +52,7 @@ std::string Response::resolveFilePath(std::string &upload_store)
 //   return 0;
 // }
 
-int Response::httpPost()
+HttpParser::httpResult Response::httpPost()
 {
     // normalizePath();
     // std::string upload_path = conf.getUploadPath();
@@ -90,10 +90,10 @@ int Response::httpPost()
     servePages(200);
     // Edited by Zakaria
 
-    return 0;
+    return HttpParser::HTTP_RES_OK;
 }
 
-int Response::httpDelete(void)
+HttpParser::httpResult Response::httpDelete(void)
 {
     std::string absPath = this->conf.getRoot();
 
@@ -102,18 +102,15 @@ int Response::httpDelete(void)
     std::cout << "file to delete : " << absPath << std::endl;
     if (access(absPath.c_str(), W_OK)) {
         servePages(404);
-        return (1);
+        return HttpParser::HTTP_RES_NOT_FOUND;
     }
     if (unlink(absPath.c_str())) {
         servePages(500);
-        return (1);
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
-    servePages(200);
-
-    // sendResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:
-    // 10\r\n\r\nDeleted hh");
-    return (0);
+    servePages(200); // check later to change it to 204
+    return HttpParser::HTTP_RES_OK;
 }
 
 std::string Response::chooseIndex(std::string &path)
@@ -203,9 +200,9 @@ void Response::serveDirectoryContent(std::string &absPath)
         return;
 }
 
-int Response::httpGet(void)
+HttpParser::httpResult Response::httpGet(void)
 {
-    char buff[1024] = {0};
+    char buff[READ_BYTES] = {0};
     ssize_t r = 0;
     int fd;
 
@@ -220,7 +217,7 @@ int Response::httpGet(void)
 
         if (stat(absPath.c_str(), &info) != 0) {
             servePages(404);
-            return 1;
+            return HttpParser::HTTP_RES_NOT_FOUND;
         }
 
         if (S_ISDIR(info.st_mode)) {
@@ -229,16 +226,16 @@ int Response::httpGet(void)
             if (index_to_serve.empty()) {
                 if (!conf.getDirectoyListing()) {
                     servePages(403);
-                    return 1;
+                    return HttpParser::HTTP_RES_FORBIDDEN;
                 }
                 else {
                     serveDirectoryContent(absPath);
                     if (error) {
                         servePages(500);
-                        return 1;
+                        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
                     }
                     this->status = 1;
-                    return 0;
+                    return HttpParser::HTTP_RES_OK;
                 }
             }
             else
@@ -247,13 +244,13 @@ int Response::httpGet(void)
 
         if (access(absPath.c_str(), R_OK)) {
             servePages(404);
-            return (1);
+            return HttpParser::HTTP_RES_NOT_FOUND;
         }
 
         fd = open(absPath.c_str(), O_RDONLY);
         if (fd == -1) {
             servePages(500);
-            return (1);
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
         this->fileFD = fd;
     }
@@ -261,14 +258,15 @@ int Response::httpGet(void)
     if (!this->headerFlag) {
         sendHeader(200);
         this->headerFlag = 1;
-        return (0);
+        return HttpParser::HTTP_RES_OK;
     }
 
-    r = read(this->fileFD, buff, 1023);
+    r = read(this->fileFD, buff, READ_BYTES - 1);
     if (r == -1) {
         close(this->fileFD);
         this->error = 1;
-        return (1);
+        servePages(500);
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
     else if (r == 0) {
         sendResponse("0\r\n\r\n");
@@ -276,12 +274,13 @@ int Response::httpGet(void)
         close(this->fileFD);
         this->fileFD = -3;
         this->status = 1;
-        return (2);
+        return HttpParser::HTTP_RES_OK; // check later this looks phishy to me somehow
     }
+
     buff[r] = 0;
 
     sendChunkSize(r);
     sendResponse(buff);
     sendResponse("\r\n");
-    return (0);
+    return HttpParser::HTTP_RES_OK;
 }

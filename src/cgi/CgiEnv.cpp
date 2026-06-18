@@ -2,11 +2,6 @@
 
 // env building
 
-// int checkVarSanity(std::string path)
-// {
-
-// }
-
 std::map<std::string, std::string>
 Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
                    std::string script_name, std::string path_info,

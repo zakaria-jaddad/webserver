@@ -1,2 +1,20 @@
-- check use after free in the case of :
+[ FIXED by changing tclients array to a deque ] check use after free in the case of :
 	. running a php script in one tab and in a new tab requesting something else (ex: GET)
+
+
+[ CHECK IF I SHOULD CATCH THE EXCEPTION I THROW OR NO NEED ] conf file problem:
+	. when there is a space between upload store path :
+		###################
+		host : localhost
+		terminate called after throwing an instance of 'std::runtime_error'
+		what():  Invalid number of arguments in "upload_store" directive
+		[1]    1792591 IOT instruction (core dumped)  ./ft_webserver
+
+
+[ FIXED ] check GET method:
+	. when trying to visit "http://localhost:8080/in" - which is inexistant
+	-> the first time it display a white page with only "l> " written in it, 
+		 second time it displays nothing, third time it displays the 404 not found page
+		 and loops over if requested multiples times
+	suspicions: I suspect its becuz of the new way get works now, it returns http codes 
+				instead of random digits that anas designed

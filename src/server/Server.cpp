@@ -125,33 +125,48 @@ int Server::checkClientTimeout(t_client *client)
     // std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
     // std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
 
-    if (!client->request->isComplete() && idle_time > REQUEST_TIMEOUT) // placeholder request
-                                                                       // timeout
-        return 1;
+    if (client->request && !client->request->isComplete() &&
+        idle_time > REQUEST_TIMEOUT) // check if i should just not implement the request timeout
+    {
+        std::cout << "Request status: " << client->request->isComplete() << " and timed out\n";
+        return 2;
+    }
 
-    if (client->request->isComplete() && idle_time > IDLE_TIMEOUT) // placeholder idle timeout
+    if (client->request && client->request->isComplete() && !client->response &&
+        idle_time > IDLE_TIMEOUT) {
+        std::cout << "Request status: " << client->request->isComplete() << " and idle timeout\n";
         return 1;
+    }
 
     return 0;
 }
 
 int Server::checkForClientFd(epoll_event *events, int i)
 {
+
     // This method is to look for the event fd in clientFds
     // It then checks if the operation that is is ready for is 'read' or 'write'
     //  then reads or writes accordingly
-
     int clientSocket = -1;
-    char req[1024] = {0};
+    char req[READ_BYTES] = {0};
     int b;
     int c = 0;
 
-    for (std::vector<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
+    for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
          c++) {
         // std::cout << "looping thru clients" << std::endl;
 
+        // Request timeout/client idling too long
         int isTimeout = checkClientTimeout(&(*it));
         if (isTimeout) {
+            // for request timeout
+            if (isTimeout == 2) {
+                it->response = new Response(&(*it));
+                it->response->servePages(408);
+                std::cout << "request timed out!!\n";
+            }
+
+            // general cleanup (either idle or request timeout)
             std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
             closeSocket(&(*it));
@@ -161,19 +176,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
         if (events[i].data.fd == it->fd) {
             clientSocket = it->fd;
-            // std::cout << "already in map clientSocket = " << clientSocket << std::endl;
             if (events[i].events == EPOLLIN) {
-                // we can read from socket
-
-                int time_out = checkClientTimeout(&(*it));
-                if (time_out) {
-                    std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-                    switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                    closeSocket(&(*it));
-                    it = clients.erase(clients.begin() + c);
-                    continue;
-                }
-
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
                 if (b == -1 || b == 0) {
                     closeSocket(&(*it));
@@ -185,61 +188,46 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 it->last_activity = time(NULL);
 
                 std::string rawData(req, b);
-                HttpParser::httpResult res = it->request->parseHttpRequest(rawData);
-                if (res != HttpParser::HTTP_RES_OK) {
-                    return res;
-                }
 
-                if (it->request->isComplete()) {
+                HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
+                std::cout << "old=" << it->req_res << " new=" << r << std::endl;
 
+                it->req_res = r;
+
+                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
                     switchEpollMode(clientSocket, EPOLLOUT);
-                }
             }
             else if (events[i].events == EPOLLOUT) {
                 // we can write to socket
                 if (it->response == NULL)
                     it->response = new Response(&(*it));
-                HttpParser::httpResult res = it->response->checkMethod();
-                if (res == HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED) {
-                    std::cout << "cgi timed out" << std::endl;
 
-                    std::ifstream file("pages/504.html", std::ios::in | std::ios::binary);
-                    std::string body;
-
-                    if (file) {
-                        std::ostringstream ss;
-                        ss << file.rdbuf();
-                        body = ss.str();
-                        file.close();
+                if (it->req_res != HttpParser::HTTP_RES_OK) {
+                    std::cout << "req_res : " << it->req_res << std::endl;
+                    it->response->servePages(it->req_res);
+                    if (it->response->isComplete()) {
+                        switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                        closeSocket(&(*it));
+                        it = clients.erase(clients.begin() + c);
+                        std::cout << "cleaned socket" << std::endl;
                     }
-                    else
-                        body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
+                    break;
+                }
 
-                    // 2️⃣ Build HTTP response with proper Content-Length
-                    std::ostringstream response;
-                    response << "HTTP/1.1 504 Gateway Timeout\r\n"
-                             << "Content-Type: text/html\r\n"
-                             << "Content-Length: " << body.size() << "\r\n"
-                             << "Connection: close\r\n"
-                             << "\r\n"
-                             << body;
+                // start the response crafting and sending process from the checkMethod parent
+                // method
+                it->resp_res = it->response->checkMethod();
 
-                    it->response->sendResponse(response.str().c_str());
-
-                    // it->response->servePages(504);
-                    std::cout << "cleaned socket" << std::endl;
+                // cleanup after an error/timeout
+                if (it->resp_res != HttpParser::HTTP_RES_OK) {
+                    // std::cout << "cgi timed out" << std::endl;
                     switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                     closeSocket(&(*it));
                     it = clients.erase(clients.begin() + c);
-                    //}
+                    std::cout << "cleaned socket" << std::endl;
                     break;
                 }
-                if (it->response->isError()) {
-                    closeSocket(&(*it));
-                    clients.erase(clients.begin() + c);
-                    break;
-                    // hh
-                }
+
                 if (it->response->isComplete()) {
                     resetSocket(&(*it));
                     switchEpollMode(clientSocket, EPOLLIN);
@@ -280,12 +268,21 @@ int Server::startServer()
         }
         if (event_count == 0) {
             int c = 0;
-            for (std::vector<t_client>::iterator it = this->clients.begin();
+            for (std::deque<t_client>::iterator it = this->clients.begin();
                  it != this->clients.end(); c++) {
                 // std::cout << "looping thru clients" << std::endl;
 
+                // check possibility to keep this and remove the above timeout check
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
+
+                    // for request timeout
+                    if (isTimeout == 2) {
+                        it->response = new Response(&(*it));
+                        it->response->servePages(408);
+                        std::cout << "request timed out!!\n";
+                    }
+
                     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
                     std::cout << "done sending timeout resetting socket..." << std::endl;
                     switchEpollMode(it->fd, EPOLL_CTL_DEL);

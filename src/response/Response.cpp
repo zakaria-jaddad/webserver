@@ -76,7 +76,8 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 			kill(childpid, SIGKILL);
 			waitpid(childpid, NULL, 0);
-			return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
+			servePages(504);
+			return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
     }
 
 		if (!this->exec_status)
@@ -113,14 +114,11 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 	{
 		switch (req_method) {
 			case HttpParser::DELETE:
-				httpDelete();
-				break;
+				return (httpDelete());
 			case HttpParser::GET:
-				httpGet();
-				break;
-      case HttpParser::POST:
-        httpPost();
-        break;
+				return (httpGet());
+			case HttpParser::POST:
+				return (httpPost());
 			default:
 				servePages(405);
 		}
@@ -132,14 +130,18 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 HttpParser::httpResult Response::checkMethod(void)
 {
-	if (this->timed_out)
-		return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
+	// check if its needed 
+	// if (this->timed_out)
+	// 	return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
 
 	std::pair<int, std::string> redir = conf.getRedir();
 	if (!redir.second.empty())
 	{
 		if (servePages(redir.first, redir.second))
+		{
+			servePages(500);
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+		}
 		return HttpParser::HTTP_RES_OK;
 	}
 	HttpParser::requestType req_method = client->request->getRequestType();
@@ -149,14 +151,9 @@ HttpParser::httpResult Response::checkMethod(void)
 																						allowed_methods.end(), \
 																						methodToString(req_method)) == allowed_methods.end())
 	{
-		servePages(405);
+		servePages(500);
 		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	}
 
-	HttpParser::httpResult res = routeMethod(req_method);
-	
-	if (res != HttpParser::HTTP_RES_OK)
-		return res;
-	
-	return (HttpParser::HTTP_RES_OK);
+	return routeMethod(req_method);
 }

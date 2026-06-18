@@ -16,7 +16,7 @@ TEST_DIR	= test
 ## src files (just add their plain names don't write their paths)
 MAIN_SRC	= ft_webserver.cpp
 CONF_SRC 	= Config.cpp ServerConfig.cpp LocationConfig.cpp parseHelpers.cpp
-SRV_SRC		= Server_Request.cpp
+SRV_SRC		= Server.cpp
 REQ_SRC		= Request.cpp
 RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp \
 			  cgiExecution.cpp ResponseUtilities.cpp

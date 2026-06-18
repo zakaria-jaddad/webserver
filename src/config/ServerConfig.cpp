@@ -33,6 +33,7 @@ void ServerConfig::init_error_pages()
   error_pages[403] = "pages/403.html";
   error_pages[404] = "pages/404.html";
   error_pages[405] = "pages/405.html";
+  error_pages[413] = "pages/413.html";
   error_pages[408] = "pages/408.html";
   error_pages[500] = "pages/500.html";
   error_pages[501] = "pages/501.html";
@@ -255,9 +256,6 @@ void ServerConfig::checkServerName( const std::string& name )
 
     val.push_back(std::tolower(c));
   }
-
-  std::cout <<"###################"<< std::endl;
-  std::cout << "host : " << val << std::endl;
   this->server_name.push_back(val);
 }
 
