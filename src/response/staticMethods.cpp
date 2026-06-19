@@ -101,11 +101,9 @@ HttpParser::httpResult Response::httpDelete(void)
     absPath += this->normalizedPath;
     std::cout << "file to delete : " << absPath << std::endl;
     if (access(absPath.c_str(), W_OK)) {
-        servePages(404);
         return HttpParser::HTTP_RES_NOT_FOUND;
     }
     if (unlink(absPath.c_str())) {
-        servePages(500);
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
@@ -179,22 +177,22 @@ void Response::serveDirectoryContent(std::string &absPath)
     if (error)
         return;
 
-    sendChunkSize(html.length());
+    craftChunkSize(html.length());
 
     if (error)
         return;
 
-    sendResponse(html.c_str());
+    sendResponse(html.c_str(), html.size());
 
     if (error)
         return;
 
-    sendResponse("\r\n");
+    sendResponse("\r\n", 2);
 
     if (error)
         return;
 
-    sendResponse("0\r\n\r\n");
+    sendResponse("0\r\n\r\n", 5);
 
     if (error)
         return;
@@ -206,6 +204,17 @@ HttpParser::httpResult Response::httpGet(void)
     ssize_t r = 0;
     int fd;
 
+
+    // std::cout << "write offset : " << client->writeOffset << std::endl;
+    // std::cout << "outbuffer : " << client->outBuffer << std::endl;
+
+    if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
+    {
+        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                            client->outBuffer.size() - client->writeOffset);
+        return HttpParser::HTTP_RES_OK;
+    }
+
     if (this->fileFD == -3) {
         std::string absPath = this->conf.getRoot();
         normalizePath();
@@ -216,7 +225,6 @@ HttpParser::httpResult Response::httpGet(void)
         struct stat info;
 
         if (stat(absPath.c_str(), &info) != 0) {
-            servePages(404);
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
 
@@ -225,13 +233,11 @@ HttpParser::httpResult Response::httpGet(void)
 
             if (index_to_serve.empty()) {
                 if (!conf.getDirectoyListing()) {
-                    servePages(403);
                     return HttpParser::HTTP_RES_FORBIDDEN;
                 }
                 else {
                     serveDirectoryContent(absPath);
                     if (error) {
-                        servePages(500);
                         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
                     }
                     this->status = 1;
@@ -243,13 +249,11 @@ HttpParser::httpResult Response::httpGet(void)
         }
 
         if (access(absPath.c_str(), R_OK)) {
-            servePages(404);
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
 
         fd = open(absPath.c_str(), O_RDONLY);
         if (fd == -1) {
-            servePages(500);
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
         this->fileFD = fd;
@@ -258,29 +262,36 @@ HttpParser::httpResult Response::httpGet(void)
     if (!this->headerFlag) {
         sendHeader(200);
         this->headerFlag = 1;
-        return HttpParser::HTTP_RES_OK;
+        // return HttpParser::HTTP_RES_OK;
     }
 
     r = read(this->fileFD, buff, READ_BYTES - 1);
     if (r == -1) {
         close(this->fileFD);
         this->error = 1;
-        servePages(500);
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
     else if (r == 0) {
-        sendResponse("0\r\n\r\n");
-        std::cout << "done" << std::endl;
-        close(this->fileFD);
-        this->fileFD = -3;
-        this->status = 1;
+        client->outBuffer.append("0\r\n\r\n", 5);
+        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset,
+                                            client->outBuffer.size() - client->writeOffset);
+        if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size())
+        {
+            std::cout << "done" << std::endl;
+            close(this->fileFD);
+            this->fileFD = -3;
+            this->status = 1;
+            client->outBuffer.clear();
+            client->writeOffset = 0;
+        }
         return HttpParser::HTTP_RES_OK; // check later this looks phishy to me somehow
     }
 
-    buff[r] = 0;
-
-    sendChunkSize(r);
-    sendResponse(buff);
-    sendResponse("\r\n");
+    // buff[r] = 0;
+    craftChunkSize(r);
+    client->outBuffer.append(buff, r);
+    client->outBuffer.append("\r\n", 2);
+    sendResponse(client->outBuffer.data() + client->writeOffset, 
+                client->outBuffer.size() - client->writeOffset);
     return HttpParser::HTTP_RES_OK;
 }

@@ -25,6 +25,14 @@ std::string Response::getStatusMessage(int code)
 // crafting response
 void Response::craftPageResponse(int code, int fd)
 {
+
+    if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
+    {
+        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                            client->outBuffer.size() - client->writeOffset);
+        return;
+    }
+
     if (!this->headerFlag) {
         sendHeader(code);
         this->headerFlag = 1;
@@ -34,40 +42,53 @@ void Response::craftPageResponse(int code, int fd)
     ssize_t bytes = read(fd, buff, sizeof(buff)-1);
     if (bytes == 0)
     {
+        client->outBuffer += "0\r\n\r\n";
+        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset,
+                                            client->outBuffer.size() - client->writeOffset);
         // std::cout << "Done reading" << std::endl ;
-        this->_phase = COMPLETE;
+        if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size())
+        {
+            this->_phase = COMPLETE;
+            client->writeOffset = 0;
+            client->outBuffer.clear();
+        }
         return;
     }
+    
 
     if (bytes == -1) {
         this->error = 1;
         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/plain\r\n"
                      "Content-Length: 21\r\n\r\n"
-                     "Internal Server Error");
+                     "Internal Server Error", 105);
         return;
     }
 
     chunk_size = bytes;
-    buff[bytes] = 0;
+    // buff[bytes] = 0;
 
     std::stringstream ss;
     ss << std::hex << chunk_size;
     std::string hexStr = ss.str();
     hexStr += "\r\n";
-    sendResponse(hexStr.c_str());
+    client->outBuffer += hexStr;
 
-    std::cout << "++++++++sending body++++++++" << std::endl;
-    std::cout << buff << std::endl;
+    // std::cout << "++++++++sending body++++++++" << std::endl;
+    // std::cout << buff << std::endl;
 
-    sendResponse(buff);
-    sendResponse("\r\n");
+    client->outBuffer.append(buff, bytes);
+    client->outBuffer += "\r\n";
+    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                        client->outBuffer.size() - client->writeOffset);
 
-    if (bytes < READ_BYTES - 1)
-    {
-        this->_phase = COMPLETE;
-        return;
-    }
+    std::cout << "outbuffer : " << client->outBuffer << std::endl;
+    std::cout << "writeOffset : " << client->writeOffset << " outbuffer size : " << client->outBuffer.size() << std::endl;
+    // if (bytes < READ_BYTES - 1)
+    // {
+    //     this->_phase = COMPLETE;
+    //     return;
+    // }
 }
 
 // redir overload
@@ -93,19 +114,19 @@ void Response::craftPageResponse(int code, std::string &location)
     ss << std::hex << html.length();
     std::string hexStr = ss.str();
     hexStr += "\r\n";
-    sendResponse(hexStr.c_str());
+    sendResponse(hexStr.c_str(), hexStr.size());
 
     std::cout << "++++++++sending body++++++++" << std::endl;
     std::cout << html << std::endl;
 
-    sendResponse(html.c_str());
+    sendResponse(html.c_str(), html.size());
 }
 
 // serving pages
 int Response::servePages(int code)
 {
 
-    std::cout << "---------------------Serving error" << code << " ------------" << std::endl;
+    std::cout << "---------------------Serving page " << code << " ------------" << std::endl;
 
     static int fd = -1;
     std::string errorPath = this->conf.getErrorPages(code);
@@ -115,7 +136,7 @@ int Response::servePages(int code)
         sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                      "Content-Type: text/plain\r\n"
                      "Content-Length: 21\r\n\r\n"
-                     "Internal Server Error");
+                     "Internal Server Error", 105);
         return 1;
     }
 
@@ -127,7 +148,7 @@ int Response::servePages(int code)
             sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
                          "Content-Type: text/plain\r\n"
                          "Content-Length: 21\r\n\r\n"
-                         "Internal Server Error");
+                         "Internal Server Error", 105);
             return 1;
         }
     }
@@ -138,7 +159,9 @@ int Response::servePages(int code)
         return 1;
 
     if (this->_phase == COMPLETE) {
-        sendResponse("0\r\n\r\n");
+       
+        std::cout << "outbuffer : " << client->outBuffer << std::endl;
+        std::cout << "writeOffset : " << client->writeOffset << std::endl;
         close(fd);
         this->status = 1;
         fd = -1;
@@ -217,11 +240,11 @@ void Response::sendHeader(int status_code, std::string &location)
     ss << "\r\n";
 
     // std::cout << ss.str() << std::endl;
-    sendResponse(ss.str().c_str());
+    sendResponse(ss.str().c_str(), ss.str().size());
 }
 
 
-void Response::sendChunkSize( size_t size )
+void Response::craftChunkSize( size_t size )
 {
     std::string hexStr;
     std::stringstream ss;
@@ -229,7 +252,7 @@ void Response::sendChunkSize( size_t size )
     ss << std::hex << size;
     hexStr = ss.str();
     hexStr += "\r\n";
-    sendResponse(hexStr.c_str());
+    client->outBuffer.append(hexStr);
 }
 
 //original
@@ -246,7 +269,7 @@ void Response::sendHeader(int status_code)
     ss << "\r\n";
 
     // std::cout << ss.str() << std::endl;
-    sendResponse(ss.str().c_str());
+    client->outBuffer += ss.str();
 }
 
 bool Response::isComplete(void) { return (this->status); }

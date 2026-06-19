@@ -4,7 +4,7 @@ void Response::sendingCgiResponse()
 {
     if (!this->headerFlag)
     {
-        sendResponse(head_resp.c_str());
+        sendResponse(head_resp.c_str(), head_resp.size());
         head_resp.clear();
         if (this->_phase != HEADERS)
             this->headerFlag = 1;
@@ -19,7 +19,7 @@ void Response::sendingCgiResponse()
         ss << std::hex << chunk_size;
         std::string hexStr = ss.str();
         hexStr += "\r\n";
-        sendResponse(hexStr.c_str());
+        sendResponse(hexStr.c_str(), hexStr.size());
         chunk_size = 0;
     }
 
@@ -28,7 +28,7 @@ void Response::sendingCgiResponse()
     
     if (this->_phase == BODY)
     {
-        sendResponse(resp.c_str());
+        sendResponse(resp.c_str(), resp.size());
     }
 
     if (error)
@@ -36,7 +36,7 @@ void Response::sendingCgiResponse()
 
     if (this->_phase == COMPLETE)
     {
-        sendResponse("0\r\n\r\n");
+        sendResponse("0\r\n\r\n", 5);
         this->status = 1;
         this->exec_status = 0;
     }

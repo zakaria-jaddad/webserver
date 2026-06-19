@@ -76,7 +76,6 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 			kill(childpid, SIGKILL);
 			waitpid(childpid, NULL, 0);
-			servePages(504);
 			return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
     }
 
@@ -86,7 +85,6 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 			if (res != HttpParser::HTTP_RES_OK)
 			{
-				servePages(500);
 				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 			}
 			return HttpParser::HTTP_RES_OK;
@@ -94,7 +92,6 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 		if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
 		{
-			servePages(500);
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		}
 		
@@ -102,7 +99,6 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 		if (error)
 		{
-			servePages(500);
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		}
 		
@@ -120,7 +116,7 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 			case HttpParser::POST:
 				return (httpPost());
 			default:
-				servePages(405);
+				return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
 		}
 	}
 
@@ -139,7 +135,6 @@ HttpParser::httpResult Response::checkMethod(void)
 	{
 		if (servePages(redir.first, redir.second))
 		{
-			servePages(500);
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		}
 		return HttpParser::HTTP_RES_OK;
@@ -151,7 +146,6 @@ HttpParser::httpResult Response::checkMethod(void)
 																						allowed_methods.end(), \
 																						methodToString(req_method)) == allowed_methods.end())
 	{
-		servePages(500);
 		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	}
 

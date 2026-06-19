@@ -89,7 +89,7 @@ HttpParser::httpResult Response::craftResponse(void)
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
 
-        buff[bytes] = 0;
+        // buff[bytes] = 0;
 
         val = buff;
 
@@ -111,7 +111,7 @@ HttpParser::httpResult Response::craftResponse(void)
                 return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
             }
 
-            buff[bytes] = 0;
+            // buff[bytes] = 0;
 
             val = buff;
         }
@@ -161,9 +161,9 @@ void printRaw(const std::string str)
     std::cout << std::endl;
 }
 
-int Response::sendResponse(const char *resp)
+ssize_t Response::sendResponse(const char *resp, size_t size)
 {
-    int bytes_sent = send(client->fd, resp, strlen(resp), 0);
+    ssize_t bytes_sent = send(client->fd, resp, size, 0);
     if (bytes_sent == -1) { // check later this function's errors should be taken into consideration
         printRaw(resp);
         struct stat sb;

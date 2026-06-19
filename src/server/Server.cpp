@@ -91,6 +91,7 @@ int Server::checkForServerFd(epoll_event *events, int i)
             client.response = NULL;
             client.connection_time = now;
             client.last_activity = now;
+            client.writeOffset = 0;
             clients.push_back(client);
             break;
         }
@@ -220,11 +221,16 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 // cleanup after an error/timeout
                 if (it->resp_res != HttpParser::HTTP_RES_OK) {
+                    std::cout << " serving error " << it->resp_res << std::endl;
+                    it->response->servePages(it->resp_res);
                     // std::cout << "cgi timed out" << std::endl;
-                    switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                    closeSocket(&(*it));
-                    it = clients.erase(clients.begin() + c);
-                    std::cout << "cleaned socket" << std::endl;
+                    if (it->response->isComplete())
+                    {
+                        switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                        closeSocket(&(*it));
+                        it = clients.erase(clients.begin() + c);
+                        std::cout << "cleaned socket" << std::endl;
+                    }
                     break;
                 }
 

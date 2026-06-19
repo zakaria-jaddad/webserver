@@ -32,6 +32,9 @@ struct t_client {
     time_t	last_activity;
 	time_t	connection_time;
 
+    ssize_t     writeOffset;
+    std::string outBuffer;
+
     ServerConfig *config;
     HttpParser::httpResult req_res;// check later should be changed and included in the request & resp objects themselves
     HttpParser::httpResult resp_res;

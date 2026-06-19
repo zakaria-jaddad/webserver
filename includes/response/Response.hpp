@@ -53,7 +53,7 @@ public:
 	void					normalizePath( void );
   	
 	std::string resolveFilePath( std::string& );
-	int	sendResponse(const char *resp);
+	ssize_t	sendResponse(const char *resp, size_t );
 //   int   createUploadFolder( std::string&, std::string& );
 
   //static methods
@@ -82,7 +82,7 @@ public:
   void		craftPageResponse( int, std::string& );
   void	sendHeader( int, std::string& );
 
-  void sendChunkSize( size_t );
+  void craftChunkSize( size_t );
   void serveDirectoryContent( std::string& );
 
 };
