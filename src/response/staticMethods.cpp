@@ -265,7 +265,7 @@ HttpParser::httpResult Response::httpGet(void)
         // return HttpParser::HTTP_RES_OK;
     }
 
-    r = read(this->fileFD, buff, READ_BYTES - 1);
+    r = read(this->fileFD, buff, READ_BYTES);
     if (r == -1) {
         close(this->fileFD);
         this->error = 1;
@@ -291,7 +291,7 @@ HttpParser::httpResult Response::httpGet(void)
     craftChunkSize(r);
     client->outBuffer.append(buff, r);
     client->outBuffer.append("\r\n", 2);
-    sendResponse(client->outBuffer.data() + client->writeOffset, 
+    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
                 client->outBuffer.size() - client->writeOffset);
     return HttpParser::HTTP_RES_OK;
 }

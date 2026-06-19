@@ -165,10 +165,10 @@ ssize_t Response::sendResponse(const char *resp, size_t size)
 {
     ssize_t bytes_sent = send(client->fd, resp, size, 0);
     if (bytes_sent == -1) { // check later this function's errors should be taken into consideration
-        printRaw(resp);
-        struct stat sb;
-        std::cerr << RED << strlen(resp) << client->fd << " " << fstat(client->fd, &sb)
-                  << std::endl;
+        // printRaw(resp);
+        // struct stat sb;
+        // std::cerr << RED << strlen(resp) << client->fd << " " << fstat(client->fd, &sb)
+        //           << std::endl;
         std::cerr << "failed to send" << std::endl;
         this->error = 1;
         return (-1);
