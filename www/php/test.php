@@ -8,9 +8,9 @@ echo "CGI test successful!\n";
 echo "PHP version: " . phpversion() . "\n";
 echo "Current time: " . date('Y-m-d H:i:s') . "\n";
 
-while(true)
-{
+// while(true)
+// {
     
-}
+// }
 
 ?>

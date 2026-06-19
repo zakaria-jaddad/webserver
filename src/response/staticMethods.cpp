@@ -174,28 +174,14 @@ void Response::serveDirectoryContent(std::string &absPath)
 
     sendHeader(200);
 
-    if (error)
-        return;
-
     craftChunkSize(html.length());
 
-    if (error)
-        return;
+    client->outBuffer.append(html);
+    client->outBuffer.append("\r\n", 2);
+    client->outBuffer.append("0\r\n\r\n", 5);
 
-    sendResponse(html.c_str(), html.size());
-
-    if (error)
-        return;
-
-    sendResponse("\r\n", 2);
-
-    if (error)
-        return;
-
-    sendResponse("0\r\n\r\n", 5);
-
-    if (error)
-        return;
+    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                        client->outBuffer.size() - client->writeOffset);
 }
 
 HttpParser::httpResult Response::httpGet(void)
