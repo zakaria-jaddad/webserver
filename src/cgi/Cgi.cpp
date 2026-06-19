@@ -38,10 +38,19 @@ void Cgi::executor(void)
             close(out_fds[0]);
             close(in_fds[1]);
     
+            // std::cout << "params passed to execve: " << std::endl;
+            // std::cout << "cgi path : " << cgiPath << std::endl;
+            // for (int i = 0; argv[i]; i++)
+            //     std::cout << "argv[" << i << "] : " << argv[i] << std::endl;
+            
+            // for (int i = 0; env[i]; i++)
+            //     std::cout << "env[" << i << "] : " << env[i] << std::endl;
+
             dup2(out_fds[1], STDOUT_FILENO);
             dup2(in_fds[0], STDIN_FILENO);
     
             execve(cgiPath.c_str(), const_cast<char *const *>(argv), env);
+            perror("execve");
         }
         else {
     
@@ -66,6 +75,7 @@ void Cgi::executor(void)
     }
 
     int status;
+    // std::cout << "waiting for child" << std::endl;
     child_status = waitpid(child, &status, WNOHANG);
 }
 

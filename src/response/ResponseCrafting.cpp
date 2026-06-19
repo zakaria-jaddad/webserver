@@ -89,7 +89,7 @@ HttpParser::httpResult Response::craftResponse(void)
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
 
-        // buff[bytes] = 0;
+        buff[bytes] = 0;
 
         val = buff;
 

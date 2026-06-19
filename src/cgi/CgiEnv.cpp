@@ -29,6 +29,7 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_NAME"] = "localhost";//TODO: change this value to the host requested by the client
     env["SERVER_PORT"] = conf->getPort();
+    std::cout << RED << "===========PORT" << conf->getPort() << "==========" << WHITE << std::endl;
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SERVER_SOFTWARE"] = "myserver/1.0";
     env["REMOTE_ADDR"] = "127.0.0.1"; // get from anas
@@ -59,10 +60,12 @@ char **Cgi::charEnvBuilder(std::map<std::string, std::string> env)
     int i = 0;
     for (; it != env.end(); it++) {
         std::string kv = it->first + "=" + it->second;
+        // std::cout << "env crafted : " << kv << std::endl; check port somehow not getting passed properly
         envp[i] = strdup(kv.c_str());
         i++;
     }
 
+    envp[i] = NULL;
     return envp;
 }
 
@@ -72,8 +75,7 @@ HttpParser::httpResult Cgi::envBuilder()
     std::vector<std::string> script_name = deriveScriptName(uriPath);
     std::string query = request->getRequestUriRawParams();
 
-    std::map<std::string, std::string> mapEnv =
-        mapEnvBuilder(header, script_name[0], script_name[1], query);
+    std::map<std::string, std::string> mapEnv = mapEnvBuilder(header, script_name[0], script_name[1], query);
 
     if (mapEnv.empty())
     {

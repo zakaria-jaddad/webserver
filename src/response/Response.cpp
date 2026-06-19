@@ -67,6 +67,7 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 
 	if (isCgi(uri, conf.getCgi()))
 	{
+		// std::cout << time(NULL) - start_time << std::endl;
 		if ((time(NULL) - start_time) > CGI_TIMEOUT)
 		{
 			this->timed_out = 1;
@@ -89,7 +90,8 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 			}
 			return HttpParser::HTTP_RES_OK;
 		}
-
+		
+		std::cout << "cgi executed!" << std::endl;
 		if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
 		{
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
@@ -127,8 +129,8 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 HttpParser::httpResult Response::checkMethod(void)
 {
 	// check if its needed 
-	// if (this->timed_out)
-	// 	return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
+	if (this->timed_out)
+		return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;//placeholder
 
 	std::pair<int, std::string> redir = conf.getRedir();
 	if (!redir.second.empty())
