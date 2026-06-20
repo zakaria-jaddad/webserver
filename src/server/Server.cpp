@@ -3,7 +3,9 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <string.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 
 Server::Server(std::string &path)
 {
@@ -18,20 +20,72 @@ void Server::setupServerFds()
 
     for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
          it != this->conf.servers.end(); it++) {
+
+        /*
+         * socket - create an endpoint for communication
+         * int socket(int domain, int type, int protocol);
+         *
+         * The socket has the indicated type, which specifies the communication semantics.
+         *
+         * - SOCK_STREAM
+         *   Provides sequenced, reliable, two-way, connection-based
+         *   byte streams.  An out-of-band data transmission mechanism
+         *   may be supported.
+         *
+         * The protocol specifies a particular protocol to be used with the
+         *   socket.  Normally only a single protocol exists to support a
+         *   particular socket type within a given protocol family, in which
+         *   case protocol can be specified as 0.
+         *   serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+         *
+         */
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+        // Structure describing an Internet socket address.
         sockaddr_in serverAddr;
 
+        /*
+         * AF_INET is an address family which defines what type of
+         * protocol is used
+         * struct in_addr sin_addr; // Internet address.
+         */
         serverAddr.sin_family = AF_INET;
+
+        /* in_port_t sin_port; // Port number.   */
         serverAddr.sin_port = htons(it->getPort());
+
+        /* unsigned char  sin_zero[8];  // Padding to match struct sockaddr size (16 bytes) */
+        memset(&serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
+
+        /* inet_pton - convert IPv4 and IPv6 addresses from text to binary form */
         if (inet_pton(AF_INET, it->getIP().c_str(), &serverAddr.sin_addr) != 1)
             std::cerr << "error inet_pton " << it->getIP() << std::endl;
+
+        /*
+         * setsockopt — set the socket options
+         *
+         * The level argument specifies the protocol level at which the option resides. To set
+         * options at the socket level, specify the level argument as SOL_SOCKET.
+         *
+         * SO_REUSEADDR  Reuse of local addresses is supported.
+         *
+         * optval: The configuration value for the socket option
+         * */
         if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
             std::cerr << "error setsockopt " << it->getIP() << std::endl;
+
+        /*
+         * When a socket is created with socket(2), it exists in a name space (address family) but
+         * has no address assigned to it.  bind() assigns the address specified by addr to the
+         * socket referred to by the file descriptor sockfd.
+         */
         if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1)
             std::cerr << "error binding " << it->getIP() << std::endl;
-        if (listen(serverSocket, 10) == -1) // TODO: update later to get it from conf
+
+        if (listen(serverSocket, SOMAXCONN) == -1)
             std::cerr << "on listen " << it->getIP() << std::endl;
-        // std::cout << "added socker fd : " << serverSocket << std::endl;
+
+        /* Add current Socket to the */
         this->vServers[serverSocket] = &(*it);
     }
 }
@@ -224,8 +278,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     std::cout << " serving error " << it->resp_res << std::endl;
                     it->response->servePages(it->resp_res, 1);
                     // std::cout << "cgi timed out" << std::endl;
-                    if (it->response->isComplete())
-                    {
+                    if (it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
                         it = clients.erase(clients.begin() + c);
@@ -249,6 +302,9 @@ int Server::checkForClientFd(epoll_event *events, int i)
     return (clientSocket);
 }
 
+/*
+ *
+ * */
 int Server::startServer()
 {
     setupServerFds();
@@ -256,6 +312,11 @@ int Server::startServer()
     int event_count;
 
     epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        std::cerr << "epoll_create1 Failed!" << std::endl;
+        return 1;
+    }
+
     epoll_event_t events[MAX_EVENTS];
 
     for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();

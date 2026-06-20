@@ -29,14 +29,15 @@ class Response;
 struct t_client {
     int fd;
 
-    time_t	last_activity;
-	time_t	connection_time;
+    time_t last_activity;
+    time_t connection_time;
 
-    ssize_t     writeOffset;
+    ssize_t writeOffset;
     std::string outBuffer;
 
     ServerConfig *config;
-    HttpParser::httpResult req_res;// check later should be changed and included in the request & resp objects themselves
+    HttpParser::httpResult req_res; // check later should be changed and included in the request &
+                                    // resp objects themselves
     HttpParser::httpResult resp_res;
     HttpParser *request;
     Response *response;
@@ -49,16 +50,19 @@ struct t_client {
     }
 };
 
+/*
+ * server class depends on 'config' class with the
+ * following getters: getListeningPairs() : get interface:port pairs on which the server will listen
+ * to.
+ */
 class Server {
-    /* server class depends on 'config' class with the following getters:
-            - getListeningPairs() //get interface:port pairs on which the server will listen to.
-                    (type of return : map of 'int key' (interface) and 'int value' (port) )
-    */
   private:
-    Config conf;
-    int epoll_fd;
+    Config conf;  // Config info
+    int epoll_fd; // fd referring to the new epoll instance
+
     // std::vector<int> serverFds;
     std::map<int, ServerConfig *> vServers;
+
     // std::vector<int> clientFds;
     // std::map<int, HttpParser *> clientFds;
     std::deque<t_client> clients;
@@ -74,7 +78,7 @@ class Server {
     void resetSocket(t_client *client);
     void closeSocket(t_client *client);
 
-    int checkClientTimeout( t_client* );
+    int checkClientTimeout(t_client *);
 
     // int setup_epoll(config &conf);
     void printInfo() const
