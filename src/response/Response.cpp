@@ -135,7 +135,7 @@ HttpParser::httpResult Response::checkMethod(void)
 	std::pair<int, std::string> redir = conf.getRedir();
 	if (!redir.second.empty())
 	{
-		if (servePages(redir.first, redir.second))
+		if (servePages(redir.first, redir.second, 0))
 		{
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		}

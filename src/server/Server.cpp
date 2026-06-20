@@ -163,7 +163,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
             // for request timeout
             if (isTimeout == 2) {
                 it->response = new Response(&(*it));
-                it->response->servePages(408);
+                it->response->servePages(408, 1);
                 std::cout << "request timed out!!\n";
             }
 
@@ -205,7 +205,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 if (it->req_res != HttpParser::HTTP_RES_OK) {
                     std::cout << "req_res : " << it->req_res << std::endl;
-                    it->response->servePages(it->req_res);
+                    it->response->servePages(it->req_res, 1);
                     if (it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
@@ -222,7 +222,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 // cleanup after an error/timeout
                 if (it->resp_res != HttpParser::HTTP_RES_OK) {
                     std::cout << " serving error " << it->resp_res << std::endl;
-                    it->response->servePages(it->resp_res);
+                    it->response->servePages(it->resp_res, 1);
                     // std::cout << "cgi timed out" << std::endl;
                     if (it->response->isComplete())
                     {
@@ -285,7 +285,7 @@ int Server::startServer()
                     // for request timeout
                     if (isTimeout == 2) {
                         it->response = new Response(&(*it));
-                        it->response->servePages(408);
+                        it->response->servePages(408, 1);
                         std::cout << "request timed out!!\n";
                     }
 

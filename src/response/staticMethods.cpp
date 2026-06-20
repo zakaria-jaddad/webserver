@@ -88,7 +88,7 @@ HttpParser::httpResult Response::httpPost()
     // write(fd, fake_body.c_str(), fake_body.length());
     // std::cout << "created!!" << std::endl;
     //
-    servePages(200);
+    servePages(200, 0);
     // Edited by Zakaria
 
     return HttpParser::HTTP_RES_OK;
@@ -108,7 +108,7 @@ HttpParser::httpResult Response::httpDelete(void)
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
-    servePages(200); // check later to change it to 204
+    servePages(200, 0); // check later to change it to 204
     return HttpParser::HTTP_RES_OK;
 }
 
@@ -173,7 +173,7 @@ void Response::serveDirectoryContent(std::string &absPath)
 
     std::string html = generateDirectoryListingHTML(absPath, this->normalizedPath, entries);
 
-    sendHeader(200, "text/html", "", true);
+    sendHeader(200, "text/html", "", true, 0);
 
     craftChunkSize(html.length());
 
@@ -275,7 +275,7 @@ HttpParser::httpResult Response::httpGet(void)
     MIME mime;
     std::string m = mime.getMIME(ext);
     if (!this->headerFlag) {
-        sendHeader(200, m, "", true);
+        sendHeader(200, m, "", true, 0);
         this->headerFlag = 1;
         // return HttpParser::HTTP_RES_OK;
     }

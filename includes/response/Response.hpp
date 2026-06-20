@@ -71,7 +71,7 @@ public:
 	HttpParser::httpResult	httpPost( void );
 
 	std::string chooseIndex( std::string& );
-  void	sendHeader( int, std::string, std::string, bool );
+  void	sendHeader( int, std::string, std::string, bool, bool );
   bool	isComplete( void );
   bool	isError( void );
   
@@ -83,12 +83,12 @@ public:
   HttpParser::httpResult	cgiExecution();
   void		sendingCgiResponse();
   
-  int 		servePages( int );
+  int 		servePages( int, bool );
   std::string getStatusMessage( int );
-  void		craftPageResponse( int, int );
+  void		craftPageResponse( int, int, bool );
   
-  int 		servePages( int, std::string& );
-  void		craftPageResponse( int, std::string& );
+  int 		servePages( int, std::string&, bool );
+  void		craftPageResponse( int, std::string&, bool );
 
   void craftChunkSize( size_t );
   void serveDirectoryContent( std::string& );
