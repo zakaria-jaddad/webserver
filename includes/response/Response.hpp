@@ -13,6 +13,15 @@
 class Cgi;
 struct t_client;
 
+//mime
+struct MIME {
+public:
+	MIME();
+	std::string getMIME(std::string extension);
+	std::map<std::string, std::string> _mime;
+};
+
+
 class Response{
 
 	typedef enum {
@@ -62,7 +71,7 @@ public:
 	HttpParser::httpResult	httpPost( void );
 
 	std::string chooseIndex( std::string& );
-  void	sendHeader( int );
+  void	sendHeader( int, std::string, std::string, bool );
   bool	isComplete( void );
   bool	isError( void );
   
@@ -80,7 +89,6 @@ public:
   
   int 		servePages( int, std::string& );
   void		craftPageResponse( int, std::string& );
-  void	sendHeader( int, std::string& );
 
   void craftChunkSize( size_t );
   void serveDirectoryContent( std::string& );

@@ -33,8 +33,10 @@ void Response::craftPageResponse(int code, int fd)
         return;
     }
 
+    MIME mime;
+
     if (!this->headerFlag) {
-        sendHeader(code);
+        sendHeader(code, mime.getMIME(".html"), "", true);
         this->headerFlag = 1;
     }
 
@@ -106,7 +108,7 @@ void Response::craftPageResponse(int code, std::string &location)
                        "</html>\n";
 
     if (!this->headerFlag) {
-        sendHeader(code, location);
+        sendHeader(code, "", location, true);
         this->headerFlag = 1;
     }
 
@@ -227,21 +229,6 @@ void Response::normalizePath(void)
 
 // send header
 // redir overload
-void Response::sendHeader(int status_code, std::string &location)
-{
-    // std::cout << "++++++++sending header++++++++" << std::endl;
-
-    std::stringstream ss;
-
-    ss << "HTTP/1.1 " << status_code << " " << getStatusMessage(status_code) << "\r\n";
-
-    ss << "Transfer-Encoding: chunked\r\n";
-    ss << "Location: " << location << "\r\n";
-    ss << "\r\n";
-
-    // std::cout << ss.str() << std::endl;
-    sendResponse(ss.str().c_str(), ss.str().size());
-}
 
 
 void Response::craftChunkSize( size_t size )
@@ -256,16 +243,22 @@ void Response::craftChunkSize( size_t size )
 }
 
 //original
-void Response::sendHeader(int status_code)
+void Response::sendHeader(int status_code, std::string content_type, std::string location, bool use_chunked)
 {
     // std::cout << "++++++++sending header++++++++" << std::endl;
 
     std::stringstream ss;
 
+
     ss << "HTTP/1.1 " << status_code << " " << getStatusMessage(status_code) << "\r\n";
 
-    ss << "Content-Type: text/html\r\n";
-    ss << "Transfer-Encoding: chunked\r\n";
+    if (!content_type.empty())
+      ss << "Content-Type: " << content_type << "\r\n";
+    if (!location.empty())
+      ss << "Location: " << location << "\r\n";
+    if (use_chunked)
+      ss << "Transfer-Encoding: chunked\r\n";
+    
     ss << "\r\n";
 
     // std::cout << ss.str() << std::endl;

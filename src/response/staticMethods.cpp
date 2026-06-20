@@ -6,6 +6,7 @@
 
 std::string Response::resolveFilePath(std::string &upload_store)
 {
+  //check to remove later
     std::string uri = this->normalizedPath;
     std::string relative_path = uri;
     std::string location_prefix = conf.getLocPath();
@@ -172,7 +173,7 @@ void Response::serveDirectoryContent(std::string &absPath)
 
     std::string html = generateDirectoryListingHTML(absPath, this->normalizedPath, entries);
 
-    sendHeader(200);
+    sendHeader(200, "text/html", "", true);
 
     craftChunkSize(html.length());
 
@@ -184,12 +185,37 @@ void Response::serveDirectoryContent(std::string &absPath)
                                         client->outBuffer.size() - client->writeOffset);
 }
 
+std::string getExtension( std::string &path )
+{
+  // remove query string if any
+  size_t qpos = path.find('?');
+  std::string cleanPath = (qpos == std::string::npos)
+    ? path
+    : path.substr(0, qpos);
+
+  // find last '/'
+  size_t slash = cleanPath.find_last_of('/');
+  std::string filename = (slash == std::string::npos)
+    ? cleanPath
+    : cleanPath.substr(slash + 1);
+
+  // find last '.'
+  size_t dot = filename.find_last_of('.');
+
+  // no dot or dot is first char (hidden file like .env)
+  if (dot == std::string::npos || dot == 0)
+    return "";
+
+  return filename.substr(dot);
+}
+
 HttpParser::httpResult Response::httpGet(void)
 {
     char buff[READ_BYTES] = {0};
     ssize_t r = 0;
     int fd;
-
+    std::string ext;
+  
 
     // std::cout << "write offset : " << client->writeOffset << std::endl;
     // std::cout << "outbuffer : " << client->outBuffer << std::endl;
@@ -205,8 +231,6 @@ HttpParser::httpResult Response::httpGet(void)
         std::string absPath = this->conf.getRoot();
         normalizePath();
         absPath += this->normalizedPath;
-
-        std::cout << "path requested : " << absPath << std::endl;
 
         struct stat info;
 
@@ -234,6 +258,9 @@ HttpParser::httpResult Response::httpGet(void)
                 absPath += index_to_serve;
         }
 
+        ext = getExtension(absPath);
+        std::cout << "path requested : " << absPath << " extension to serve : " << ext << std::endl;
+
         if (access(absPath.c_str(), R_OK)) {
             return HttpParser::HTTP_RES_NOT_FOUND;
         }
@@ -245,8 +272,10 @@ HttpParser::httpResult Response::httpGet(void)
         this->fileFD = fd;
     }
 
+    MIME mime;
+    std::string m = mime.getMIME(ext);
     if (!this->headerFlag) {
-        sendHeader(200);
+        sendHeader(200, m, "", true);
         this->headerFlag = 1;
         // return HttpParser::HTTP_RES_OK;
     }

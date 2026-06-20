@@ -808,10 +808,10 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
         size_t contentLengthValue = std::atol(contentLength[0].c_str());
 
         this->_type = CONTENT_LENGTH;
-        if (contentLengthValue < 0) {
+        /*if (contentLengthValue < 0) {
             return HTTP_RES_LENGTH_REQUIRED;
-        }
-        else if (contentLengthValue == 0) {
+        }*/
+        if (contentLengthValue == 0) {
 
             this->_state = BODY_COMPLETE; /* Since Body is 0 Nothing to read */
             this->_contentLength = 0;
