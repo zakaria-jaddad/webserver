@@ -201,7 +201,7 @@ class HttpParser {
     /* ---- GETTERS ----*/
     requestType getRequestType() const;
     const int *getRequestVersion() const;
-    std::map<std::string, std::vector<std::string> > getHeaders() const;
+    const std::map<std::string, std::vector<std::string> > &getHeaders() const;
     httpResult getRes() const;
 
     std::string getRequestUriPath() const;
@@ -211,6 +211,7 @@ class HttpParser {
     ServerConfig *getServerConfig() const;
     const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
     std::string getPendingData() const;
+    const std::map<std::string, std::string> getCookies() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);

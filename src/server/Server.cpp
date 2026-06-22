@@ -252,8 +252,15 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 it->req_res = r;
 
-                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
+                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK) {
+                    std::map<std::string, std::string> cookies = it->request->getCookies();
+                    for (std::map<std::string, std::string>::const_iterator hello = cookies.begin();
+                         hello != cookies.end(); hello++) {
+                        std::cout << "{" << "'" << hello->first << "'" << " " << "'"
+                                  << hello->second << "'" << "}" << std::endl;
+                    }
                     switchEpollMode(clientSocket, EPOLLOUT);
+                }
             }
             else if (events[i].events == EPOLLOUT) {
                 // we can write to socket
