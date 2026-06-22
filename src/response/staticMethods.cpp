@@ -181,8 +181,12 @@ void Response::serveDirectoryContent(std::string &absPath)
     client->outBuffer.append("\r\n", 2);
     client->outBuffer.append("0\r\n\r\n", 5);
 
-    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                                        client->outBuffer.size() - client->writeOffset);
+    ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                client->outBuffer.size() - client->writeOffset);
+    if (sent == -2)
+        return;
+    else if (sent > 0)
+        client->writeOffset += sent;
 }
 
 std::string getExtension( std::string &path )

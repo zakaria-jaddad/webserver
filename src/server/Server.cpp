@@ -162,8 +162,10 @@ int Server::checkForClientFd(epoll_event *events, int i)
         if (isTimeout) {
             // for request timeout
             if (isTimeout == 2) {
-                it->response = new Response(&(*it));
-                it->response->servePages(408, 1);
+                if (!it->response)
+                    it->response = new Response(&(*it));
+                if (it->response->servePages(408, 1))
+                    std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
                 std::cout << "request timed out!!\n";
             }
 
@@ -205,8 +207,10 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 if (it->req_res != HttpParser::HTTP_RES_OK) {
                     std::cout << "req_res : " << it->req_res << std::endl;
-                    it->response->servePages(it->req_res, 1);
-                    if (it->response->isComplete()) {
+                    int serv_res = it->response->servePages(it->req_res, 1);
+                    if (serv_res)
+                        std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
+                    if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
                         it = clients.erase(clients.begin() + c);
@@ -222,9 +226,11 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 // cleanup after an error/timeout
                 if (it->resp_res != HttpParser::HTTP_RES_OK) {
                     std::cout << " serving error " << it->resp_res << std::endl;
-                    it->response->servePages(it->resp_res, 1);
+                    int serv_res = it->response->servePages(it->resp_res, 1);
+                    if (serv_res)
+                        std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
                     // std::cout << "cgi timed out" << std::endl;
-                    if (it->response->isComplete())
+                    if (serv_res || it->response->isComplete())
                     {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));

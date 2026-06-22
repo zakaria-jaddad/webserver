@@ -97,9 +97,13 @@ void Response::craftPageResponse(int code, int fd, bool to_close)
 
     if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
     {
-        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                                            client->outBuffer.size() - client->writeOffset);
+      ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                   client->outBuffer.size() - client->writeOffset);
+      if (sent == -2)
         return;
+      else if (sent > 0)
+        client->writeOffset += sent;
+      return;
     }
 
     MIME mime;
@@ -114,8 +118,12 @@ void Response::craftPageResponse(int code, int fd, bool to_close)
     if (bytes == 0)
     {
         client->outBuffer += "0\r\n\r\n";
-        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset,
-                                            client->outBuffer.size() - client->writeOffset);
+        ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                    client->outBuffer.size() - client->writeOffset);
+        if (sent == -2)
+          return;
+        else if (sent > 0)
+          client->writeOffset += sent;
         // std::cout << "Done reading" << std::endl ;
         if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size())
         {
@@ -151,16 +159,18 @@ void Response::craftPageResponse(int code, int fd, bool to_close)
 
     client->outBuffer.append(buff, bytes);
     client->outBuffer += "\r\n";
-    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                                        client->outBuffer.size() - client->writeOffset);
+    ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                client->outBuffer.size() - client->writeOffset);
+    if (sent == -2)
+      return;
+    else if (sent > 0)
+      client->writeOffset += sent;
+    else
+      return;
+
 
     std::cout << "outbuffer : " << client->outBuffer << std::endl;
     std::cout << "writeOffset : " << client->writeOffset << " outbuffer size : " << client->outBuffer.size() << std::endl;
-    // if (bytes < READ_BYTES - 1)
-    // {
-    //     this->_phase = COMPLETE;
-    //     return;
-    // }
 }
 
 // redir overload
