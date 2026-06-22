@@ -71,7 +71,7 @@ HttpParser::httpResult Response::craftResponse(void)
 {
     std::cout << "--------------start of crafting response----------------" << std::endl;
 
-    char buff[10];
+    char buff[READ_BYTES];
     std::string val;
 
     while (this->_phase == HEADERS && !this->error) {
