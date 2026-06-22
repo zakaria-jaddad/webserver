@@ -123,18 +123,8 @@ int Server::checkClientTimeout(t_client *client)
     time_t now = time(NULL);
     time_t idle_time = now - client->last_activity;
 
-    // std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
-    // std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
-
-    if (client->request && !client->request->isComplete() &&
-        idle_time > REQUEST_TIMEOUT) // check if i should just not implement the request timeout
+    if (!client->response && idle_time > IDLE_TIMEOUT)
     {
-        std::cout << "Request status: " << client->request->isComplete() << " and timed out\n";
-        return 2;
-    }
-
-    if (client->request && client->request->isComplete() && !client->response &&
-        idle_time > IDLE_TIMEOUT) {
         std::cout << "Request status: " << client->request->isComplete() << " and idle timeout\n";
         return 1;
     }
@@ -160,15 +150,6 @@ int Server::checkForClientFd(epoll_event *events, int i)
         // Request timeout/client idling too long
         int isTimeout = checkClientTimeout(&(*it));
         if (isTimeout) {
-            // for request timeout
-            if (isTimeout == 2) {
-                if (!it->response)
-                    it->response = new Response(&(*it));
-                if (it->response->servePages(408, 1))
-                    std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
-                std::cout << "request timed out!!\n";
-            }
-
             // general cleanup (either idle or request timeout)
             std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
@@ -287,14 +268,6 @@ int Server::startServer()
                 // check possibility to keep this and remove the above timeout check
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
-
-                    // for request timeout
-                    if (isTimeout == 2) {
-                        it->response = new Response(&(*it));
-                        it->response->servePages(408, 1);
-                        std::cout << "request timed out!!\n";
-                    }
-
                     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
                     std::cout << "done sending timeout resetting socket..." << std::endl;
                     switchEpollMode(it->fd, EPOLL_CTL_DEL);

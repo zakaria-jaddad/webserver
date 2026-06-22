@@ -61,7 +61,6 @@ public:
 	
 	void					normalizePath( void );
   	
-	std::string resolveFilePath( std::string& );
 	ssize_t	sendResponse(const char *resp, size_t );
 //   int   createUploadFolder( std::string&, std::string& );
 
