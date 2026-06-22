@@ -19,7 +19,7 @@
 #include <vector>
 
 typedef struct epoll_event epoll_event_t;
-#define MAX_EVENTS 100
+#define MAX_EVENTS 1024
 #define REQUEST_TIMEOUT 30
 #define IDLE_TIMEOUT 60
 #define READ_BYTES 2048
@@ -60,7 +60,6 @@ class Server {
     Config conf;  // Config info
     int epoll_fd; // fd referring to the new epoll instance
 
-    // std::vector<int> serverFds;
     std::map<int, ServerConfig *> vServers;
 
     // std::vector<int> clientFds;

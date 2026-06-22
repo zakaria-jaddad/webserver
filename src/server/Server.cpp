@@ -90,31 +90,34 @@ void Server::setupServerFds()
     }
 }
 
+/*
+ * Add fd to epoll list of interest using EPOLL_CTL_ADD with flag meaning that we
+ * are interested in read operation or write
+ */
 int Server::addToEpoll(int fd, uint32_t flag)
 {
-    // This method is to add fd to epoll list of interest
-    //  with flag meaning that we are interested in read operation or write ...
     epoll_event_t event;
 
     event.events = flag;
     event.data.fd = fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
-        std::cerr << "epoll_ctl Failed!" << std::endl;
-        return (1);
+        std::cerr << "epoll_ctl() Failed!" << std::endl;
+        return (EXIT_FAILURE);
     }
-    return (0);
+    return (EXIT_SUCCESS);
 }
 
+/*
+ * Switch epoll mode (read or write)
+ */
 int Server::switchEpollMode(int clientSocket, uint32_t flag)
 {
-    // This method is to switch epoll mode (read or write)
     epoll_event_t event;
 
     event.events = flag;
     event.data.fd = clientSocket;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, clientSocket, &event) == -1) {
-        perror("ctl failed");
-        std::cerr << "epoll_ctl Failed!" << std::endl;
+        std::cerr << "epoll_ctl() Failed!" << std::endl;
         return (1);
     }
     return (0);
@@ -313,7 +316,7 @@ int Server::startServer()
 
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
-        std::cerr << "epoll_create1 Failed!" << std::endl;
+        std::cerr << "epoll_create1() Failed!" << std::endl;
         return 1;
     }
 
@@ -321,8 +324,9 @@ int Server::startServer()
 
     for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
-        if (addToEpoll(it->first, EPOLLIN))
-            return (1);
+        if (addToEpoll(it->first, EPOLLIN)) {
+            return EXIT_FAILURE;
+        }
     }
 
     while (1) {
@@ -337,9 +341,6 @@ int Server::startServer()
             int c = 0;
             for (std::deque<t_client>::iterator it = this->clients.begin();
                  it != this->clients.end(); c++) {
-                // std::cout << "looping thru clients" << std::endl;
-
-                // check possibility to keep this and remove the above timeout check
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
 
