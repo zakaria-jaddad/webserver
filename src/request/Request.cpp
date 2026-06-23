@@ -773,6 +773,7 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
 {
 
     std::string uploadPath = this->conf->getUploadPath();
+    std::cout << RED << "Upload path : " << uploadPath << WHITE << std::endl;
 
     if (uploadPath.empty()) {
         return HTTP_RES_METHOD_NOT_ALLOWED;

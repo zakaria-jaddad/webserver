@@ -180,18 +180,8 @@ int Server::checkClientTimeout(t_client *client)
     time_t now = time(NULL);
     time_t idle_time = now - client->last_activity;
 
-    // std::cout << "[" << idle_time << "]" << "idle value for fd=" << client->fd << std::endl;
-    // std::cout << "[" << now << "]" << "checking timeout..." << std::endl;
-
-    if (client->request && !client->request->isComplete() &&
-        idle_time > REQUEST_TIMEOUT) // check if i should just not implement the request timeout
+    if (!client->response && idle_time > IDLE_TIMEOUT)
     {
-        std::cout << "Request status: " << client->request->isComplete() << " and timed out\n";
-        return 2;
-    }
-
-    if (client->request && client->request->isComplete() && !client->response &&
-        idle_time > IDLE_TIMEOUT) {
         std::cout << "Request status: " << client->request->isComplete() << " and idle timeout\n";
         return 1;
     }
@@ -217,13 +207,6 @@ int Server::checkForClientFd(epoll_event *events, int i)
         // Request timeout/client idling too long
         int isTimeout = checkClientTimeout(&(*it));
         if (isTimeout) {
-            // for request timeout
-            if (isTimeout == 2) {
-                it->response = new Response(&(*it));
-                it->response->servePages(408, 1);
-                std::cout << "request timed out!!\n";
-            }
-
             // general cleanup (either idle or request timeout)
             std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
@@ -269,8 +252,10 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 if (it->req_res != HttpParser::HTTP_RES_OK) {
                     std::cout << "req_res : " << it->req_res << std::endl;
-                    it->response->servePages(it->req_res, 1);
-                    if (it->response->isComplete()) {
+                    int serv_res = it->response->servePages(it->req_res, 1);
+                    if (serv_res)
+                        std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
+                    if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
                         it = clients.erase(clients.begin() + c);
@@ -286,9 +271,12 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 // cleanup after an error/timeout
                 if (it->resp_res != HttpParser::HTTP_RES_OK) {
                     std::cout << " serving error " << it->resp_res << std::endl;
-                    it->response->servePages(it->resp_res, 1);
+                    int serv_res = it->response->servePages(it->resp_res, 1);
+                    if (serv_res)
+                        std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
                     // std::cout << "cgi timed out" << std::endl;
-                    if (it->response->isComplete()) {
+                    if (serv_res || it->response->isComplete())
+                    {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
                         it = clients.erase(clients.begin() + c);
@@ -350,14 +338,6 @@ int Server::startServer()
                  it != this->clients.end(); c++) {
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
-
-                    // for request timeout
-                    if (isTimeout == 2) {
-                        it->response = new Response(&(*it));
-                        it->response->servePages(408, 1);
-                        std::cout << "request timed out!!\n";
-                    }
-
                     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
                     std::cout << "done sending timeout resetting socket..." << std::endl;
                     switchEpollMode(it->fd, EPOLL_CTL_DEL);

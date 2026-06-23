@@ -129,14 +129,16 @@ HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method
 HttpParser::httpResult Response::checkMethod(void)
 {
 	// check if its needed 
-	if (this->timed_out)
-		return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;//placeholder
+	// if (this->timed_out)
+	// 	return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;//placeholder
 
 	std::pair<int, std::string> redir = conf.getRedir();
 	if (!redir.second.empty())
 	{
+		std::cout << YELLOW << "Redirecting : " << redir.first << " ==== " << redir.second << WHITE << std::endl;
 		if (servePages(redir.first, redir.second, 0))
 		{
+			std::cout << RED << "Error Redirecting" << WHITE << std::endl;
 			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 		}
 		return HttpParser::HTTP_RES_OK;
@@ -145,8 +147,8 @@ HttpParser::httpResult Response::checkMethod(void)
 	std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
 
 	if (!allowed_methods.empty() && std::find(allowed_methods.begin(), \
-																						allowed_methods.end(), \
-																						methodToString(req_method)) == allowed_methods.end())
+											  allowed_methods.end(), \
+											  methodToString(req_method)) == allowed_methods.end())
 	{
 		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 	}

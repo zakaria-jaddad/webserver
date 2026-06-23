@@ -61,6 +61,6 @@ HttpParser::httpResult Response::cgiExecution()
         this->exec_status = 1;
         std::cout << "finished executing" << std::endl;
     }
-        
+
     return HttpParser::HTTP_RES_OK;
 }

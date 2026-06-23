@@ -97,9 +97,13 @@ void Response::craftPageResponse(int code, int fd, bool to_close)
 
     if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
     {
-        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                                            client->outBuffer.size() - client->writeOffset);
+      ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                   client->outBuffer.size() - client->writeOffset);
+      if (sent == -2)
         return;
+      else if (sent > 0)
+        client->writeOffset += sent;
+      return;
     }
 
     MIME mime;
@@ -114,8 +118,12 @@ void Response::craftPageResponse(int code, int fd, bool to_close)
     if (bytes == 0)
     {
         client->outBuffer += "0\r\n\r\n";
-        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset,
-                                            client->outBuffer.size() - client->writeOffset);
+        ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                    client->outBuffer.size() - client->writeOffset);
+        if (sent == -2)
+          return;
+        else if (sent > 0)
+          client->writeOffset += sent;
         // std::cout << "Done reading" << std::endl ;
         if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size())
         {
@@ -151,47 +159,51 @@ void Response::craftPageResponse(int code, int fd, bool to_close)
 
     client->outBuffer.append(buff, bytes);
     client->outBuffer += "\r\n";
-    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                                        client->outBuffer.size() - client->writeOffset);
+    ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                client->outBuffer.size() - client->writeOffset);
+    if (sent == -2)
+      return;
+    else if (sent > 0)
+      client->writeOffset += sent;
+    else
+      return;
+
 
     std::cout << "outbuffer : " << client->outBuffer << std::endl;
     std::cout << "writeOffset : " << client->writeOffset << " outbuffer size : " << client->outBuffer.size() << std::endl;
-    // if (bytes < READ_BYTES - 1)
-    // {
-    //     this->_phase = COMPLETE;
-    //     return;
-    // }
 }
 
 // redir overload
 void Response::craftPageResponse(int code, std::string &location, bool to_close)
 {
-    std::string html = "<!DOCTYPE html>\n"
-                       "<html>\n"
-                       "<head><title>Moved</title></head>\n"
-                       "<body>\n"
-                       "<h1>Page moved</h1>\n"
-                       "<p><a href=\"" +
-                       location +
-                       "\">Click here to go to the new page</a></p>\n"
-                       "</body>\n"
-                       "</html>\n";
+  std::string html = "<!DOCTYPE html>\n"
+                      "<html>\n"
+                      "<head><title>Moved</title></head>\n"
+                      "<body>\n"
+                      "<h1>Page moved</h1>\n"
+                      "<p><a href=\"" +
+                      location +
+                      "\">Click here to go to the new page</a></p>\n"
+                      "</body>\n"
+                      "</html>\n";
 
-    if (!this->headerFlag) {
-        sendHeader(code, "", location, true, to_close);
-        this->headerFlag = 1;
-    }
+  if (!this->headerFlag) {
+      sendHeader(code, "", location, true, to_close);
+      this->headerFlag = 1;
+  }
 
-    std::stringstream ss;
-    ss << std::hex << html.length();
-    std::string hexStr = ss.str();
-    hexStr += "\r\n";
-    sendResponse(hexStr.c_str(), hexStr.size());
+  std::stringstream ss;
+  ss << std::hex << html.length();
+  std::string hexStr = ss.str();
+  hexStr += "\r\n";
+  client->outBuffer.append(hexStr);
 
-    std::cout << "++++++++sending body++++++++" << std::endl;
-    std::cout << html << std::endl;
+  // std::cout << "++++++++sending body++++++++" << std::endl;
+  // std::cout << html << std::endl;
 
-    sendResponse(html.c_str(), html.size());
+  client->outBuffer.append(html);
+  client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
+                                      client->outBuffer.size() - client->writeOffset);
 }
 
 // serving pages
