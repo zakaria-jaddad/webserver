@@ -1,4 +1,5 @@
 #include "../../includes/server/Server.hpp"
+#include <cstddef>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -180,8 +181,7 @@ int Server::checkClientTimeout(t_client *client)
     time_t now = time(NULL);
     time_t idle_time = now - client->last_activity;
 
-    if (!client->response && idle_time > IDLE_TIMEOUT)
-    {
+    if (!client->response && idle_time > IDLE_TIMEOUT) {
         std::cout << "Request status: " << client->request->isComplete() << " and idle timeout\n";
         return 1;
     }
@@ -236,11 +236,24 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 it->req_res = r;
 
                 if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK) {
-                    std::map<std::string, std::string> cookies = it->request->getCookies();
-                    for (std::map<std::string, std::string>::const_iterator hello = cookies.begin();
-                         hello != cookies.end(); hello++) {
-                        std::cout << "{" << "'" << hello->first << "'" << " " << "'"
-                                  << hello->second << "'" << "}" << std::endl;
+
+                    const std::map<std::string, std::vector<HttpParser::FilePart> > &foo =
+                        it->request->getBodyFormFields();
+                    for (std::map<std::string, std::vector<HttpParser::FilePart> >::const_iterator
+                             bar = foo.begin();
+                         bar != foo.end(); bar++) {
+                        if (bar->second[0].filename.empty() == true) {
+
+                            for (size_t alo = 0; alo < bar->second.size(); alo++) {
+                                HttpParser::printRaw(bar->second[alo].buffer);
+                                // std::cout << "{  '" << bar->first << "' '"
+                                //           << bar->second[alo].buffer << "' }" << std::endl;
+                            }
+                        }
+                        else {
+                            std::cout << "{  '" << bar->first << "' '" << bar->second[0].filename
+                                      << "' }" << std::endl;
+                        }
                     }
                     switchEpollMode(clientSocket, EPOLLOUT);
                 }
@@ -254,7 +267,8 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     std::cout << "req_res : " << it->req_res << std::endl;
                     int serv_res = it->response->servePages(it->req_res, 1);
                     if (serv_res)
-                        std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
+                        std::cout << RED << "Connection Error, closing connection ..." << WHITE
+                                  << std::endl;
                     if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
@@ -273,10 +287,10 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     std::cout << " serving error " << it->resp_res << std::endl;
                     int serv_res = it->response->servePages(it->resp_res, 1);
                     if (serv_res)
-                        std::cout << RED << "Connection Error, closing connection ..." << WHITE << std::endl;
+                        std::cout << RED << "Connection Error, closing connection ..." << WHITE
+                                  << std::endl;
                     // std::cout << "cgi timed out" << std::endl;
-                    if (serv_res || it->response->isComplete())
-                    {
+                    if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
                         it = clients.erase(clients.begin() + c);

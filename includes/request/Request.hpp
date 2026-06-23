@@ -211,7 +211,6 @@ class HttpParser {
     ServerConfig *getServerConfig() const;
     const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
     std::string getPendingData() const;
-    const std::map<std::string, std::string> getCookies() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);

@@ -71,35 +71,6 @@ const std::map<std::string, std::vector<std::string> > &HttpParser::getHeaders()
     return this->_headers;
 }
 
-const std::map<std::string, std::string> HttpParser::getCookies() const
-{
-    std::map<std::string, std::vector<std::string> > headers = this->_headers;
-
-    std::map<std::string, std::string> cookies;
-
-    if (headers["Cookie"].empty() == true) {
-        // return empty map
-        return cookies;
-    }
-    std::string cookiesHeaderValue = headers["Cookie"][0];
-
-    std::vector<std::string> splitCookies = this->_getTokens(cookiesHeaderValue, ";");
-
-    for (size_t i = 0; i < splitCookies.size(); i++) {
-        std::vector<std::string> keyValueCookie = this->_getTokens(splitCookies[i], "=");
-        if (keyValueCookie.size() > 0) {
-            keyValueCookie[0] = trim(keyValueCookie[0]);
-            cookies[keyValueCookie[0]] = "";
-        }
-        if (keyValueCookie.size() == 2) {
-
-            keyValueCookie[1] = trim(keyValueCookie[1]);
-            cookies[keyValueCookie[0]] = keyValueCookie[1];
-        }
-    }
-    return cookies;
-}
-
 HttpParser::httpResult HttpParser::getRes() const { return this->_res; }
 
 std::string HttpParser::getRequestUriPath() const { return this->_requestURI.getPath(); }
