@@ -42,8 +42,8 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     env["SERVER_SOFTWARE"] = "webserv/1.0";
     env["REMOTE_ADDR"] = "127.0.0.1"; //check get from anas
 
-    // bs needed to run on terminal
-    // env["REDIRECT_STATUS"] = "200";
+    // bs needed so php-cgi runs
+    env["REDIRECT_STATUS"] = "200";
 
     // php specific variables
     std::string script_filename = conf->getRoot() + script_name;
