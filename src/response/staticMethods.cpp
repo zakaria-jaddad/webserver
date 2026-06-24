@@ -76,7 +76,7 @@ std::string Response::chooseIndex(std::string &path)
     return "";
 }
 
-std::string generateDirectoryListingHTML(const std::string &path, const std::string &requestPath,
+std::string Response::generateDirectoryListingHTML(const std::string &path, const std::string &requestPath,
                                          std::vector<std::string> entries)
 {
     std::ostringstream html;
@@ -94,7 +94,10 @@ std::string generateDirectoryListingHTML(const std::string &path, const std::str
         struct stat statbuf;
 
         if (stat(fullPath.c_str(), &statbuf) == 0) {
-            html << "<li><a href=\"" << *dir_it;
+            // forging the html for the folder entries
+            std::string href = requestPath + "/" + *dir_it;
+            href = normalizePath(href);
+            html << "<li><a href=\"" << href;
             if (S_ISDIR(statbuf.st_mode)) {
                 html << "/";
             }
@@ -188,6 +191,7 @@ HttpParser::httpResult Response::httpGet(void)
         absPath += this->normalizedPath;
 
         struct stat info;
+        std::cout << "path requested : " << absPath << std::endl;
 
         if (stat(absPath.c_str(), &info) != 0) {
             return HttpParser::HTTP_RES_NOT_FOUND;
@@ -214,7 +218,7 @@ HttpParser::httpResult Response::httpGet(void)
         }
 
         ext = getExtension(absPath);
-        std::cout << "path requested : " << absPath << " extension to serve : " << ext << std::endl;
+        std::cout << " extension to serve : " << ext << std::endl;
 
         if (access(absPath.c_str(), R_OK)) {
             return HttpParser::HTTP_RES_NOT_FOUND;

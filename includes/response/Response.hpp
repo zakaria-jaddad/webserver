@@ -52,6 +52,9 @@ class Response{
 
 	time_t 						start_time;
 
+	std::string generateDirectoryListingHTML(const std::string &path, const std::string &requestPath,
+                                         std::vector<std::string> entries);
+
 public:
 	Response( t_client* client );
 	~Response( void );
@@ -60,6 +63,8 @@ public:
 	HttpParser::httpResult	routeMethod( HttpParser::requestType );
 	
 	void					normalizePath( void );
+	std::string 			normalizePath( std::string& );
+
   	
 	ssize_t	sendResponse(const char *resp, size_t );
 //   int   createUploadFolder( std::string&, std::string& );

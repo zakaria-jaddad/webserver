@@ -309,6 +309,41 @@ void Response::normalizePath(void)
     this->normalizedPath = normPath;
 }
 
+std::string Response::normalizePath( std::string& originalPath )
+{
+    // std::string originalPath = this->client->request->getRequestUriPath();
+    std::stringstream ss(originalPath);
+    std::string elem;
+    std::vector<std::string> elements;
+    std::string normPath = "";
+    bool ends_with_slash = false;
+
+    if (!originalPath.empty() && originalPath[originalPath.length() - 1] == '/')
+        ends_with_slash = true;
+
+    while (getline(ss, elem, '/')) {
+        if (elem == "." || elem.empty())
+            continue;
+        else if (elem == ".." && elements.size() != 0)
+            elements.resize(elements.size() - 1);
+        else if (elem != "..")
+            elements.push_back(elem);
+    }
+    for (std::vector<std::string>::iterator it = elements.begin(); it != elements.end(); it++) {
+        normPath += "/";
+        normPath += *it;
+    }
+    if (normPath == "")
+        normPath = "/";
+    
+    if (ends_with_slash && normPath != "/")
+        normPath += "/";
+
+    // std::cout << "The normalized path is :'" << normPath << "'" << std::endl;
+    // std::cout << "The original path is :'" << this->client->request->getRequestUriPath() << "'" << std::endl;
+    return normPath;
+}
+
 // send header
 // redir overload
 
