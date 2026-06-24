@@ -106,6 +106,7 @@ void headerEnvBuilder( std::map<std::string, std::string>& env, std::map<std::st
 	{
 		std::string	field_value = joinHeaderValues(it->second);
 		std::string	field_name = normalizeHeaderName(it->first);
-		env[field_name] = field_value;
+		if (field_name != "HTTP_CONTENT_TYPE" || field_name != "HTTP_CONTENT_LENGTH")
+			env[field_name] = field_value;
 	}
 }

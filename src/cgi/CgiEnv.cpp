@@ -25,17 +25,25 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     env["REQUEST_METHOD"] = methodToString(request->getRequestType());
     env["QUERY_STRING"] = query;
 
+    // content length
+    // if (body)
+    //     env["CONTENT_LENGTH"] = content_length;
+    
+    // content type
+    // if (content_type)
+    //     env["CONTENT_TYPE"] = content_type;
+
     // some cgi needed? bs
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_NAME"] = "localhost";//TODO: change this value to the host requested by the client
     env["SERVER_PORT"] = conf->getPort();
     std::cout << RED << "===========PORT" << conf->getPort() << "==========" << WHITE << std::endl;
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
-    env["SERVER_SOFTWARE"] = "myserver/1.0";
-    env["REMOTE_ADDR"] = "127.0.0.1"; // get from anas
+    env["SERVER_SOFTWARE"] = "webserv/1.0";
+    env["REMOTE_ADDR"] = "127.0.0.1"; //check get from anas
 
     // bs needed to run on terminal
-    env["REDIRECT_STATUS"] = "200";
+    // env["REDIRECT_STATUS"] = "200";
 
     // php specific variables
     std::string script_filename = conf->getRoot() + script_name;
