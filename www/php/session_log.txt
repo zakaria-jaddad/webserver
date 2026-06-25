@@ -1,2 +1,0 @@
-18:02:30 session=aece57b3f803ca14 name=anonymous
-18:40:15 session=aece57b3f803ca14 name=anonymous
