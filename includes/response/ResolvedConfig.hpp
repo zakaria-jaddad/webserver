@@ -7,7 +7,7 @@
 #include <vector>
 
 class ResolvedConfig{
-	std::pair<std::string, std::string>	cgi_info;
+	std::map<std::string, std::string>	cgi_info;
 	std::map<int, std::string>					error_pages;
 	std::pair<int, std::string>  				redir;
 	std::vector<std::string>						methods_accepted;
@@ -34,7 +34,7 @@ public:
 	std::string			            getIp( void );
 	std::string			            getUploadPath( void );
 	std::string			            getLocPath( void );
-	std::pair<std::string, std::string>           getCgi( void );
+	std::map<std::string, std::string>           getCgi( void );
 };
 
 #endif

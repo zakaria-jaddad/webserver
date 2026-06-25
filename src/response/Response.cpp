@@ -27,15 +27,14 @@ Response::~Response( void )
 		delete cgi;
 }
 
-bool isCgi(const std::string& uri, std::pair<std::string, std::string> cgiInfo)
+bool isCgi(const std::string& uri, std::map<std::string, std::string> cgiInfo)
 {
-	bool cgi_configured = !cgiInfo.first.empty() &&
-												!cgiInfo.second.empty();
-
+	bool cgi_configured = !(cgiInfo.empty());
+												
 	if (!cgi_configured)
 		return false;
 	
-	bool is_php_request = false;
+	bool is_cgi_request = false;
 
 	std::stringstream s(uri);
 	std::string elem;
@@ -51,14 +50,14 @@ bool isCgi(const std::string& uri, std::pair<std::string, std::string> cgiInfo)
 
 	for (; it != elements.end(); it++)
 	{
-		if ((*it).find(".php") != std::string::npos)
+		if (((*it).find(".php") != std::string::npos) || ((*it).find(".py") != std::string::npos))
 		{
-			is_php_request = true;
+			is_cgi_request = true;
 			break;
 		}
 	}
 
-	return is_php_request && cgi_configured;
+	return is_cgi_request && cgi_configured;
 }
 
 HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method)

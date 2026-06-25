@@ -7,7 +7,7 @@ class ServerConfig{
   
   std::map<int, std::string>  error_pages;
 	std::pair<int, std::string>  redir;
-	std::pair<std::string, std::string>  cgi_info;
+	std::map<std::string, std::string>  cgi_info;
   std::vector<std::string>    index;
 	std::vector<std::string>		methods_accepted;
   std::vector<std::string>     server_name;
@@ -67,7 +67,7 @@ public:
 	bool 						            getDirectoyListing( void );
   std::vector<std::string>    getAcceptedMethods( void );
 	std::pair<int, std::string>	getRedir( void );
-	std::pair<std::string, std::string>	getCgi( void );
+	std::map<std::string, std::string>	getCgi( void );
 
 };
 

@@ -14,7 +14,11 @@ Cgi::Cgi(int *in, int *out, t_client *client)
     scriptPath = conf->getRoot() + deriveScriptName(uriPath)[0];
     std::cout << "script path : " << scriptPath << std::endl;
 
-    cgiPath = conf->getCgi().second;
+    std::string ext = Response::getExtension(scriptPath);
+
+    std::map<std::string, std::string> cg = conf->getCgi();
+    cgiPath = cg[ext];
+    std::cout << RED << "cgi used : " << cgiPath << std::endl;
 
     std::cout << "--------------end of cgi constructor----------------" << std::endl;
 }

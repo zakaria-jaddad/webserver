@@ -70,7 +70,7 @@ std::pair<int, std::string>	ResolvedConfig::getRedir( void )
   return redir;
 }
 
-std::pair<std::string, std::string>	ResolvedConfig::getCgi( void )
+std::map<std::string, std::string>	ResolvedConfig::getCgi( void )
 {
   return cgi_info;
 }

@@ -184,7 +184,7 @@ void LocationConfig::parseCgi( std::vector<std::string>& tokens, size_t& i)
   if (!isAbsolutePath(cgi_path))
     throw std::runtime_error("Invalid path : " + cgi_path);
 
-  this->cgi_info = std::make_pair(extension, cgi_path);
+  this->cgi_info.insert(std::make_pair(extension, cgi_path));
 
   this->is_set_cgi_info = true;
 }
@@ -317,7 +317,7 @@ std::string LocationConfig::getLocationPath( void )
   return location_path;
 }
 
-std::pair<std::string, std::string>	LocationConfig::getCgi( void )
+std::map<std::string, std::string>	LocationConfig::getCgi( void )
 {
   return cgi_info;
 }

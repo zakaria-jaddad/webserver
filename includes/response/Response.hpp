@@ -56,7 +56,10 @@ class Response{
                                          std::vector<std::string> entries);
 
 public:
-	Response( t_client* client );
+
+  static std::string getExtension( std::string &path );
+	
+  Response( t_client* client );
 	~Response( void );
 
 	HttpParser::httpResult	checkMethod( void );

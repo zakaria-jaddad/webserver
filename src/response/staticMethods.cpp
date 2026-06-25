@@ -143,7 +143,7 @@ void Response::serveDirectoryContent(std::string &absPath)
         client->writeOffset += sent;
 }
 
-std::string getExtension( std::string &path )
+std::string Response::getExtension( std::string &path )
 {
   // remove query string if any
   size_t qpos = path.find('?');

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webserv Test Dashboard</title>
+
+<style>
+body {
+    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+}
+
+h1 {
+    color: #4b0082;
+    text-shadow: 2px 2px #ffb6c1;
+}
+
+section {
+    background: rgba(255,255,255,0.8);
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 15px;
+    width: 80%;
+    max-width: 900px;
+}
+
+a {
+    display: inline-block;
+    margin: 5px;
+    color: #4b0082;
+    font-weight: bold;
+}
+
+button {
+    padding: 8px 15px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+.gif-container img {
+    border: 6px solid white;
+    border-radius: 20px;
+    max-width: 80%;
+}
+
+#output {
+    margin-top: 20px;
+    padding: 10px;
+    background: #eee;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    text-align: left;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🌸 Webserv Test Dashboard 🌸</h1>
+
+<div class="gif-container">
+    <img src="http://media.giphy.com/media/a6pzK009rlCak/giphy.gif"
+         alt="Anime GIF">
+</div>
+
+<section>
+    <h2>Static File Tests</h2>
+    <a href="/index.html">HTML</a>
+    <a href="/style.css">CSS</a>
+    <a href="/script.js">JS</a>
+    <a href="/sample.txt">TXT</a>
+    <a href="/image.png">PNG</a>
+    <a href="/large.bin">Large File</a>
+</section>
+
+<section>
+    <h2>Error Page Tests</h2>
+    <a href="/does-not-exist">404 Test</a>
+    <a href="/forbidden">403 Test</a>
+    <a href="/method-not-allowed">405 Test</a>
+</section>
+
+<section>
+    <h2>Autoindex Tests</h2>
+    <a href="/folders/">Directory Listing</a>
+</section>
+
+<section>
+    <h2>Query String Tests</h2>
+    <a href="/cgi-bin/env.py?name=anime">?name=anime</a>
+    <a href="/cgi-bin/env.py?a=1&b=2">?a=1&b=2</a>
+</section>
+
+<section>
+    <h2>CGI GET Test</h2>
+
+    <form action="/cgi-bin/echo.py" method="GET">
+        <input type="text" name="message"
+               placeholder="Type something">
+        <input type="submit" value="Send GET">
+    </form>
+</section>
+
+<section>
+    <h2>CGI POST Test</h2>
+
+    <form action="/cgi-bin/post.py" method="POST">
+        <input type="text" name="message"
+               placeholder="Type something">
+        <input type="submit" value="Send POST">
+    </form>
+</section>
+
+<section>
+    <h2>Upload Test</h2>
+
+    <form action="/upload"
+          method="POST"
+          enctype="multipart/form-data">
+
+        <label>Username</label><br>
+        <input type="text" name="username"><br><br>
+
+        <label>Password</label><br>
+        <input type="password" name="password"><br><br>
+
+        <input type="checkbox" name="bike" value="yes">
+        <label>Bike</label><br>
+
+        <input type="checkbox" name="car" value="yes">
+        <label>Car</label><br>
+
+        <input type="checkbox" name="boat" value="yes">
+        <label>Boat</label><br><br>
+
+        <input type="file" name="profile"><br><br>
+
+        <input type="submit" value="Upload">
+    </form>
+</section>
+
+<section>
+    <h2>DELETE Test</h2>
+
+    <button onclick="deleteFile()">
+        Delete Test File
+    </button>
+</section>
+
+<section>
+    <h2>Redirect Test</h2>
+
+    <a href="/redirect">Test Redirect</a>
+</section>
+
+<section>
+    <h2>Stress Test</h2>
+
+    <button onclick="stressTest()">
+        Send 100 Requests
+    </button>
+</section>
+
+<section>
+    <h2>Server Information</h2>
+
+    <a href="/cgi-bin/env.py">
+        View CGI Environment
+    </a>
+</section>
+
+<div id="output"></div>
+
+<script>
+
+function log(msg) {
+    document.getElementById("output").textContent +=
+        msg + "\n";
+}
+
+async function deleteFile() {
+    try {
+        const response = await fetch(
+            "/uploads/test.txt",
+            {
+                method: "DELETE"
+            }
+        );
+
+        log(
+            "DELETE status: "
+            + response.status
+        );
+    }
+    catch(err) {
+        log("DELETE failed: " + err);
+    }
+}
+
+async function stressTest() {
+
+    log("Starting stress test...");
+
+    const requests = [];
+
+    for (let i = 0; i < 100; i++) {
+        requests.push(
+            fetch("/index.html")
+        );
+    }
+
+    await Promise.all(requests);
+
+    log("100 requests completed.");
+}
+
+</script>
+
+</body>
+</html>
+
+
