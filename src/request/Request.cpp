@@ -1,5 +1,6 @@
 #include "../../includes/request/Request.hpp"
 #include <cstddef>
+#include <ios>
 #include <map>
 #include <ostream>
 #include <string>
@@ -93,6 +94,8 @@ HttpParser::getBodyFormFields() const
 }
 
 std::string HttpParser::getPendingData() const { return this->_pendingData; }
+
+std::string HttpParser::getRequestRawBodyFilePath() const { return this->_body.filePath; }
 
 /* ---- SETTERS ----*/
 
@@ -487,8 +490,16 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
     }
     if (this->_state == BODY_PROCESSING) {
 
-        if (this->_mediaType == "application/x-www-form-urlencoded") {
+        /* NOTE: When POST request rout is a script, body shouldn't be parsed */
+        if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi())) {
 
+            std::cout << GREEN << this->filePath << WHITE << std::endl;
+            this->_state = BODY_COMPLETE;
+            this->file.close();
+            return HTTP_RES_OK;
+        }
+
+        if (this->_mediaType == "application/x-www-form-urlencoded") {
             std::map<std::string, std::string> params;
 
             std::string urlEncodedForm;
@@ -513,6 +524,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             _fileCleanUp();
             std::cout << "\033[33mapplication/x-www-form-urlencoded: Parsed\033[0m" << std::endl;
             this->_state = BODY_COMPLETE;
+            this->file.close();
             return HTTP_RES_OK;
         }
 
@@ -545,6 +557,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                     else if ("--" + this->_boundary + "--" == line) {
                         this->_mpState = MP_COMPLETE;
                         this->_state = BODY_COMPLETE;
+
+                        this->file.close();
                         return HTTP_RES_OK;
                     }
                     continue;
@@ -638,6 +652,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         }
                         /* if end boundary found set body complete */
                         this->_mpState = MP_COMPLETE;
+
+                        this->file.close();
                         this->_state = BODY_COMPLETE;
 
                         return HTTP_RES_OK;
