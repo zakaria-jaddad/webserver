@@ -11,6 +11,7 @@ REQ_DIR		= request
 RSP_DIR		= response
 CGI_DIR		= cgi
 OBJ_DIR		= obj
+UTI_DIR 	= utils
 TEST_DIR	= test
 
 ## src files (just add their plain names don't write their paths)
@@ -21,12 +22,14 @@ REQ_SRC		= Request.cpp
 RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp \
 			  cgiExecution.cpp ResponseUtilities.cpp mime.cpp
 CGI_SRC		= CgiEnv.cpp Cgi.cpp envUtils.cpp
+UTI_SRC = isCgi.cpp
 
 ## project srcs : here you add the prefix and boom compiled ;p
 PROJECT_SRC	=	$(addprefix $(SRC_DIR)/$(SRV_DIR)/, $(SRV_SRC)) \
 				$(addprefix $(SRC_DIR)/$(CONF_DIR)/, $(CONF_SRC)) \
 				$(addprefix $(SRC_DIR)/$(REQ_DIR)/, $(REQ_SRC)) \
 				$(addprefix $(SRC_DIR)/$(CGI_DIR)/, $(CGI_SRC)) \
+				$(addprefix $(SRC_DIR)/$(UTI_DIR)/, $(UTI_SRC)) \
 				$(addprefix $(SRC_DIR)/$(RSP_DIR)/, $(RSP_SRC))
 
 SRC			= $(addprefix $(SRC_DIR)/, $(MAIN_SRC)) $(PROJECT_SRC)

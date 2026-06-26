@@ -1,0 +1,11 @@
+#ifndef UTILS_HPP
+#define UTILS_HPP
+
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
+
+bool isCgi(const std::string &uri, std::pair<std::string, std::string> cgiInfo);
+
+#endif
