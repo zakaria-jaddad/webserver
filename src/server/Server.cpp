@@ -181,8 +181,7 @@ int Server::checkClientTimeout(t_client *client)
     time_t now = time(NULL);
     time_t idle_time = now - client->last_activity;
 
-    if (!client->response && idle_time > IDLE_TIMEOUT) {
-        std::cout << "Request status: " << client->request->isComplete() << " and idle timeout\n";
+    if (client && !client->response && idle_time > IDLE_TIMEOUT) {
         return 1;
     }
 

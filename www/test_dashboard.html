@@ -1,225 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Webserv Test Dashboard</title>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Live House</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 
-<style>
-body {
-    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-}
-
-h1 {
-    color: #4b0082;
-    text-shadow: 2px 2px #ffb6c1;
-}
-
-section {
-    background: rgba(255,255,255,0.8);
-    margin: 20px auto;
-    padding: 20px;
-    border-radius: 15px;
-    width: 80%;
-    max-width: 900px;
-}
-
-a {
-    display: inline-block;
-    margin: 5px;
-    color: #4b0082;
-    font-weight: bold;
-}
-
-button {
-    padding: 8px 15px;
-    margin: 5px;
-    cursor: pointer;
-}
-
-.gif-container img {
-    border: 6px solid white;
-    border-radius: 20px;
-    max-width: 80%;
-}
-
-#output {
-    margin-top: 20px;
-    padding: 10px;
-    background: #eee;
-    border-radius: 10px;
-    white-space: pre-wrap;
-    text-align: left;
-}
-</style>
-</head>
-
-<body>
-
-<h1>🌸 Webserv Test Dashboard 🌸</h1>
-
-<div class="gif-container">
-    <img src="http://media.giphy.com/media/a6pzK009rlCak/giphy.gif"
-         alt="Anime GIF">
-</div>
-
-<section>
-    <h2>Static File Tests</h2>
-    <a href="/index.html">HTML</a>
-    <a href="/style.css">CSS</a>
-    <a href="/script.js">JS</a>
-    <a href="/sample.txt">TXT</a>
-    <a href="/image.png">PNG</a>
-    <a href="/large.bin">Large File</a>
-</section>
-
-<section>
-    <h2>Error Page Tests</h2>
-    <a href="/does-not-exist">404 Test</a>
-    <a href="/forbidden">403 Test</a>
-    <a href="/method-not-allowed">405 Test</a>
-</section>
-
-<section>
-    <h2>Autoindex Tests</h2>
-    <a href="/folders/">Directory Listing</a>
-</section>
-
-<section>
-    <h2>Query String Tests</h2>
-    <a href="/cgi-bin/env.py?name=anime">?name=anime</a>
-    <a href="/cgi-bin/env.py?a=1&b=2">?a=1&b=2</a>
-</section>
-
-<section>
-    <h2>CGI GET Test</h2>
-
-    <form action="/cgi-bin/echo.py" method="GET">
-        <input type="text" name="message"
-               placeholder="Type something">
-        <input type="submit" value="Send GET">
-    </form>
-</section>
-
-<section>
-    <h2>CGI POST Test</h2>
-
-    <form action="/cgi-bin/post.py" method="POST">
-        <input type="text" name="message"
-               placeholder="Type something">
-        <input type="submit" value="Send POST">
-    </form>
-</section>
-
-<section>
-    <h2>Upload Test</h2>
-
-    <form action="/upload"
-          method="POST"
-          enctype="multipart/form-data">
-
-        <label>Username</label><br>
-        <input type="text" name="username"><br><br>
-
-        <label>Password</label><br>
-        <input type="password" name="password"><br><br>
-
-        <input type="checkbox" name="bike" value="yes">
-        <label>Bike</label><br>
-
-        <input type="checkbox" name="car" value="yes">
-        <label>Car</label><br>
-
-        <input type="checkbox" name="boat" value="yes">
-        <label>Boat</label><br><br>
-
-        <input type="file" name="profile"><br><br>
-
-        <input type="submit" value="Upload">
-    </form>
-</section>
-
-<section>
-    <h2>DELETE Test</h2>
-
-    <button onclick="deleteFile()">
-        Delete Test File
-    </button>
-</section>
-
-<section>
-    <h2>Redirect Test</h2>
-
-    <a href="/redirect">Test Redirect</a>
-</section>
-
-<section>
-    <h2>Stress Test</h2>
-
-    <button onclick="stressTest()">
-        Send 100 Requests
-    </button>
-</section>
-
-<section>
-    <h2>Server Information</h2>
-
-    <a href="/cgi-bin/env.py">
-        View CGI Environment
-    </a>
-</section>
-
-<div id="output"></div>
-
-<script>
-
-function log(msg) {
-    document.getElementById("output").textContent +=
-        msg + "\n";
-}
-
-async function deleteFile() {
-    try {
-        const response = await fetch(
-            "/uploads/test.txt",
-            {
-                method: "DELETE"
-            }
-        );
-
-        log(
-            "DELETE status: "
-            + response.status
-        );
-    }
-    catch(err) {
-        log("DELETE failed: " + err);
-    }
-}
-
-async function stressTest() {
-
-    log("Starting stress test...");
-
-    const requests = [];
-
-    for (let i = 0; i < 100; i++) {
-        requests.push(
-            fetch("/index.html")
-        );
+    <style>
+    *{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
     }
 
-    await Promise.all(requests);
+    body{
+    font-family:"Pixelify Sans", sans-serif;
+    background:#111827;
+    color:white;
+    }
 
-    log("100 requests completed.");
-}
+    header{
+    padding:40px;
+    text-align:center;
+    background:#1f2937;
+    border-bottom:3px solid #6d28d9;
+    }
 
-</script>
+    header h1{
+    font-family: "Press Start 2P", cursive;
+    font-size:3rem;
+    margin-bottom:10px;
+    }
 
-</body>
+    header p{
+    color:#bbb;
+    }
+
+    .hero{
+    margin:30px auto;
+    text-align:center;
+    }
+
+    .hero img{
+    width:350px;
+    border-radius:15px;
+    border:4px solid #6d28d9;
+    }
+
+    .grid{
+    width:90%;
+    max-width:1200px;
+    margin:auto;
+
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+
+    margin-top:40px;
+    }
+
+    .card{
+    background:#1f2937;
+    border:2px solid #374151;
+    border-radius:15px;
+    padding:20px;
+
+    transition:.2s;
+    }
+
+    .card:hover{
+    transform:translateY(-5px);
+    border-color:#8b5cf6;
+    }
+
+    .card h2{
+    margin-bottom:10px;
+    }
+
+    .card p{
+    color:#bbb;
+    margin-bottom:20px;
+    }
+
+    .card a{
+    display:inline-block;
+    padding:10px 20px;
+
+    text-decoration:none;
+    color:white;
+
+    background:#6d28d9;
+    border-radius:8px;
+    }
+
+    .status{
+    width:90%;
+    max-width:1200px;
+    margin:40px auto;
+
+    background:#1f2937;
+    padding:20px;
+    border-radius:15px;
+    }
+
+    .status ul{
+    list-style:none;
+    line-height:2em;
+    }
+
+    footer{
+    text-align:center;
+    padding:30px;
+    color:#999;
+    }
+    </style>
+
+  </head>
+  <body>
+
+    <header>
+
+      <h1>⚔ Webserv Control Center ⚔</h1>
+
+      <p>"Every HTTP request begins here."</p>
+
+    </header>
+
+    <div class="hero">
+
+      <img src="http://media.giphy.com/media/a6pzK009rlCak/giphy.gif">
+
+    </div>
+
+    <section class="status">
+
+      <h2>Server Status</h2>
+
+      <ul>
+        <li>🟢 HTTP Engine Online</li>
+        <li>🟢 CGI Ready</li>
+        <li>🟢 Upload Service Ready</li>
+        <li>🟢 Cookies Enabled</li>
+        <li>🟢 Redirect Module Loaded</li>
+        <li>🟢 Error Pages Available</li>
+      </ul>
+
+    </section>
+
+    <section class="grid">
+
+      <div class="card">
+        <h2>⚔ GET</h2>
+        <p>Browse static pages.</p>
+        <a href="/pages/get.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>🧪 POST</h2>
+        <p>Submit forms.</p>
+        <a href="/pages/post.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>📤 Upload</h2>
+        <p>Upload files using multipart/form-data.</p>
+        <a href="/pages/upload.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>🍪 Cookies</h2>
+        <p>Create and inspect cookies.</p>
+        <a href="/pages/cookies.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>⚡ CGI</h2>
+        <p>Run CGI scripts.</p>
+        <a href="/pages/cgi.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>🌀 Redirects</h2>
+        <p>Test HTTP redirects.</p>
+        <a href="/pages/redirect.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>💀 Errors</h2>
+        <p>Generate custom error pages.</p>
+        <a href="/pages/errors.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>📂 Autoindex</h2>
+        <p>Browse directories.</p>
+        <a href="/archive/">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>🗑 DELETE</h2>
+        <p>Delete uploaded files.</p>
+        <a href="/pages/delete.html">Open</a>
+      </div>
+
+      <div class="card">
+        <h2>👑 Final Boss</h2>
+        <p>A page combining every feature.</p>
+        <a href="/pages/final.html">Fight!</a>
+      </div>
+
+    </section>
+
+    <footer>
+
+      Made for the 42 Webserv defense • HTTP/1.1 Powered
+
+    </footer>
+
+  </body>
 </html>
-
-
