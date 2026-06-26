@@ -18,6 +18,9 @@
     --white-paper: #f4f4f4;
     --neon-magenta: #ff007f;
   }
+    body {
+      margin: 0;
+    }
   
   .hero-section {
     position: relative;
@@ -609,13 +612,13 @@
   </style>
 
   <nav class="zine-nav" aria-label="Main Navigation">
-    <a href="#practice-room" class="nav-sticker tape-pink">🎸 Practice Room</a>
+    <a href="/sites/test.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
     <a href="#song-requests" class="nav-sticker tape-yellow">📝 Song Requests</a>
     <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
     <a href="#equipment-room" class="nav-sticker tape-blue">📦 Equipment</a>
     <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
     <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
-    <a href="#server-room" class="nav-sticker tape-dark">⚙ Server</a>
+    <a href="/sites/About.html" class="nav-sticker tape-dark">⚙ About</a>
   </nav>
 
 <header class="hero-section">
@@ -640,7 +643,7 @@
       </p>
       </p>
       <div class="hero-actions">
-        <a href="#listen" class="btn btn-primary">LAUNCH TEST BENCH</a>
+        <a href="/sites/test_bench.html" class="btn btn-primary">LAUNCH TEST BENCH</a>
         <a href="#gigs" class="btn btn-secondary">TOUR DATES</a>
       </div>
     </div>
@@ -650,20 +653,20 @@
       
       <!-- Background "Gig Poster" Cutout -->
       <div class="collage-item poster-layer">
-        <img src="kessoku_gig_cutout.jpg" alt="Vintage punk rock gig poster background">
+        <img src="resources/kessoku_gig_cutout.jpg" alt="Vintage punk rock gig poster background">
       </div>
 
       <!-- Midground "Polaroid" Frame -->
       <div class="collage-item polaroid-layer">
         <div class="polaroid-frame">
-          <img src="kessoku_band.jpg" alt="Kessoku Band members laughing">
+          <img src="resources/kessoku_band.jpg" alt="Kessoku Band members laughing">
           <span class="polaroid-caption">E2 - 2026</span>
         </div>
       </div>
 
       <!-- Foreground Main Character Cutout (Sticker Effect) -->
       <div class="collage-item character-layer">
-        <img src="bocchi-zilla.jpg" alt="Bocchi shredding on her Gibson Les Paul Custom guitar">
+        <img src="resources/bocchi-zilla.jpg" alt="Bocchi shredding on her Gibson Les Paul Custom guitar">
       </div>
 
       <!-- Decorative Screamtone / Scribble Overlay -->
@@ -688,48 +691,6 @@
 </head>
 
 <body>
-  <main class="dashboard-grid">
-  
-    <section id="practice-room" class="dashboard-card zine-panel">
-      <div class="card-tag">GET METHODS</div>
-      <h2>🎸 Practice Room</h2>
-      <p class="card-desc">Inspect static resources across distinct configurations, custom server root paths, and directory locations.</p>
-      <div class="test-links">
-        <a href="/practice/index.html" class="zine-link">📁 Main Index File</a>
-        <a href="/practice/alt-location/" class="zine-link">📍 Alternate Location Blocks</a>
-      </div>
-    </section>
-    
-    <section id="song-requests" class="dashboard-card zine-panel alt-tilt">
-      <div class="card-tag tag-magenta">POST METHODS</div>
-      <h2>📝 Song Requests</h2>
-      <p class="card-desc">Simulate heavy payloads. Upload content using raw application parameters or multi-part binary boundaries.</p>
-      <div class="test-links">
-        <a href="/requests/urlencoded.html" class="zine-link">✏️ URL-Encoded Request</a>
-        <a href="/requests/multipart.html" class="zine-link">📎 Multipart Form-Data</a>
-      </div>
-    </section>
-    
-    <section id="backstage" class="dashboard-card zine-panel">
-      <div class="card-tag tag-yellow">DYNAMIC EXECUTION</div>
-      <h2>🎛 Backstage CGI</h2>
-      <p class="card-desc">Execute stateful server processes. Inspect runtime variables through custom interpreters.</p>
-      <div class="test-links">
-        <a href="/cgi-bin/stats.py" class="zine-link py-accent">🐍 Python Tracker</a>
-        <a href="/cgi-bin/dashboard.php" class="zine-link php-accent">🐘 PHP Session Inspector</a>
-      </div>
-    </section>
-    
-    <section id="equipment-room" class="dashboard-card zine-panel alt-tilt-2">
-      <div class="card-tag tag-blue">STORAGE LAYER</div>
-      <h2>📦 Equipment Room</h2>
-      <p class="card-desc">Manipulate direct files. Test the server limits with enforced <code>client_max_body_size</code> constraints.</p>
-      <div class="test-links">
-        <a href="/equipment/upload.html" class="zine-link">📤 File Upload Bench</a>
-        <a href="/equipment/browser.html" class="zine-link">🗑️ Target File Deletion</a>
-      </div>
-    </section>
-  </main>
   
   <section id="venue" class="venue-console">
     <div class="console-header">

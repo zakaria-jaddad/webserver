@@ -2,18 +2,19 @@
 
 import os
 import sys
+import html
 
 # CGI header
-print("Content-Type: text/html")
-print()
+print("Content-Type: text/html\r\n\r\n")
+#print()
 
 # Read POST body if present
-content_length = os.environ.get("CONTENT_LENGTH", "0")
+try:
+    length = int(os.environ.get("CONTENT_LENGTH", 0))
+except ValueError:
+    length = 0
 
-body = ""
-if content_length.isdigit() and int(content_length) > 0:
-    body = sys.stdin.read(int(content_length))
-
+body = sys.stdin.read(length) if length > 0 else ""
 # HTML response
 print("""
 <!DOCTYPE html>
@@ -35,8 +36,8 @@ print("""
 for key in sorted(os.environ.keys()):
     print(f"""
         <tr>
-            <td>{key}</td>
-            <td>{os.environ[key]}</td>
+            <td>{html.escape(key)}</td>
+            <td>{html.escape(os.environ[key])}</td>
         </tr>
     """)
 
@@ -47,7 +48,7 @@ print("""
 if body:
     print(f"""
     <h2>POST Body</h2>
-    <pre>{body}</pre>
+    <pre>{html.escape(body)}</pre>
     """)
 
 print("""

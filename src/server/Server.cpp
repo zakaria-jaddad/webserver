@@ -204,15 +204,15 @@ int Server::checkForClientFd(epoll_event *events, int i)
         // std::cout << "looping thru clients" << std::endl;
 
         // Request timeout/client idling too long
-        int isTimeout = checkClientTimeout(&(*it));
-        if (isTimeout) {
-            // general cleanup (either idle or request timeout)
-            std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-            closeSocket(&(*it));
-            it = clients.erase(clients.begin() + c);
-            continue;
-        }
+       // int isTimeout = checkClientTimeout(&(*it));
+       // if (isTimeout) {
+       //     // general cleanup (either idle or request timeout)
+       //     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+       //     switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+       //     closeSocket(&(*it));
+       //     it = clients.erase(clients.begin() + c);
+       //     continue;
+       // }
 
         if (events[i].data.fd == it->fd) {
             clientSocket = it->fd;
@@ -228,6 +228,9 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 it->last_activity = time(NULL);
 
                 std::string rawData(req, b);
+                std::cout << RED << "=================Request " << GREEN << it->fd  << RED << "=================" << std::endl;
+                std::cout << YELLOW << rawData << WHITE << std::endl;
+
 
                 HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
                 std::cout << "old=" << it->req_res << " new=" << r << std::endl;
@@ -255,6 +258,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                         }
                     }
                     switchEpollMode(clientSocket, EPOLLOUT);
+                    std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                 }
             }
             else if (events[i].events == EPOLLOUT) {
@@ -270,6 +274,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                                   << std::endl;
                     if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                        std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                         closeSocket(&(*it));
                         it = clients.erase(clients.begin() + c);
                         std::cout << "cleaned socket" << std::endl;
@@ -346,16 +351,16 @@ int Server::startServer()
             return (1);
         }
         if (event_count == 0) {
-            int c = 0;
             for (std::deque<t_client>::iterator it = this->clients.begin();
-                 it != this->clients.end(); c++) {
+                 it != this->clients.end();) {
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
                     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
                     std::cout << "done sending timeout resetting socket..." << std::endl;
                     switchEpollMode(it->fd, EPOLL_CTL_DEL);
+                    std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                     closeSocket(&(*it));
-                    it = clients.erase(clients.begin() + c);
+                    it = clients.erase(it);
                     continue;
                 }
                 it++;

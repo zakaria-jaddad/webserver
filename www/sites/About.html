@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About | Kessoku SERVER</title>
+    <style>
+      :root {
+        --pink-bocchi: #ffb1cb;
+        --blue-kita: #82e3f5;
+        --yellow-nijika: #fff176;
+        --purple-ryo: #b39ddb;
+        --dark-punk: #121212;
+        --white-paper: #f4f4f4;
+        --neon-magenta: #ff007f;
+      }
+      /* ==========================================================================
+       6. FIXed ZINE NAVIGATION (STICKER TAPE)
+       ========================================================================== */
+      .zine-nav {
+        position: fixed;
+        top: 15%;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        z-index: 100;
+        transform: rotate(2deg);
+      }
+  
+      @media (max-width: 768px) {
+        .zine-nav {
+          position: static;
+          transform: none;
+          padding: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          display: grid;
+        }
+      }
+  
+      .nav-sticker {
+        color: var(--dark-punk);
+        font-weight: 900;
+        text-decoration: none;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+     text-transform: uppercase;
+    border: 2px solid var(--dark-punk);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 4px 4px 0px var(--dark-punk);
+   }
+  
+  .tape-pink { background-color: var(--pink-bocchi); transform: rotate(-3deg); }
+  .tape-yellow { background-color: var(--yellow-nijika); transform: rotate(2deg); }
+  .tape-purple { background-color: var(--purple-ryo); transform: rotate(-1deg); }
+  .tape-blue { background-color: var(--blue-kita); transform: rotate(4deg); }
+  .tape-white { background-color: var(--white-paper); transform: rotate(-2deg); }
+  .tape-magenta { background-color: var(--neon-magenta); color: white; transform: rotate(1deg); }
+  .tape-dark { background-color: var(--dark-punk); color: var(--yellow-nijika); transform: rotate(-4deg); }
+  
+  .nav-sticker:hover {
+    transform: scale(1.1) rotate(0deg);
+    box-shadow: 6px 6px 0px var(--neon-magenta);
+  }
+    </style>
+  </head>
+  
+  <body>
+    <nav class="zine-nav" aria-label="Main Navigation">
+      <a href="/sites/test.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
+      <a href="#song-requests" class="nav-sticker tape-yellow">📝 Song Requests</a>
+      <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
+      <a href="#equipment-room" class="nav-sticker tape-blue">📦 Equipment</a>
+      <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
+      <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
+      <a href="/sites/About.html" class="nav-sticker tape-dark">⚙ About</a>
+    </nav>
+  </body>

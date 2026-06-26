@@ -30,8 +30,8 @@ void Response::craftHeader(std::string &buff)
 
         head_resp.append(headers);
 
-        // std::cout << "+++++++ header to send next ++++++++" << std::endl;
-        // std::cout << head_resp << std::endl;
+        std::cout << "+++++++ header to send next ++++++++" << std::endl;
+        std::cout << head_resp << std::endl;
 
         head_resp.append(CRLF);
         this->_phase = BODY;
@@ -39,8 +39,8 @@ void Response::craftHeader(std::string &buff)
     else {
         head_resp.append(headers);
 
-        // std::cout << "+++++++ header to send next ++++++++" << std::endl;
-        // std::cout << head_resp << std::endl;
+        std::cout << "+++++++ crlf not found header to send next ++++++++" << std::endl;
+        std::cout << head_resp << std::endl;
 
         buff.erase();
     }
@@ -51,11 +51,11 @@ void Response::craftHeader(std::string &buff)
         head_resp.append("Transfer-Encoding: chunked\r\n");
         head_resp.append(DOUBLE_CRLF);
 
-        // std::cout << "+++++++ header to send next ++++++++" << std::endl;
-        // std::cout << head_resp << std::endl;
+        std::cout << "+++++++ header to send next ++++++++" << std::endl;
+        std::cout << head_resp << std::endl;
     }
 
-    // std::cout << "crafted header" << std::endl;
+    std::cout << "crafted header" << std::endl;
 }
 
 void Response::craftBody(std::string &buff)
@@ -63,8 +63,8 @@ void Response::craftBody(std::string &buff)
     resp.append(buff);
     buff.erase();
 
-    // std::cout << "crafted body : " << std::endl;
-    // std::cout << resp << std::endl;
+    std::cout << "crafted body : " << std::endl;
+    std::cout << resp << std::endl;
 }
 
 HttpParser::httpResult Response::craftResponse(void)
@@ -76,6 +76,7 @@ HttpParser::httpResult Response::craftResponse(void)
 
     while (this->_phase == HEADERS && !this->error) {
         ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
+        std::cout << GREEN << "READING..." << WHITE << std::endl;
 
         if (bytes == 0) {
             std::cout << "nothing else to read" << std::endl;
