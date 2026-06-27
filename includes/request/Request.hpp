@@ -3,6 +3,7 @@
 
 #include "../config/Config.hpp"
 #include "../response/ResolvedConfig.hpp"
+#include "../utils/utils.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -211,6 +212,7 @@ class HttpParser {
     ServerConfig *getServerConfig() const;
     const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
     std::string getPendingData() const;
+    std::string getRequestRawBodyFilePath() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);

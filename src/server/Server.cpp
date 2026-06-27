@@ -239,24 +239,6 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK) {
 
-                    const std::map<std::string, std::vector<HttpParser::FilePart> > &foo =
-                        it->request->getBodyFormFields();
-                    for (std::map<std::string, std::vector<HttpParser::FilePart> >::const_iterator
-                             bar = foo.begin();
-                         bar != foo.end(); bar++) {
-                        if (bar->second[0].filename.empty() == true) {
-
-                            for (size_t alo = 0; alo < bar->second.size(); alo++) {
-                                HttpParser::printRaw(bar->second[alo].buffer);
-                                // std::cout << "{  '" << bar->first << "' '"
-                                //           << bar->second[alo].buffer << "' }" << std::endl;
-                            }
-                        }
-                        else {
-                            std::cout << "{  '" << bar->first << "' '" << bar->second[0].filename
-                                      << "' }" << std::endl;
-                        }
-                    }
                     switchEpollMode(clientSocket, EPOLLOUT);
                     std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                 }
