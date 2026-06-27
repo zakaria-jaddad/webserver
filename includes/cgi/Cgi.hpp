@@ -30,6 +30,12 @@ class Cgi{
 		char**					env;
 		pid_t					child;
 		int						child_status;
+
+    std::string body_path;
+    int body_fd;
+
+    std::string content_type;
+    std::string content_length;
 		// phase				_phase;
 
 	public:

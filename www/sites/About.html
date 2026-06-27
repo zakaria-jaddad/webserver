@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>About | Kessoku SERVER</title>
     <style>
       :root {
@@ -34,7 +34,10 @@
       .halftone-pattern {
         position: absolute;
         inset: 0;
-        background-image: radial-gradient(var(--white-paper) 15%, transparent 16%);
+        background-image: radial-gradient(
+          var(--white-paper) 15%,
+          transparent 16%
+        );
         background-size: 12px 12px;
       }
 
@@ -42,11 +45,19 @@
       .distressed-texture {
         position: absolute;
         inset: 0;
-        background: linear-gradient(rgba(18,18,18,0) 50%, rgba(0,0,0,0.25) 50%),
-                    linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,255,0.02), rgba(0,0,255,0.06));
-        background-size: 100% 4px, 6px 100%;
+        background:
+          linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+          linear-gradient(
+            90deg,
+            rgba(255, 0, 0, 0.06),
+            rgba(0, 255, 255, 0.02),
+            rgba(0, 0, 255, 0.06)
+          );
+        background-size:
+          100% 4px,
+          6px 100%;
       }
-      
+
       /* ==========================================================================
        6. FIXed ZINE NAVIGATION (STICKER TAPE)
        ========================================================================== */
@@ -60,7 +71,7 @@
         z-index: 100;
         transform: rotate(2deg);
       }
-  
+
       @media (max-width: 768px) {
         .zine-nav {
           position: static;
@@ -70,178 +81,219 @@
           display: grid;
         }
       }
-  
+
       .nav-sticker {
         color: var(--dark-punk);
         font-weight: 900;
         text-decoration: none;
         padding: 0.6rem 1.2rem;
         font-size: 0.9rem;
-     text-transform: uppercase;
-    border: 2px solid var(--dark-punk);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    box-shadow: 4px 4px 0px var(--dark-punk);
-   }
-  
-  .tape-pink { background-color: var(--pink-bocchi); transform: rotate(-3deg); }
-  .tape-yellow { background-color: var(--yellow-nijika); transform: rotate(2deg); }
-  .tape-purple { background-color: var(--purple-ryo); transform: rotate(-1deg); }
-  .tape-blue { background-color: var(--blue-kita); transform: rotate(4deg); }
-  .tape-white { background-color: var(--white-paper); transform: rotate(-2deg); }
-  .tape-magenta { background-color: var(--neon-magenta); color: white; transform: rotate(1deg); }
-  .tape-dark { background-color: var(--dark-punk); color: var(--yellow-nijika); transform: rotate(-4deg); }
-  
-  .nav-sticker:hover {
-    transform: scale(1.1) rotate(0deg);
-    box-shadow: 6px 6px 0px var(--neon-magenta);
-  }
-    /* ==========================================================================
+        text-transform: uppercase;
+        border: 2px solid var(--dark-punk);
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+        box-shadow: 4px 4px 0px var(--dark-punk);
+      }
+
+      .tape-pink {
+        background-color: var(--pink-bocchi);
+        transform: rotate(-3deg);
+      }
+      .tape-yellow {
+        background-color: var(--yellow-nijika);
+        transform: rotate(2deg);
+      }
+      .tape-purple {
+        background-color: var(--purple-ryo);
+        transform: rotate(-1deg);
+      }
+      .tape-blue {
+        background-color: var(--blue-kita);
+        transform: rotate(4deg);
+      }
+      .tape-white {
+        background-color: var(--white-paper);
+        transform: rotate(-2deg);
+      }
+      .tape-magenta {
+        background-color: var(--neon-magenta);
+        color: white;
+        transform: rotate(1deg);
+      }
+      .tape-dark {
+        background-color: var(--dark-punk);
+        color: var(--yellow-nijika);
+        transform: rotate(-4deg);
+      }
+
+      .nav-sticker:hover {
+        transform: scale(1.1) rotate(0deg);
+        box-shadow: 6px 6px 0px var(--neon-magenta);
+      }
+      /* ==========================================================================
    10. TEAM ABOUT SECTION (image_0.png STYLING)
    ========================================================================== */
-.team-section {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  background-color: var(--dark-punk);
-  color: var(--white-paper);
-  padding: 6rem 2rem;
-  overflow: hidden;
-  font-family: 'Courier New', Courier, monospace;
-}
+      .team-section {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        background-color: var(--dark-punk);
+        color: var(--white-paper);
+        padding: 6rem 2rem;
+        overflow: hidden;
+        font-family: "Courier New", Courier, monospace;
+      }
 
-.about-container {
-  position: relative;
-  z-index: 2;
-  max-width: 1400px;
-  margin: 0 auto;
-}
+      .about-container {
+        position: relative;
+        z-index: 2;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
 
-.section-header {
-  margin-bottom: 5rem;
-  text-align: center;
-}
+      .section-header {
+        margin-bottom: 5rem;
+        text-align: center;
+      }
 
-.section-title span {
-  font-size: clamp(2rem, 5vw, 4rem); /* Smaller than hero title */
-}
-    /* Container that manages card intersection and depth */
-.team-collage-row {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 4rem;
-  position: relative;
-  padding: 0 4rem;
-}
+      .section-title span {
+        font-size: clamp(2rem, 5vw, 4rem); /* Smaller than hero title */
+      }
+      /* Container that manages card intersection and depth */
+      .team-collage-row {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 4rem;
+        position: relative;
+        padding: 0 4rem;
+      }
 
-@media (max-width: 1024px) {
-  .team-collage-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 8rem;
-    padding: 0;
-  }
-}
-    .collage-card {
-  position: relative;
-  background-color: transparent;
-  width: 100%;
-  max-width: 500px;
-  transition: transform 0.3s ease, z-index 0.1s ease;
-}
+      @media (max-width: 1024px) {
+        .team-collage-row {
+          flex-direction: column;
+          align-items: center;
+          gap: 8rem;
+          padding: 0;
+        }
+      }
+      .collage-card {
+        position: relative;
+        background-color: transparent;
+        width: 100%;
+        max-width: 500px;
+        transition:
+          transform 0.3s ease,
+          z-index 0.1s ease;
+      }
 
-/* Card Information Box (The content panel) */
-.card-info-box {
-  background-color: white;
-  color: var(--dark-punk);
-  padding: 3rem 2rem 2rem 2rem;
-  border: 4px solid var(--dark-punk);
-  box-shadow: 12px 12px 0px rgba(0,0,0,0.6);
-  position: relative;
-  z-index: 10; /* Ensures info is above everything but the character sticker */
-  margin-top: 180px; /* Space for character illustration to sit above */
-}
+      /* Card Information Box (The content panel) */
+      .card-info-box {
+        background-color: white;
+        color: var(--dark-punk);
+        padding: 3rem 2rem 2rem 2rem;
+        border: 4px solid var(--dark-punk);
+        box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.6);
+        position: relative;
+        z-index: 10; /* Ensures info is above everything but the character sticker */
+        margin-top: 180px; /* Space for character illustration to sit above */
+      }
 
-.card-desc {
-  font-size: 1rem;
-  line-height: 1.5;
-  color: #333;
-  margin-bottom: 2rem;
-}
-    /* --- CHARACTER LAYER (Recycling image_0.png's sticker effect) --- */
-.collage-card .character-layer {
-  position: absolute;
-  top: -120px;
-  width: 85%;
-  left: 7.5%;
-  z-index: 20; /* Highest priority */
-  pointer-events: none;
-  /* Thick white outline + drop shadow */
-  filter: drop-shadow(4px 4px 0px var(--white-paper)) 
-          drop-shadow(-4px -4px 0px var(--white-paper)) 
-          drop-shadow(4px -4px 0px var(--white-paper)) 
-          drop-shadow(-4px 4px 0px var(--white-paper)) 
-          drop-shadow(8px 12px 0px rgba(0,0,0,0.6));
-  transition: transform 0.4s ease;
-}
+      .card-desc {
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #333;
+        margin-bottom: 2rem;
+      }
+      /* --- CHARACTER LAYER (Recycling image_0.png's sticker effect) --- */
+      .collage-card .character-layer {
+        position: absolute;
+        top: -120px;
+        width: 85%;
+        left: 7.5%;
+        z-index: 20; /* Highest priority */
+        pointer-events: none;
+        /* Thick white outline + drop shadow */
+        filter: drop-shadow(4px 4px 0px var(--white-paper))
+          drop-shadow(-4px -4px 0px var(--white-paper))
+          drop-shadow(4px -4px 0px var(--white-paper))
+          drop-shadow(-4px 4px 0px var(--white-paper))
+          drop-shadow(8px 12px 0px rgba(0, 0, 0, 0.6));
+        transition: transform 0.4s ease;
+      }
 
-/* --- TILT & POSITIONING (Creating organic asymmetry) --- */
-.team-card-left {
-  transform: rotate(-3deg) translateY(20px);
-  z-index: 100;
-}
-.team-card-right {
-  transform: rotate(2.5deg);
-  z-index: 90;
-}
+      /* --- TILT & POSITIONING (Creating organic asymmetry) --- */
+      .team-card-left {
+        transform: rotate(-3deg) translateY(20px);
+        z-index: 100;
+      }
+      .team-card-right {
+        transform: rotate(2.5deg);
+        z-index: 90;
+      }
 
-/* Interactivity: Cards overlap more dynamically on hover */
-.collage-card:hover { z-index: 200; }
-.collage-card:hover .character-layer { transform: scale(1.05) rotate(0deg); }
-.team-card-left:hover { transform: rotate(-1deg) translate(-10px, 10px); }
-.team-card-right:hover { transform: rotate(1deg) translate(10px, 10px); }
+      /* Interactivity: Cards overlap more dynamically on hover */
+      .collage-card:hover {
+        z-index: 200;
+      }
+      .collage-card:hover .character-layer {
+        transform: scale(1.05) rotate(0deg);
+      }
+      .team-card-left:hover {
+        transform: rotate(-1deg) translate(-10px, 10px);
+      }
+      .team-card-right:hover {
+        transform: rotate(1deg) translate(10px, 10px);
+      }
 
-/* --- MINI ASSET CLUSTERS (Recycling vector graphics) --- */
-.mini-asset-cluster {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 1.5rem;
-  margin-top: auto;
-}
+      /* --- MINI ASSET CLUSTERS (Recycling vector graphics) --- */
+      .mini-asset-cluster {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1.5rem;
+        margin-top: auto;
+      }
 
-.mini-scribble {
-  width: 60px;
-  opacity: 0.3;
-  color: var(--blue-kita);
-}
+      .mini-scribble {
+        width: 60px;
+        opacity: 0.3;
+        color: var(--blue-kita);
+      }
 
-.mini-polaroid {
-  width: 140px;
-  transform: rotate(8deg);
-  box-shadow: 4px 6px 0px rgba(0,0,0,0.3);
-}
+      .mini-polaroid {
+        width: 140px;
+        transform: rotate(8deg);
+        box-shadow: 4px 6px 0px rgba(0, 0, 0, 0.3);
+      }
 
-.mini-star {
-  width: 50px;
-  color: var(--yellow-nijika);
-  filter: drop-shadow(2px 2px 0px var(--dark-punk));
-}
+      .mini-star {
+        width: 50px;
+        color: var(--yellow-nijika);
+        filter: drop-shadow(2px 2px 0px var(--dark-punk));
+      }
 
-.mini-blob {
-  position: static;
-  width: 80px;
-  height: 70px;
-  transform: scale(0.7) rotate(-5deg) !important;
-}
-.mini-blob .blob-alert-text { font-size: 0.6rem; }
+      .mini-blob {
+        position: static;
+        width: 80px;
+        height: 70px;
+        transform: scale(0.7) rotate(-5deg) !important;
+      }
+      .mini-blob .blob-alert-text {
+        font-size: 0.6rem;
+      }
     </style>
   </head>
-  
+
   <body>
     <nav class="zine-nav" aria-label="Main Navigation">
-      <a href="/sites/test.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
-      <a href="#song-requests" class="nav-sticker tape-yellow">📝 Song Requests</a>
+      <a href="/sites/test.html" class="nav-sticker tape-pink"
+        >🎸 Main Posting</a
+      >
+      <a href="/sites/song_request.html" class="nav-sticker tape-yellow"
+        >📝 Song Requests</a
+      >
       <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
       <a href="#equipment-room" class="nav-sticker tape-blue">📦 Equipment</a>
       <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
@@ -250,70 +302,84 @@
     </nav>
 
     <section class="team-section">
-  <div class="hero-bg-overlay" aria-hidden="true">
-    <div class="halftone-pattern"></div>
-    <div class="distressed-texture"></div>
-  </div>
+      <div class="hero-bg-overlay" aria-hidden="true">
+        <div class="halftone-pattern"></div>
+        <div class="distressed-texture"></div>
+      </div>
 
-  <div class="about-container">
-    <header class="section-header">
-      <h2 class="hero-title section-title">
-        <span class="text-layer-1">The</span>
-        <span class="text-layer-3">Weaving</span>
-        <span class="text-layer-2">Team</span>
-      </h2>
-    </header>
+      <div class="about-container">
+        <header class="section-header">
+          <h2 class="hero-title section-title">
+            <span class="text-layer-1">The</span>
+            <span class="text-layer-3">Weaving</span>
+            <span class="text-layer-2">Team</span>
+          </h2>
+        </header>
 
-    <div class="team-collage-row">
-      
-      <article class="collage-card team-card-left panic-state">
-        <div class="card-tag tag-magenta">C++ ENGINE</div>
-        
-        <div class="collage-item character-layer">
-          <img src="resources/yhossni.jpeg" alt="Hand-drawn illustration of focused developer with 'WEBSERV' shirt">
-        </div>
-        
-        <div class="card-info-box">
-          <h3 class="hero-title card-name">
-            <span class="text-layer-2">CODE</span>
-            <span class="text-layer-3">SHREDDER</span>
-          </h3>
-          <p class="card-desc">Master of C++98, HTTP parsers, and connection management. Does not believe in segmentation faults.</p>
-          
-          <div class="mini-asset-cluster">
-            <!-- <img src="anxiety-spiral.svg" class="mini-scribble" alt=""> -->
-            <div class="polaroid-frame mini-polaroid">
-              <img src="resources/slug_bocchi.jpg" alt="">
-              <span class="polaroid-caption">CLUSTER 42</span>
+        <div class="team-collage-row">
+          <article class="collage-card team-card-left panic-state">
+            <div class="card-tag tag-magenta">C++ ENGINE</div>
+
+            <div class="collage-item character-layer">
+              <img
+                src="resources/yhossni.jpeg"
+                alt="Hand-drawn illustration of focused developer with 'WEBSERV' shirt"
+              />
             </div>
-          </div>
-        </div>
-      </article>
 
-      <article class="collage-card team-card-right">
-        <div class="card-tag tag-yellow">DEPLOYMENT</div>
-        
-        <div class="collage-item character-layer">
-          <img src="resources/zajaddad.png" alt="Hand-drawn illustration of teammate looking exhausted holding a network cable">
-        </div>
+            <div class="card-info-box">
+              <h3 class="hero-title card-name">
+                <span class="text-layer-2">CODE</span>
+                <span class="text-layer-3">SHREDDER</span>
+              </h3>
+              <p class="card-desc">
+                Master of C++98, HTTP parsers, and connection management. Does
+                not believe in segmentation faults.
+              </p>
 
-        <div class="card-info-box">
-          <h3 class="hero-title card-name">
-            <span class="text-layer-1">CHAOS</span>
-            <span class="text-layer-2">COORDINATOR</span>
-          </h3>
-          <p class="card-desc">Handles NGINX config translation, CGI states, and surviving evaluation panels. Primarily powered by energy drinks.</p>
-          
-          <div class="mini-asset-cluster">
-            <!-- <img src="vector-star.svg" class="mini-star" alt=""> -->
-            <div class="collage-item bocchi-blob-hidden mini-blob panic-state">
-              <div class="blob-vector"></div>
-              <span class="blob-alert-text">500 ERROR</span>
+              <div class="mini-asset-cluster">
+                <!-- <img src="anxiety-spiral.svg" class="mini-scribble" alt=""> -->
+                <div class="polaroid-frame mini-polaroid">
+                  <img src="resources/slug_bocchi.jpg" alt="" />
+                  <span class="polaroid-caption">CLUSTER 42</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </article>
+          </article>
 
-    </div></div>
-</section>
+          <article class="collage-card team-card-right">
+            <div class="card-tag tag-yellow">DEPLOYMENT</div>
+
+            <div class="collage-item character-layer">
+              <img
+                src="resources/zajaddad.png"
+                alt="Hand-drawn illustration of teammate looking exhausted holding a network cable"
+              />
+            </div>
+
+            <div class="card-info-box">
+              <h3 class="hero-title card-name">
+                <span class="text-layer-1">CHAOS</span>
+                <span class="text-layer-2">COORDINATOR</span>
+              </h3>
+              <p class="card-desc">
+                Handles NGINX config translation, CGI states, and surviving
+                evaluation panels. Primarily powered by energy drinks.
+              </p>
+
+              <div class="mini-asset-cluster">
+                <!-- <img src="vector-star.svg" class="mini-star" alt=""> -->
+                <div
+                  class="collage-item bocchi-blob-hidden mini-blob panic-state"
+                >
+                  <div class="blob-vector"></div>
+                  <span class="blob-alert-text">500 ERROR</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
   </body>
+</html>

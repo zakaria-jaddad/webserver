@@ -26,12 +26,12 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     env["QUERY_STRING"] = query;
 
     // content length
-    // if (body)
-    //     env["CONTENT_LENGTH"] = content_length;
+    if (!this->body_path.empty())
+        env["CONTENT_LENGTH"] = this->content_length;
     
     // content type
-    // if (content_type)
-    //     env["CONTENT_TYPE"] = content_type;
+    if (!this->content_type.empty())
+      env["CONTENT_TYPE"] = this->content_type[0];
 
     // some cgi needed? bs
     env["GATEWAY_INTERFACE"] = "CGI/1.1";

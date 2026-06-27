@@ -2,6 +2,7 @@
 # define RESPONSE_HPP
 
 #include "../server/Server.hpp"
+#include "../utils/utils.hpp"
 #include "../request/Request.hpp"
 #include "ResolvedConfig.hpp"
 #include "../cgi/Cgi.hpp"
@@ -57,7 +58,6 @@ class Response{
 
 public:
 
-  static std::string getExtension( std::string &path );
 	
   Response( t_client* client );
 	~Response( void );

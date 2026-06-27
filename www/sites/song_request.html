@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Kessoku Song Request</title></head>
+<body>
+  <h1>🎸 Kessoku Live House Request Box</h1>
+  <form action="/cgi-bin/song_request.py" method="POST">
+    <label>Fan name: <input name="fan_name" required></label><br><br>
+    <label>Song request: <input name="song_title" required></label><br><br>
+    <label>Dedication:<br>
+      <textarea name="message" rows="5" cols="40"></textarea>
+    </label><br><br>
+    <button type="submit">Send to STARRY</button>
+  </form>
+</body>
+</html>

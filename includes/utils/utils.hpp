@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
-bool isCgi(const std::string &uri, std::pair<std::string, std::string> cgiInfo);
+bool isCgi(const std::string &uri, std::map<std::string, std::string> cgiInfo);
+std::string getExtension( std::string &path );
 
 #endif
