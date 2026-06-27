@@ -3,6 +3,7 @@
 #include <ios>
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -96,6 +97,8 @@ HttpParser::getBodyFormFields() const
 std::string HttpParser::getPendingData() const { return this->_pendingData; }
 
 std::string HttpParser::getRequestRawBodyFilePath() const { return this->_body.filePath; }
+
+size_t HttpParser::getBodySize() const { return this->_body._bytesReceived; }
 
 /* ---- SETTERS ----*/
 
@@ -408,6 +411,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             this->_fileCleanUp();
                             return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                         }
+                        this->_bytesReceived += this->currentChunkSize;
                     }
                     else {
                         this->rawChunkSize += data;
@@ -759,27 +763,37 @@ std::string HttpParser::Body::_resolveFilePath(std::string &upload_store)
 HttpParser::httpResult HttpParser::Body::_initParsingInfo()
 {
 
-    std::string uploadPath = this->conf->getUploadPath();
-    std::cout << RED << "Upload path : " << uploadPath << WHITE << std::endl;
-
-    if (uploadPath.empty()) {
-        return HTTP_RES_METHOD_NOT_ALLOWED;
-    }
-
-    if (access(uploadPath.c_str(), R_OK) == -1) {
-        std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
-        return HTTP_RES_INTERNAL_SERVER_ERROR;
-    }
-
-    /* NOTE: Fixed a bug here When fileuPath is a directory */
-    std::string filePath = _resolveFilePath(uploadPath);
-    if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
-        std::stringstream ss;
+    /* NOTE: When POST request rout is a script, body shouldn't be parsed */
+    if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi()) == true) {
+        // don't validate path just create a random file
         srand(time(NULL));
-        ss << filePath << "upload_" << time(NULL) << "_" << rand();
-        filePath = ss.str();
+        std::stringstream ss;
+        ss << "/tmp/" << "upload_" << time(NULL) << "_" << rand();
+        this->filePath = ss.str();
     }
-    this->filePath = filePath;
+    else {
+        std::string uploadPath = this->conf->getUploadPath();
+        std::cout << RED << "Upload path : " << uploadPath << WHITE << std::endl;
+
+        if (uploadPath.empty()) {
+            return HTTP_RES_METHOD_NOT_ALLOWED;
+        }
+
+        if (access(uploadPath.c_str(), R_OK) == -1) {
+            std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
+            return HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+
+        /* NOTE: Fixed a bug here When fileuPath is a directory */
+        std::string filePath = _resolveFilePath(uploadPath);
+        if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
+            std::stringstream ss;
+            srand(time(NULL));
+            ss << filePath << "upload_" << time(NULL) << "_" << rand();
+            filePath = ss.str();
+        }
+        this->filePath = filePath;
+    }
 
     file.open(this->filePath.c_str(), std::ios::out | std::ios::in | std::ios::trunc);
     if (file.is_open() == false) {

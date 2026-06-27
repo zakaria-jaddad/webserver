@@ -213,6 +213,7 @@ class HttpParser {
     const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
     std::string getPendingData() const;
     std::string getRequestRawBodyFilePath() const;
+    size_t getBodySize() const;
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
