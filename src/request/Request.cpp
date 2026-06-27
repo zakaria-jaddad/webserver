@@ -192,7 +192,7 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
             /* If request type other than POST ignore the body */
             if (this->_requestType != POST) {
                 // Save pending Data if pipelined request
-                _savePendingData(rawData);
+                setPendingData(rawData);
                 this->_phase = COMPLETE;
                 std::cout << "FROM HTTP PARSING ignoring body, RESULT : " << HTTP_RES_OK
                           << std::endl;
@@ -210,7 +210,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         if (this->_body._state == Body::BODY_COMPLETE) {
             // Body is done save remaining rawData for the next request
-            _savePendingData(rawData);
             this->_phase = COMPLETE;
         }
     }
@@ -348,8 +347,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         if (this->_type == CONTENT_LENGTH) {
             std::cout << YELLOW << "Reading body using Content-Length" << WHITE << std::endl;
             size_t byteRemaining = this->_contentLength - this->_bytesReceived;
+
             if (rawDataSize > byteRemaining) {
-                this->file.write(rawData.c_str(), rawDataSize);
+                this->file.write(rawData.c_str(), byteRemaining);
                 this->_bytesReceived += byteRemaining;
 
                 // Save leftover rawData for next request if pipelined
@@ -362,16 +362,18 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                 this->file.flush();
                 this->file.seekg(0, std::ios::beg);
             }
+            else {
 
-            file.write(rawData.c_str(), rawDataSize);
-            this->_bytesReceived = this->_bytesReceived + rawDataSize;
-            if (this->_bytesReceived == this->_contentLength) {
+                file.write(rawData.c_str(), rawDataSize);
+                this->_bytesReceived = this->_bytesReceived + rawDataSize;
+                if (this->_bytesReceived == this->_contentLength) {
 
-                std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
-                          << std::endl;
-                this->_state = BODY_PROCESSING;
-                this->file.flush();
-                this->file.seekg(0, std::ios::beg);
+                    std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
+                              << std::endl;
+                    this->_state = BODY_PROCESSING;
+                    this->file.flush();
+                    this->file.seekg(0, std::ios::beg);
+                }
             }
         }
 

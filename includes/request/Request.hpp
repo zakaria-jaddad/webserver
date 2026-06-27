@@ -217,6 +217,7 @@ class HttpParser {
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
+    void setPendingData(std::string &pendingData) { this->_pendingData = pendingData; }
 
     bool isComplete();
     bool isBodyComplete();
@@ -232,12 +233,6 @@ class HttpParser {
     static std::string _urlDecode(std::string str);
     static void _replacePlusWithSpace(std::string &str);
     static void _parseQueryString(std::string &query, std::map<std::string, std::string> &store);
-    void _savePendingData(std::string &pendingData)
-    {
-        if (pendingData.empty() == false) {
-            this->_pendingData = pendingData;
-        }
-    }
 
     /*
      *

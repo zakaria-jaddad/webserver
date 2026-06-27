@@ -124,7 +124,7 @@ int Server::switchEpollMode(int clientSocket, uint32_t flag)
     return (0);
 }
 
-int Server::checkForServerFd(epoll_event *events, int i)
+int Server::checkServerFd(epoll_event *events, int i)
 {
     // This method is just to look for fd in serverFds
     //  in case it is a serverFd it accepts and gets clientSocket and adds it to epoll & clientFds
@@ -159,9 +159,13 @@ int Server::checkForServerFd(epoll_event *events, int i)
 
 void Server::resetSocket(t_client *client)
 {
+    std::string pendingData = client->request->getPendingData();
     delete client->request;
     delete client->response;
     client->request = new HttpParser(client->config);
+
+    // Save previous Data since connection is always open
+    client->request->setPendingData(pendingData);
     client->response = NULL;
 }
 
@@ -188,7 +192,7 @@ int Server::checkClientTimeout(t_client *client)
     return 0;
 }
 
-int Server::checkForClientFd(epoll_event *events, int i)
+int Server::checkClientFd(epoll_event *events, int i)
 {
 
     // This method is to look for the event fd in clientFds
@@ -201,41 +205,25 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
     for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
          c++) {
-        // std::cout << "looping thru clients" << std::endl;
-
-        // Request timeout/client idling too long
-       // int isTimeout = checkClientTimeout(&(*it));
-       // if (isTimeout) {
-       //     // general cleanup (either idle or request timeout)
-       //     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-       //     switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-       //     closeSocket(&(*it));
-       //     it = clients.erase(clients.begin() + c);
-       //     continue;
-       // }
 
         if (events[i].data.fd == it->fd) {
+
             clientSocket = it->fd;
             if (events[i].events == EPOLLIN) {
+
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
-                if (b == -1 || b == 0) {
+                if (b <= 0) {
                     closeSocket(&(*it));
                     clients.erase(clients.begin() + c);
                     return 1;
-                    // TODO:check if i must remove from epoll list of interest
                 }
-                req[b] = 0;
+
                 it->last_activity = time(NULL);
 
+                req[b] = 0;
                 std::string rawData(req, b);
-                std::cout << RED << "=================Request " << GREEN << it->fd  << RED << "=================" << std::endl;
-                std::cout << YELLOW << rawData << WHITE << std::endl;
 
-
-                HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
-                std::cout << "old=" << it->req_res << " new=" << r << std::endl;
-
-                it->req_res = r;
+                it->req_res = it->request->parseHttpRequest(rawData);
 
                 if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK) {
 
@@ -275,7 +263,6 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     if (serv_res)
                         std::cout << RED << "Connection Error, closing connection ..." << WHITE
                                   << std::endl;
-                    // std::cout << "cgi timed out" << std::endl;
                     if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
@@ -287,11 +274,27 @@ int Server::checkForClientFd(epoll_event *events, int i)
 
                 if (it->response->isComplete()) {
                     resetSocket(&(*it));
+
+                    /* NOTE: HTTP/1.1 Pipelining ya dawla */
+                    if (it->request->getPendingData().empty() == false) {
+
+                        std::cout << GREEN << std::endl;
+                        HttpParser::printRaw(it->request->getPendingData());
+
+                        std::cout << WHITE << std::endl;
+                        HttpParser::httpResult r = it->request->parseHttpRequest("");
+                        it->req_res = r;
+
+                        if (it->request->isComplete() == true ||
+                            it->req_res != HttpParser::HTTP_RES_OK) {
+                            std::cout << "Pipelined request ready, staying in EPOLLOUT"
+                                      << std::endl;
+                            break;
+                        }
+                    }
                     switchEpollMode(clientSocket, EPOLLIN);
                     std::cout << "back to reading" << std::endl;
                 }
-                // check if connection close or keep alive to know
-                // whether to close or in case of keep alive clear data buff falgs etc..
             }
             break;
         }
@@ -305,9 +308,10 @@ int Server::checkForClientFd(epoll_event *events, int i)
  * */
 int Server::startServer()
 {
-    setupServerFds();
     int clientSocket;
     int event_count;
+
+    setupServerFds();
 
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
@@ -351,12 +355,14 @@ int Server::startServer()
 
         for (int i = 0; i < event_count; i++) {
 
-            clientSocket = checkForServerFd(events, i);
-            if (clientSocket != -1) // found fd in serverFds
+            clientSocket = checkServerFd(events, i);
+            if (clientSocket != -1) {
                 continue;
-            clientSocket = checkForClientFd(events, i);
-            if (clientSocket == -1)
-                std::cerr << "error clienSocket Not Found!" << std::endl;
+            }
+            clientSocket = checkClientFd(events, i);
+            if (clientSocket == -1) {
+                std::cerr << "Error: ClientSocket not found!" << std::endl;
+            }
         }
     }
     return (0);
