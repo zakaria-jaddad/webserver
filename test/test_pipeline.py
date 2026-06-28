@@ -1,89 +1,71 @@
 #!/usr/bin/env python3
-import socket
-import sys
+"""HTTP/1.1 pipelining tests.
 
-HOST = "localhost"
+Covered requirement: requests should be processed in order on a persistent
+connection without waiting for each response before sending the next request.
+"""
+
+import socket
+
+from test.helpers import make_request, status_code_from
+
+HOST = "127.0.0.1"
 PORT = 2010
 
-def test_pipeline():
-    # Build two pipelined GET requests
-    req1 = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
-    req2 = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
-    pipeline = req1 + req2
+
+def _recv_all(sock, timeout=2.0):
+    sock.settimeout(timeout)
+    data = b""
+    try:
+        while True:
+            chunk = sock.recv(512)
+            if not chunk:
+                break
+            data += chunk
+            # Stop early once the chunked terminator is seen.
+            if data.endswith(b"0\r\n\r\n"):
+                break
+    except socket.timeout:
+        pass
+    return data
+
+
+def test_pipeline(server):
+    """Two pipelined GET requests should yield two 200 responses."""
+    req = make_request("GET", "/", headers={"Host": "localhost"})
+    pipeline = req + req
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(5)
         s.connect((HOST, PORT))
-        s.sendall(pipeline.encode())
+        s.sendall(pipeline)
+        data = _recv_all(s)
 
-        # Receive all data with a small buffer to force multiple reads
-        data = b""
-        s.settimeout(2)
-        try:
-            while True:
-                chunk = s.recv(512)
-                if not chunk:
-                    break
-                data += chunk
-        except socket.timeout:
-            pass
+    count_200 = data.count(b"200 OK")
+    assert count_200 >= 1, "No response received for pipelined requests"
+    assert count_200 == 2, f"Expected 2 responses, got {count_200}"
 
-    response_text = data.decode('utf-8', errors='replace')
-    print(response_text)
-    count_200 = response_text.count("200 OK")
 
-    print(f"Sent {len(pipeline)} bytes ({2} requests)")
-    print(f"Received {len(data)} bytes")
-    print(f"'200 OK' count: {count_200}")
-
-    if count_200 == 2:
-        print("✅ PIPELINING WORKS")
-        return 0
-    elif count_200 == 1:
-        print("❌ Only one response — pipelining broken")
-        return 1
-    else:
-        print(f"❌ Unexpected: {count_200} responses")
-        return 1
-
-def test_mixed_pipeline():
-    """Test GET + POST pipeline (if you have a POST endpoint)"""
-    # Adjust body and Content-Length for your setup
-    body = "name=test&value=123"
-    post = (
-        "POST / HTTP/1.1\r\n"
-        "Host: localhost\r\n"
-        f"Content-Length: {len(body)}\r\n"
-        "\r\n"
-        f"{body}"
+def test_mixed_pipeline(server):
+    """A POST followed by a GET on the same connection should both be answered."""
+    post = make_request(
+        "POST",
+        "/uploads",
+        headers={
+            "Host": "localhost",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body=b"name=test&value=123",
     )
-    get = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    get = make_request("GET", "/", headers={"Host": "localhost"})
     pipeline = post + get
-    print(len(body))
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(5)
         s.connect((HOST, PORT))
-        s.sendall(pipeline.encode())
+        s.sendall(pipeline)
+        data = _recv_all(s, timeout=3.0)
 
-        data = b""
-        s.settimeout(2)
-        try:
-            while True:
-                chunk = s.recv(512)
-                if not chunk:
-                    break
-                data += chunk
-        except socket.timeout:
-            pass
-
-    response_text = data.decode('utf-8', errors='replace')
-    print(f"\nMixed pipeline (POST+GET):")
-    print(f"Received {len(data)} bytes")
-    # Look for 200 or 201/204 for POST, then 200 for GET
-    print(response_text[:500])
-
-if __name__ == "__main__":
-    test_mixed_pipeline()
-    rc = test_pipeline()
-    sys.exit(0)
+    # POST currently returns 500; we still expect the GET to be answered.
+    assert b"HTTP/1.1" in data
+    assert data.count(b"HTTP/1.1") >= 2

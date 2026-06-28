@@ -58,4 +58,7 @@ re: fclean all
 
 .PHONY: all clean fclean re test
 
+test:
+	./run_tests.sh
+
 -include $(OBJ:.o=.d)
