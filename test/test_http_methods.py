@@ -24,7 +24,7 @@ WWW_ROOT = PROJECT_ROOT / "www"
 def _send(req):
     return send_request_and_read_all(req, timeout=3.0)
 
-
+#
 class TestGet:
     def test_get_existing_file(self, server):
         resp = _send(make_request("GET", "/index.html", headers={"Host": "localhost"}))
@@ -53,12 +53,15 @@ class TestPost:
 
     def test_post_multipart_upload(self, server):
         boundary = "----WebKitFormBoundary7MA4YWxk"
+        # Per RFC 2046 the delimiter is "--" + the boundary parameter value.
+        # boundary already starts with dashes, so do NOT prepend extra dashes.
+        delim = f"--{boundary}"
         body = (
-            f"------{boundary}\r\n"
+            f"{delim}\r\n"
             f"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
             f"Content-Type: text/plain\r\n\r\n"
             f"hello upload\r\n"
-            f"------{boundary}--\r\n"
+            f"{delim}--\r\n"
         ).encode()
         req = make_request(
             "POST",

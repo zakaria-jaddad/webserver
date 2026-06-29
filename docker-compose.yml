@@ -13,6 +13,7 @@ services:
     # Map ports for testing (adjust as needed)
     ports:
       - "8080:8080"
+      - "2010:2010"
       - "8081:8081"
       - "9090:9090"
     # Run bash by default

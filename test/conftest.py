@@ -85,10 +85,15 @@ class ServerProcess:
     def start(self) -> "ServerProcess":
         build_server()
         env = os.environ.copy()
-        # Sanitize upload test directories before each run.
+        # Sanitize upload test directories before each run. Wipe stale uploads
+        # but recreate every upload_store referenced by the config, since the
+        # server does not create them itself and will return 500 for a POST to
+        # a route whose upload_store is missing (Request.cpp _initParsingInfo).
         if TEST_UPLOAD_DIR.exists():
             shutil.rmtree(TEST_UPLOAD_DIR)
         TEST_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        for store in read_config_upload_stores(self.config_path):
+            store.mkdir(parents=True, exist_ok=True)
 
         stdout = subprocess.PIPE if self.capture_output else subprocess.DEVNULL
         self.proc = subprocess.Popen(
@@ -151,6 +156,28 @@ def read_config_ports(config_path: Path) -> list[int]:
                         except ValueError:
                             pass
     return ports
+
+
+def read_config_upload_stores(config_path: Path) -> list[Path]:
+    """Naively parse `upload_store <dir>;` directives from a config file.
+
+    The server expects these directories to already exist (it does not create
+    them at startup), and the fixture wipes test_uploads/ before every run, so
+    any configured upload directory that lives under test_uploads/ must be
+    recreated here or POST uploads fail with 500 ("Unable to open file").
+    """
+    stores: list[Path] = []
+    with open(config_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("upload_store"):
+                parts = line.split()
+                if len(parts) >= 2:
+                    p = Path(parts[1].rstrip(";"))
+                    if not p.is_absolute():
+                        p = PROJECT_ROOT / p
+                    stores.append(p)
+    return stores
 
 
 @pytest.fixture

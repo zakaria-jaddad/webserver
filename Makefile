@@ -54,11 +54,12 @@ clean:
 fclean: clean
 	rm -rf $(NAME) $(TEST_NAME)
 
+test:
+	./run_tests.sh
+
 re: fclean all
 
 .PHONY: all clean fclean re test
 
-test:
-	./run_tests.sh
 
 -include $(OBJ:.o=.d)

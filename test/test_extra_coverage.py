@@ -66,6 +66,13 @@ class TestChunkedUpload:
             b"Content-Type: application/octet-stream\r\n"
             b"\r\n" + chunks
         )
+        """
+            curl -X POST \
+              -H "Transfer-Encoding: chunked" -H "Content-Type: application/octet-stream" \
+              -d '4\r\ntest\r\n5\r\nchunk\r\n0\r\n\r\n' \
+              http://localhost:2010/upload
+
+        """
         resp = _send_port(2010, req)
         code = status_code_from(resp)
         assert code is not None

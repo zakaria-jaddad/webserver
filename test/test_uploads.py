@@ -24,12 +24,15 @@ def _send(req):
 class TestFileUploads:
     def test_upload_text_file(self, server):
         boundary = "----WebKitFormBoundaryT1"
+        # Per RFC 2046 the delimiter is "--" + the boundary parameter value.
+        # boundary already starts with dashes, so do NOT prepend extra dashes.
+        delim = f"--{boundary}"
         content = b"Hello, webserv upload!"
         body = (
-            f"------{boundary}\r\n"
+            f"{delim}\r\n"
             f"Content-Disposition: form-data; name=\"file\"; filename=\"uploaded.txt\"\r\n"
             f"Content-Type: text/plain\r\n\r\n"
-        ).encode() + content + f"\r\n------{boundary}--\r\n".encode()
+        ).encode() + content + f"\r\n{delim}--\r\n".encode()
 
         req = make_request(
             "POST",
@@ -46,12 +49,15 @@ class TestFileUploads:
 
     def test_upload_binary_file(self, server):
         boundary = "----WebKitFormBoundaryB2"
+        # Per RFC 2046 the delimiter is "--" + the boundary parameter value.
+        # boundary already starts with dashes, so do NOT prepend extra dashes.
+        delim = f"--{boundary}"
         content = bytes(range(256))
         body = (
-            f"------{boundary}\r\n"
+            f"{delim}\r\n"
             f"Content-Disposition: form-data; name=\"bin\"; filename=\"bytes.bin\"\r\n"
             f"Content-Type: application/octet-stream\r\n\r\n"
-        ).encode() + content + f"\r\n------{boundary}--\r\n".encode()
+        ).encode() + content + f"\r\n{delim}--\r\n".encode()
 
         req = make_request(
             "POST",

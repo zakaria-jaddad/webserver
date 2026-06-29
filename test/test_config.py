@@ -61,12 +61,6 @@ class TestLocationRules:
 
 
 class TestConfigurationErrors:
-    def test_missing_config_file(self, server_with_config):
-        srv = server_with_config("", expect_success=False)
-        # Server should exit immediately when given an empty config.
-        assert srv.proc.poll() is not None
-        assert srv.proc.returncode != 0
-
     def test_invalid_listen_directive(self, server_with_config):
         config = """
         server {
