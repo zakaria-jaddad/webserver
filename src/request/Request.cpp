@@ -770,6 +770,7 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
         std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
         return HTTP_RES_INTERNAL_SERVER_ERROR;
     }
+    std::cout << GREEN << "opened uploadPath" << WHITE << std::endl;
 
     /* NOTE: Fixed a bug here When fileuPath is a directory */
     std::string filePath = _resolveFilePath(uploadPath);

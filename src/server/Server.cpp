@@ -197,22 +197,20 @@ int Server::checkForClientFd(epoll_event *events, int i)
     int clientSocket = -1;
     char req[READ_BYTES] = {0};
     int b;
-    int c = 0;
 
-    for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
-         c++) {
+    for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();) {
         // std::cout << "looping thru clients" << std::endl;
 
         // Request timeout/client idling too long
-       // int isTimeout = checkClientTimeout(&(*it));
-       // if (isTimeout) {
-       //     // general cleanup (either idle or request timeout)
-       //     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-       //     switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-       //     closeSocket(&(*it));
-       //     it = clients.erase(clients.begin() + c);
-       //     continue;
-       // }
+        // int isTimeout = checkClientTimeout(&(*it));
+        // if (isTimeout) {
+        //     // general cleanup (either idle or request timeout)
+        //     std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
+        //     switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+        //     closeSocket(&(*it));
+        //     it = clients.erase(clients.begin() + c);
+        //     continue;
+        // }
 
         if (events[i].data.fd == it->fd) {
             clientSocket = it->fd;
@@ -220,7 +218,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
                 if (b == -1 || b == 0) {
                     closeSocket(&(*it));
-                    clients.erase(clients.begin() + c);
+                    clients.erase(clients.begin());
                     return 1;
                     // TODO:check if i must remove from epoll list of interest
                 }
@@ -228,9 +226,9 @@ int Server::checkForClientFd(epoll_event *events, int i)
                 it->last_activity = time(NULL);
 
                 std::string rawData(req, b);
-                std::cout << RED << "=================Request " << GREEN << it->fd  << RED << "=================" << std::endl;
+                std::cout << RED << "=================Request " << GREEN << it->fd << RED
+                          << "=================" << std::endl;
                 std::cout << YELLOW << rawData << WHITE << std::endl;
-
 
                 HttpParser::httpResult r = it->request->parseHttpRequest(rawData);
                 std::cout << "old=" << it->req_res << " new=" << r << std::endl;
@@ -258,7 +256,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                         closeSocket(&(*it));
-                        it = clients.erase(clients.begin() + c);
+                        it = clients.erase(clients.begin());
                         std::cout << "cleaned socket" << std::endl;
                     }
                     break;
@@ -279,7 +277,7 @@ int Server::checkForClientFd(epoll_event *events, int i)
                     if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
-                        it = clients.erase(clients.begin() + c);
+                        it = clients.erase(clients.begin());
                         std::cout << "cleaned socket" << std::endl;
                     }
                     break;

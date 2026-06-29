@@ -21,104 +21,93 @@ Response::Response(t_client *dep)
         error = true;
 }
 
-Response::~Response( void )
+Response::~Response(void)
 {
-	if (cgi)
-		delete cgi;
+    if (cgi)
+        delete cgi;
 }
 
-
-HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method)
+HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
 {
-	const std::string& uri = client->request->getRequestUriPath();
+    const std::string &uri = client->request->getRequestUriPath();
 
-	if (isCgi(uri, conf.getCgi()))
-	{
-		// std::cout << time(NULL) - start_time << std::endl;
-		if ((time(NULL) - start_time) > CGI_TIMEOUT)
-		{
-			this->timed_out = 1;
-			int childpid = cgi->getChild();
+    if (isCgi(uri, conf.getCgi())) {
+        // std::cout << time(NULL) - start_time << std::endl;
+        if ((time(NULL) - start_time) > CGI_TIMEOUT) {
+            this->timed_out = 1;
+            int childpid = cgi->getChild();
 
-			std::cout << "child to kill : " << childpid << std::endl;
+            std::cout << "child to kill : " << childpid << std::endl;
 
-			kill(childpid, SIGKILL);
-			waitpid(childpid, NULL, 0);
-			return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
-		}
+            kill(childpid, SIGKILL);
+            waitpid(childpid, NULL, 0);
+            return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
+        }
 
-		if (!this->exec_status)
-		{
-			HttpParser::httpResult res = cgiExecution();
+        if (!this->exec_status) {
+            HttpParser::httpResult res = cgiExecution();
 
-			if (res != HttpParser::HTTP_RES_OK)
-			{
-				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-			}
-			return HttpParser::HTTP_RES_OK;
-		}
-		
-		std::cout << "cgi executed!" << std::endl;
-		if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
-		{
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		
-		sendingCgiResponse();
+            if (res != HttpParser::HTTP_RES_OK) {
+                return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+            }
+            return HttpParser::HTTP_RES_OK;
+        }
 
-		if (error)
-		{
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		
-		std::cout << "Done sending the response" << std::endl;
-		resp.clear();
-	}
+        std::cout << "cgi executed!" << std::endl;
+        if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR) {
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
 
-	else
-	{
-		switch (req_method) {
-			case HttpParser::DELETE:
-				return (httpDelete());
-			case HttpParser::GET:
-				return (httpGet());
-			case HttpParser::POST:
-				return (httpPost());
-			default:
-				return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
-		}
-	}
+        sendingCgiResponse();
 
-	return HttpParser::HTTP_RES_OK;
+        if (error) {
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+
+        std::cout << "Done sending the response" << std::endl;
+        resp.clear();
+    }
+
+    else {
+        switch (req_method) {
+        case HttpParser::DELETE:
+            return (httpDelete());
+        case HttpParser::GET:
+            return (httpGet());
+        case HttpParser::POST:
+            return (httpPost());
+        default:
+            return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
+        }
+    }
+
+    return HttpParser::HTTP_RES_OK;
 }
-
 
 HttpParser::httpResult Response::checkMethod(void)
 {
-	// check if its needed 
-	// if (this->timed_out)
-	// 	return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;//placeholder
+    // check if its needed
+    // if (this->timed_out)
+    // 	return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;//placeholder
 
-	std::pair<int, std::string> redir = conf.getRedir();
-	if (!redir.second.empty())
-	{
-		std::cout << YELLOW << "Redirecting : " << redir.first << " ==== " << redir.second << WHITE << std::endl;
-		if (servePages(redir.first, redir.second, 0))
-		{
-			std::cout << RED << "Error Redirecting" << WHITE << std::endl;
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		return HttpParser::HTTP_RES_OK;
-	}
-	HttpParser::requestType req_method = client->request->getRequestType();
-	std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
+    std::pair<int, std::string> redir = conf.getRedir();
+    if (!redir.second.empty()) {
+        std::cout << YELLOW << "Redirecting : " << redir.first << " ==== " << redir.second << WHITE
+                  << std::endl;
+        if (servePages(redir.first, redir.second, 0)) {
+            std::cout << RED << "Error Redirecting" << WHITE << std::endl;
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+        return HttpParser::HTTP_RES_OK;
+    }
+    HttpParser::requestType req_method = client->request->getRequestType();
+    std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
 
-	if (!allowed_methods.empty() && std::find(allowed_methods.begin(), \
-											  allowed_methods.end(), \
-											  methodToString(req_method)) == allowed_methods.end())
-	{
-		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-	}
+    if (!allowed_methods.empty() &&
+        std::find(allowed_methods.begin(), allowed_methods.end(), methodToString(req_method)) ==
+            allowed_methods.end()) {
+        return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
+    }
 
-	return routeMethod(req_method);
+    return routeMethod(req_method);
 }
