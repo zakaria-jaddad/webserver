@@ -61,6 +61,7 @@ void Response::craftHeader(std::string &buff)
 void Response::craftBody(std::string &buff)
 {
     resp.append(buff);
+    resp.append(CRLF);
     buff.erase();
 
     std::cout << "crafted body : " << std::endl;
@@ -98,8 +99,9 @@ HttpParser::httpResult Response::craftResponse(void)
     }
 
     if (this->_phase == BODY) {
+        ssize_t bytes;
         if (val.empty()) {
-            ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
+            bytes = read(cgi_out_pipe[0], buff, READ_BYTES);
 
             if (bytes == 0) {
                 this->_phase = COMPLETE;
@@ -114,10 +116,10 @@ HttpParser::httpResult Response::craftResponse(void)
 
             // buff[bytes] = 0;
 
-            val = buff;
+            val.assign(buff, bytes);
         }
 
-        chunk_size = val.length();
+        chunk_size = bytes;
 
         craftBody(val);
     }
@@ -167,7 +169,7 @@ ssize_t Response::sendResponse(const char *resp, size_t size)
     ssize_t bytes_sent = send(client->fd, resp, size, 0);
     if (errno == EAGAIN || errno == EWOULDBLOCK)
         return -2;
-    
+
     if (bytes_sent >= 0) // check later this function's errors should be taken into consideration
         return bytes_sent;
 
