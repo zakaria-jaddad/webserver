@@ -54,7 +54,7 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
         }
 
         std::cout << "cgi executed!" << std::endl;
-        if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR) {
+        if (craftResponse() != HttpParser::HTTP_RES_OK) {
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
 
