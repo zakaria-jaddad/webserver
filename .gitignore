@@ -46,6 +46,9 @@ obj/
 external/googletest/
 
 www/uploads/
+test_uploads/
+venv/
+.pytest_cache/
 
 .gitignore
 

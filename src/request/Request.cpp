@@ -3,6 +3,7 @@
 #include <ios>
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -97,6 +98,8 @@ std::string HttpParser::getPendingData() const { return this->_pendingData; }
 
 std::string HttpParser::getRequestRawBodyFilePath() const { return this->_body.filePath; }
 
+size_t HttpParser::getBodySize() const { return this->_body._bytesReceived; }
+
 /* ---- SETTERS ----*/
 
 void HttpParser::setRes(httpResult res) { this->_res = res; }
@@ -189,7 +192,7 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
             /* If request type other than POST ignore the body */
             if (this->_requestType != POST) {
                 // Save pending Data if pipelined request
-                _savePendingData(rawData);
+                setPendingData(rawData);
                 this->_phase = COMPLETE;
                 std::cout << "FROM HTTP PARSING ignoring body, RESULT : " << HTTP_RES_OK
                           << std::endl;
@@ -207,7 +210,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         if (this->_body._state == Body::BODY_COMPLETE) {
             // Body is done save remaining rawData for the next request
-            _savePendingData(rawData);
             this->_phase = COMPLETE;
         }
     }
@@ -345,8 +347,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         if (this->_type == CONTENT_LENGTH) {
             std::cout << YELLOW << "Reading body using Content-Length" << WHITE << std::endl;
             size_t byteRemaining = this->_contentLength - this->_bytesReceived;
+
             if (rawDataSize > byteRemaining) {
-                this->file.write(rawData.c_str(), rawDataSize);
+                this->file.write(rawData.c_str(), byteRemaining);
                 this->_bytesReceived += byteRemaining;
 
                 // Save leftover rawData for next request if pipelined
@@ -359,16 +362,18 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                 this->file.flush();
                 this->file.seekg(0, std::ios::beg);
             }
+            else {
 
-            file.write(rawData.c_str(), rawDataSize);
-            this->_bytesReceived = this->_bytesReceived + rawDataSize;
-            if (this->_bytesReceived == this->_contentLength) {
+                file.write(rawData.c_str(), rawDataSize);
+                this->_bytesReceived = this->_bytesReceived + rawDataSize;
+                if (this->_bytesReceived == this->_contentLength) {
 
-                std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
-                          << std::endl;
-                this->_state = BODY_PROCESSING;
-                this->file.flush();
-                this->file.seekg(0, std::ios::beg);
+                    std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
+                              << std::endl;
+                    this->_state = BODY_PROCESSING;
+                    this->file.flush();
+                    this->file.seekg(0, std::ios::beg);
+                }
             }
         }
 
@@ -408,6 +413,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             this->_fileCleanUp();
                             return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                         }
+                        this->_bytesReceived += this->currentChunkSize;
                     }
                     else {
                         this->rawChunkSize += data;
@@ -759,28 +765,37 @@ std::string HttpParser::Body::_resolveFilePath(std::string &upload_store)
 HttpParser::httpResult HttpParser::Body::_initParsingInfo()
 {
 
-    std::string uploadPath = this->conf->getUploadPath();
-    std::cout << RED << "Upload path : " << uploadPath << WHITE << std::endl;
-
-    if (uploadPath.empty()) {
-        return HTTP_RES_METHOD_NOT_ALLOWED;
-    }
-
-    if (access(uploadPath.c_str(), R_OK) == -1) {
-        std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
-        return HTTP_RES_INTERNAL_SERVER_ERROR;
-    }
-    std::cout << GREEN << "opened uploadPath" << WHITE << std::endl;
-
-    /* NOTE: Fixed a bug here When fileuPath is a directory */
-    std::string filePath = _resolveFilePath(uploadPath);
-    if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
-        std::stringstream ss;
+    /* NOTE: When POST request rout is a script, body shouldn't be parsed */
+    if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi()) == true) {
+        // don't validate path just create a random file
         srand(time(NULL));
-        ss << filePath << "upload_" << time(NULL) << "_" << rand();
-        filePath = ss.str();
+        std::stringstream ss;
+        ss << "/tmp/" << "upload_" << time(NULL) << "_" << rand();
+        this->filePath = ss.str();
     }
-    this->filePath = filePath;
+    else {
+        std::string uploadPath = this->conf->getUploadPath();
+        std::cout << RED << "Upload path : " << uploadPath << WHITE << std::endl;
+
+        if (uploadPath.empty()) {
+            return HTTP_RES_METHOD_NOT_ALLOWED;
+        }
+
+        if (access(uploadPath.c_str(), R_OK) == -1) {
+            std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
+            return HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+
+        /* NOTE: Fixed a bug here When fileuPath is a directory */
+        std::string filePath = _resolveFilePath(uploadPath);
+        if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
+            std::stringstream ss;
+            srand(time(NULL));
+            ss << filePath << "upload_" << time(NULL) << "_" << rand();
+            filePath = ss.str();
+        }
+        this->filePath = filePath;
+    }
 
     file.open(this->filePath.c_str(), std::ios::out | std::ios::in | std::ios::trunc);
     if (file.is_open() == false) {

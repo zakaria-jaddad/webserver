@@ -72,8 +72,8 @@ class Server {
     void setupServerFds();
     int addToEpoll(int fd, uint32_t flag);
     int switchEpollMode(int clientSocket, uint32_t flag);
-    int checkForServerFd(epoll_event *events, int i);
-    int checkForClientFd(epoll_event *events, int i);
+    int checkServerFd(epoll_event *events, int i);
+    int checkClientFd(epoll_event *events, int i);
     void resetSocket(t_client *client);
     void closeSocket(t_client *client);
 

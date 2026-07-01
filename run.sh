@@ -5,4 +5,4 @@
 # docker run -d -p 2010:2010 nginx-2010
 #
 make all
-./ft_webserver
+./ft_webserver conf/test.conf
