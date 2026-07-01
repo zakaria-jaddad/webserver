@@ -1,4 +1,5 @@
 #include "../../includes/response/Response.hpp"
+#include <ostream>
 #include <sys/stat.h>
 
 // std::string Response::craftHeaderStatus(std::string &header)
