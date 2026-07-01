@@ -202,8 +202,7 @@ int Server::checkClientFd(epoll_event *events, int i)
     char req[READ_BYTES] = {0};
     int b;
 
-    for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();
-         c++) {
+    for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();) {
 
         if (events[i].data.fd == it->fd) {
 
