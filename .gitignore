@@ -55,3 +55,7 @@ venv/
 subject.md
 dokerfile
 run.sh
+
+venv/
+test/
+test_upload/
