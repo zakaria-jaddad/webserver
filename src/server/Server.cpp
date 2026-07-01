@@ -212,7 +212,8 @@ int Server::checkClientFd(epoll_event *events, int i)
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
                 if (b <= 0) {
                     closeSocket(&(*it));
-                    clients.erase(clients.begin());
+                    // BUG: WTF is this for yhosnsi
+                    clients.erase(it);
                     return 1;
                 }
 
@@ -247,7 +248,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                         closeSocket(&(*it));
-                        it = clients.erase(clients.begin());
+                        it = clients.erase(it);
                         std::cout << "cleaned socket" << std::endl;
                     }
                     break;
@@ -267,7 +268,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                     if (serv_res || it->response->isComplete()) {
                         switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                         closeSocket(&(*it));
-                        it = clients.erase(clients.begin());
+                        it = clients.erase(it);
                         std::cout << "cleaned socket" << std::endl;
                     }
                     break;
