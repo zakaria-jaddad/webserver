@@ -14,17 +14,26 @@ Response::Response(t_client *dep)
     this->start_time = time(NULL);
     this->cgi = NULL;
 
-    if (pipe(cgi_in_pipe) == -1)
-        error = true;
-
-    if (pipe(cgi_out_pipe) == -1)
-        error = true;
+    this->cgi_in_pipe[0] = -1;
+    this->cgi_in_pipe[1] = -1;
+    this->cgi_out_pipe[0] = -1;
+    this->cgi_out_pipe[1] = -1;
 }
 
 Response::~Response(void)
 {
     if (cgi)
         delete cgi;
+
+    if (this->fileFD >= 0)
+        close(this->fileFD);
+
+    for (int i = 0; i < 2; ++i) {
+        if (this->cgi_in_pipe[i] >= 0)
+            close(this->cgi_in_pipe[i]);
+        if (this->cgi_out_pipe[i] >= 0)
+            close(this->cgi_out_pipe[i]);
+    }
 }
 
 HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
