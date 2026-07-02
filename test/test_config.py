@@ -55,7 +55,7 @@ class TestLocationRules:
         assert status_code_from(resp) == 405
 
     def test_autoindex_enabled(self, server):
-        resp = _send_port(2010, make_request("GET", "/folder/", headers={"Host": "localhost"}))
+        resp = _send_port(2010, make_request("GET", "/resources/", headers={"Host": "localhost"}))
         code = status_code_from(resp)
         assert code in (200, 403)
 

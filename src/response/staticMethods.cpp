@@ -127,7 +127,7 @@ void Response::serveDirectoryContent(std::string &absPath)
 
     std::string html = generateDirectoryListingHTML(absPath, this->normalizedPath, entries);
 
-    sendHeader(200, "text/html", "", true, 0);
+    sendHeader(200, "text/html", "", true, this->closeConnection);
 
     craftChunkSize(html.length());
 
@@ -150,16 +150,19 @@ HttpParser::httpResult Response::httpGet(void)
     ssize_t r = 0;
     int fd;
     std::string ext;
-  
 
-    // std::cout << "write offset : " << client->writeOffset << std::endl;
-    // std::cout << "outbuffer : " << client->outBuffer << std::endl;
-
-    if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
-    {
-        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                                            client->outBuffer.size() - client->writeOffset);
-        return HttpParser::HTTP_RES_OK;
+    // Drain any buffered data left from a previous partial send first.
+    if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
+        ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
+                                    client->outBuffer.size() - client->writeOffset);
+        if (sent == -2)
+            return HttpParser::HTTP_RES_OK;
+        else if (sent > 0)
+            client->writeOffset += sent;
+        if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
+            return HttpParser::HTTP_RES_OK;
+        client->outBuffer.clear();
+        client->writeOffset = 0;
     }
 
     if (this->fileFD == -3) {
@@ -211,38 +214,51 @@ HttpParser::httpResult Response::httpGet(void)
     MIME mime;
     std::string m = mime.getMIME(ext);
     if (!this->headerFlag) {
-        sendHeader(200, m, "", true, 0);
+        sendHeader(200, m, "", true, this->closeConnection);
         this->headerFlag = 1;
-        // return HttpParser::HTTP_RES_OK;
     }
 
-    r = read(this->fileFD, buff, READ_BYTES);
-    if (r == -1) {
-        close(this->fileFD);
-        this->error = 1;
-        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-    }
-    else if (r == 0) {
-        client->outBuffer.append("0\r\n\r\n", 5);
-        client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset,
-                                            client->outBuffer.size() - client->writeOffset);
-        if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size())
-        {
-            std::cout << "done" << std::endl;
+    // Send as many chunks as the socket will accept in one go. This keeps
+    // pipelined responses flowing without yielding back to epoll between
+    // every chunk.
+    while (true) {
+        r = read(this->fileFD, buff, READ_BYTES);
+        if (r == -1) {
             close(this->fileFD);
-            this->fileFD = -3;
-            this->status = 1;
-            client->outBuffer.clear();
-            client->writeOffset = 0;
+            this->error = 1;
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
-        return HttpParser::HTTP_RES_OK; // check later this looks phishy to me somehow
-    }
+        else if (r == 0) {
+            client->outBuffer.append("0\r\n\r\n", 5);
+            ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
+                                        client->outBuffer.size() - client->writeOffset);
+            if (sent == -2)
+                return HttpParser::HTTP_RES_OK;
+            else if (sent > 0)
+                client->writeOffset += sent;
+            if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size()) {
+                std::cout << "done" << std::endl;
+                close(this->fileFD);
+                this->fileFD = -3;
+                this->status = 1;
+                client->outBuffer.clear();
+                client->writeOffset = 0;
+            }
+            return HttpParser::HTTP_RES_OK;
+        }
 
-    // buff[r] = 0;
-    craftChunkSize(r);
-    client->outBuffer.append(buff, r);
-    client->outBuffer.append("\r\n", 2);
-    client->writeOffset += sendResponse(client->outBuffer.data() + client->writeOffset, 
-                client->outBuffer.size() - client->writeOffset);
-    return HttpParser::HTTP_RES_OK;
+        craftChunkSize(r);
+        client->outBuffer.append(buff, r);
+        client->outBuffer.append("\r\n", 2);
+        ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
+                                    client->outBuffer.size() - client->writeOffset);
+        if (sent == -2)
+            return HttpParser::HTTP_RES_OK;
+        else if (sent > 0)
+            client->writeOffset += sent;
+        if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size())
+            return HttpParser::HTTP_RES_OK;
+        client->outBuffer.clear();
+        client->writeOffset = 0;
+    }
 }

@@ -387,3 +387,5 @@ void Response::sendHeader(int status_code, std::string content_type, std::string
 bool Response::isComplete(void) { return (this->status); }
 
 bool Response::isError(void) { return (this->error); }
+
+bool Response::shouldClose(void) const { return (this->closeConnection); }

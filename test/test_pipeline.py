@@ -6,7 +6,6 @@ connection without waiting for each response before sending the next request.
 """
 
 import socket
-
 from test.helpers import make_request, status_code_from
 
 HOST = "127.0.0.1"
@@ -18,13 +17,10 @@ def _recv_all(sock, timeout=2.0):
     data = b""
     try:
         while True:
-            chunk = sock.recv(512)
+            chunk = sock.recv(4096)
             if not chunk:
                 break
             data += chunk
-            # Stop early once the chunked terminator is seen.
-            if data.endswith(b"0\r\n\r\n"):
-                break
     except socket.timeout:
         pass
     return data
@@ -43,7 +39,7 @@ def test_pipeline(server):
 
     count_200 = data.count(b"200 OK")
     assert count_200 >= 1, "No response received for pipelined requests"
-    assert count_200 == 2, f"Expected 2 responses, got {count_200}"
+    assert count_200 == 2, f"Expected 2 responses, got {data.decode()}"
 
 
 def test_mixed_pipeline(server):

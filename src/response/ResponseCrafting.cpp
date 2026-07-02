@@ -106,6 +106,8 @@ void Response::craftHeader(std::string &buff)
     client->outBuffer += statusLine;
     client->outBuffer += headers + "\r\n";
     client->outBuffer += "Transfer-Encoding: chunked\r\n";
+    if (this->closeConnection)
+        client->outBuffer += "Connection: close\r\n";
     client->outBuffer += "\r\n";
 
     // std::cout << GREEN << "===========crafted header===========" << WHITE << std::endl;

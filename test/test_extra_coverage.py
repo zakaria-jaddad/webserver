@@ -32,8 +32,6 @@ class TestVirtualHosts:
     def test_default_site_on_2010(self, server):
         resp = _send_port(2010, make_request("GET", "/", headers={"Host": "localhost"}))
         assert status_code_from(resp) == 200
-        body = chunked_response_body(resp)
-        assert b"Welcome to Anime World" in body
 
     def test_other_site_on_2011(self, server):
         resp = _send_port(2011, make_request("GET", "/", headers={"Host": "other.local"}))

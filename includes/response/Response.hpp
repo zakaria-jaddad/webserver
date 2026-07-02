@@ -51,6 +51,7 @@ class Response {
     bool exec_status;
     bool error;
     bool timed_out;
+    bool closeConnection;
 
     time_t start_time;
 
@@ -80,6 +81,7 @@ class Response {
     void sendHeader(int, std::string, std::string, bool, bool);
     bool isComplete(void);
     bool isError(void);
+    bool shouldClose(void) const;
 
     HttpParser::httpResult craftResponse(void);
     std::string craftHeaderStatus(std::string &);

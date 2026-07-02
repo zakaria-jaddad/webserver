@@ -18,7 +18,7 @@ from test.helpers import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-WWW_ROOT = PROJECT_ROOT / "www"
+WWW_ROOT = PROJECT_ROOT / "www/sites"
 
 
 def _send(req):

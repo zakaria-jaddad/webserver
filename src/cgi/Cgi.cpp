@@ -91,9 +91,12 @@ void Cgi::executor(void)
             std::cout << "child created : " << child << std::endl;
             // if (methodToString(request->getRequestType()) == "GET") {
             close(in_fds[0]);
+            in_fds[0] = -1;
             close(out_fds[1]);
+            out_fds[1] = -1;
 
             close(in_fds[1]);
+            in_fds[1] = -1;
             // }
             // else if (methodToString(request->getRequestType()) == "POST") {
             //     close(in_fds[0]);
