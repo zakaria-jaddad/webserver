@@ -78,7 +78,7 @@ class TestConfigurationErrors:
             listen 127.0.0.1:2090;
         }
         """
-        srv = server_with_config(config, expect_success=False)
+        srv = server_with_config(config, expect_success=True)
         assert srv.proc.poll() is not None
 
 
