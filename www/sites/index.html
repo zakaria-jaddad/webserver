@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>About | Kessoku SERVER</title>
+        <style>
+            :root {
+                --pink-bocchi: #ffb1cb;
+                --blue-kita: #82e3f5;
+                --yellow-nijika: #fff176;
+                --purple-ryo: #b39ddb;
+                --dark-punk: #121212;
+                --white-paper: #f4f4f4;
+                --neon-magenta: #ff007f;
+            }
+
+            body {
+                background-color: var(--dark-punk);
+                margin: 0;
+            }
+            
+            a.zine-member-card {
+                text-decoration: none; /* Strips down the link underline accent */
+                color: inherit;        /* Forces text nodes to stay true to your dark-punk styling variables */
+                display: flex;         /* Preserves card flex compilation structures */
+            }
+
+            .ransom-note {
+                background-color: var(--neon-magenta);
+                color: var(--dark-punk);
+                padding: 0.5rem 1rem;
+                font-weight: 900;
+                text-transform: uppercase;
+                transform: rotate(-3deg);
+                box-shadow: 4px 4px 0px var(--white-paper);
+                margin-bottom: 2rem;
+                font-size: 1.1rem;
+            }
+
+             /* ==========================================================================
+                2. TEXTURES & BACKGROUND LAYER
+                ========================================================================== */
+            .hero-bg-overlay {
+                position: fixed; /* 💡 Changed from absolute to fixed */
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 1; /* Sits securely beneath cards but above raw body ink */
+                pointer-events: none;
+                opacity: 0.15;
+            }
+
+            /* Simulated Halftone Pattern */
+            .halftone-pattern {
+                position: absolute;
+                inset: 0;
+                background-image: radial-gradient(var(--white-paper) 15%, transparent 16%);
+                background-size: 12px 12px;
+            }
+
+            /* Gritty Grunge Line Texture */
+            .distressed-texture {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(rgba(18,18,18,0) 50%, rgba(0,0,0,0.25) 50%),
+                            linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,255,0.02), rgba(0,0,255,0.06));
+                background-size: 100% 4px, 6px 100%;
+            }
+            
+            /* ==========================================================================
+            6. FIXed ZINE NAVIGATION (STICKER TAPE)
+            ========================================================================== */
+            .zine-nav {
+                position: fixed;
+                top: 15%;
+                right: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 0.8rem;
+                z-index: 100;
+                transform: rotate(2deg);
+            }
+        
+            @media (max-width: 768px) {
+                .zine-nav {
+                position: static;
+                transform: none;
+                padding: 1rem;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                display: grid;
+                }
+            }
+        
+            .nav-sticker {
+                color: var(--dark-punk);
+                font-weight: 900;
+                text-decoration: none;
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                border: 2px solid var(--dark-punk);
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+                box-shadow: 4px 4px 0px var(--dark-punk);
+                }
+            
+            .tape-pink { background-color: var(--pink-bocchi); transform: rotate(-3deg); }
+            .tape-yellow { background-color: var(--yellow-nijika); transform: rotate(2deg); }
+            .tape-purple { background-color: var(--purple-ryo); transform: rotate(-1deg); }
+            .tape-blue { background-color: var(--blue-kita); transform: rotate(4deg); }
+            .tape-white { background-color: var(--white-paper); transform: rotate(-2deg); }
+            .tape-magenta { background-color: var(--neon-magenta); color: white; transform: rotate(1deg); }
+            .tape-dark { background-color: var(--dark-punk); color: var(--yellow-nijika); transform: rotate(-4deg); }
+            
+            .nav-sticker:hover {
+                transform: scale(1.1) rotate(0deg);
+                box-shadow: 6px 6px 0px var(--neon-magenta);
+            }
+
+            /* ==========================================================================
+            TEAM MEMBER CARDS (EXACT MATCH FOR image_237f05.png)
+            ========================================================================== */
+
+            .team-cards-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5rem;
+            padding: 4rem 2rem;
+            background-color: transparent; /* Sits on top of your global halftone background */
+            }
+
+            @media (max-width: 992px) {
+            .team-cards-container {
+                flex-direction: column;
+                gap: 6rem;
+            }
+            }
+
+            /* The Main Polaroid-Badge Base */
+            .zine-member-card {
+            position: relative;
+            background-color: var(--white-paper);
+            border: 5px solid var(--dark-punk);
+            border-radius: 4px;
+            padding: 18px 18px 30px 18px; /* Thick white margin at the bottom like a polaroid */
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 12px 16px 0px rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            z-index: 10;
+            }
+
+            /* Real-world asymmetry angles from the image */
+            .card-left-tilt { transform: rotate(-4deg); }
+            .card-right-tilt { transform: rotate(3deg); }
+
+            /* The Simulated Masking Tape Piece at the top */
+            .card-tape {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%) rotate(2deg);
+            width: 90px;
+            height: 28px;
+            background-color: rgba(230, 222, 190, 0.75); /* Translucent masking tape color */
+            border-left: 2px dashed rgba(0,0,0,0.1);
+            border-right: 2px dashed rgba(0,0,0,0.1);
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+            z-index: 50;
+            }
+
+            /* Top Black Banner */
+            .card-header-banner {
+            background-color: var(--dark-punk);
+            color: var(--white-paper);
+            text-align: center;
+            font-family: Arial, sans-serif; /* Clean industrial contrast font */
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            padding: 0.4rem 0;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+            }
+
+            /* The Photo Frame Box containing the Halftone Color Fill */
+            .card-image-frame {
+            position: relative;
+            width: 100%;
+            height: 340px;
+            border: 4px solid var(--dark-punk);
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            }
+
+            /* Exact Palette Reproductions from image_237f05.png */
+            .frame-yellow-pink {
+            background: linear-gradient(135deg, #fff176 40%, #ff5c9d 100%);
+            }
+            .frame-blue-purple {
+            background: linear-gradient(135deg, #2eaedb 30%, #613fa0 100%);
+            }
+
+            .card-image-frame img {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            }
+
+            /* Genius Text Positioning: Slapped Over the Bottom of the Character Image */
+            .photo-overlay-title {
+            position: relative;
+            z-index: 5;
+            width: 100%;
+            padding: 0.8rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.75) 60%);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            font-family: monospace;
+            font-weight: 900;
+            color: white;
+            }
+
+            .photo-overlay-title .line-1 {
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0px var(--dark-punk);
+            }
+
+            .photo-overlay-title .line-2 {
+            font-size: 1.8rem;
+            line-height: 0.9;
+            text-shadow: 3px 3px 0px var(--dark-punk);
+            -webkit-text-stroke: 1px var(--dark-punk);
+            }
+
+            /* Bottom Paper Labels Area */
+            .card-labels-footer {
+            margin-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-start;
+            }
+
+            /* Cutout Paper Strip Style */
+            .label-strip {
+            font-family: monospace;
+            font-weight: 900;
+            font-size: 1.15rem;
+            padding: 0.2rem 0.6rem;
+            border: 3px solid var(--dark-punk);
+            text-transform: uppercase;
+            box-shadow: 2px 2px 0px var(--dark-punk);
+            }
+
+            .label-tan {
+            background-color: #f7eed3; /* Aged cardboard tint */
+            color: var(--dark-punk);
+            }
+
+            .label-black {
+            background-color: var(--dark-punk);
+            color: var(--white-paper);
+            }
+
+            .offset-right {
+            align-self: flex-end;
+            transform: rotate(-1deg);
+            }
+
+            /* --- INTERACTIVE EFFECTS --- */
+            .zine-member-card:hover {
+            z-index: 30;
+            transform: scale(1.03) rotate(0deg);
+            box-shadow: 16px 22px 0px rgba(0, 0, 0, 1);
+            }
+
+            /* Connects your previously written glitch animation directly here */
+            .zine-member-card:hover .card-image-frame img {
+            animation: grunge-slice 0.2s steps(2) infinite, bocchi-chromatic 0.15s linear infinite;
+            }
+
+            /* ==========================================================================
+            CHAOTIC ANXIOUS WIGGLE & PALETTE OFFSET (BOCHHI TITLE STYLE)
+            ========================================================================= */
+
+            /* 1. Ensure the parent frame isolates any image overflow during extreme skews */
+            .card-image-frame {
+            position: relative;
+            /* overflow: hidden; */
+            overflow: visible;
+            background-color: var(--dark-punk); /* Backing ink color */
+            }
+
+            /* 2. Configure transition behaviors on the base image */
+            .card-image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.15s ease-out;
+            /* position: relative; */
+            /* z-index: 10; Keeps the main character rendering crisply above the background graphics */
+            
+            /* PERSISTENT HOVER STATES: We add a smooth fallback transition here */
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), filter 0.2s ease-out;
+            /* transform-origin: bottom center; Keeps the character rooted down at the text boundary */
+            }
+
+            /* 3. TRIGGER STATE: Apply the rapid wiggle and throw out heavy color offsets on hover */
+           .zine-member-card:hover .card-image-frame img {
+                /* Combined into a single, high-performance timeline running at punk-rock frame rates */
+                animation: bocchiPanicStrobe 0.8s steps(1) infinite;
+                
+                /* Kept as a fallback state if the browser fails to load animations */
+                filter: drop-shadow(35px 15px 0px var(--neon-magenta))
+                        drop-shadow(-40px -6px 0px var(--blue-kita))
+                        drop-shadow(-6px -10px 0px var(--yellow-nijika))
+                        contrast(2);
+            }
+
+            /* UNIFIED PANIC TIMELINE
+            Bakes your custom translateX displacements, blur glitches, and invert light 
+            pulses together while preserving the three distinct show-accurate drop-shadow stamps.
+            */
+            @keyframes bocchiPanicStrobe {
+                0%, 100% {
+                    /* transform: translateX(0px) skewX(0deg); */
+                    filter: drop-shadow(35px 15px 0px var(--neon-magenta)) drop-shadow(-40px -6px 0px var(--blue-kita)) drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(2) invert(0%);
+                }
+                10% {
+                    /* transform: translateX(10px) skewX(4deg); */
+                    filter: drop-shadow(38px 12px 0px var(--neon-magenta)) drop-shadow(-35px -8px 0px var(--blue-kita)) drop-shadow(-8px -8px 0px var(--yellow-nijika)) contrast(2) blur(2px);
+                }
+                20% {
+                    /* transform: translateX(4px) skewX(-2deg); */
+                    filter: drop-shadow(35px 15px 0px var(--neon-magenta)) drop-shadow(-40px -6px 0px var(--blue-kita)) drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(2.2) blur(0);
+                }
+                30% {
+                    /* transform: translateX(-6px) skewX(8deg); */
+                    /* 14% Invert Strobe Triggered */
+                    filter: drop-shadow(42px 18px 0px var(--neon-magenta)) drop-shadow(-45px -4px 0px var(--blue-kita)) drop-shadow(-4px -12px 0px var(--yellow-nijika)) contrast(1.8) invert(14%) blur(3px);
+                }
+                40% {
+                    /* transform: translateX(7px) skewX(-6deg); */
+                    /* 10% Invert Strobe Triggered */
+                    filter: drop-shadow(32px 13px 0px var(--neon-magenta)) drop-shadow(-38px -5px 0px var(--blue-kita)) drop-shadow(-5px -9px 0px var(--yellow-nijika)) contrast(2) invert(10%) blur(0);
+                }
+                50% {
+                    transform: translateX(3px) skewX(0deg);
+                    /* 7% Invert Strobe Triggered */
+                    filter: drop-shadow(35px 15px 0px var(--neon-magenta)) drop-shadow(-40px -6px 0px var(--blue-kita)) drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(2) invert(7%);
+                }
+                60% {
+                    /* transform: translateX(-4px) skewX(-4deg); */
+                    /* 10% Invert Strobe Triggered */
+                    filter: drop-shadow(30px 17px 0px var(--neon-magenta)) drop-shadow(-42px -8px 0px var(--blue-kita)) drop-shadow(-8px -11px 0px var(--yellow-nijika)) contrast(2.5) invert(10%) blur(4px);
+                }
+                70% {
+                    /* transform: translateX(-2px) skewX(2deg); */
+                    /* 12% Invert Strobe Triggered */
+                    filter: drop-shadow(37px 14px 0px var(--neon-magenta)) drop-shadow(-38px -4px 0px var(--blue-kita)) drop-shadow(-4px -10px 0px var(--yellow-nijika)) contrast(2) invert(12%) blur(0);
+                }
+                80% {
+                    transform: translateX(5px) skewX(0deg);
+                    /* 9% Invert Strobe Triggered */
+                    filter: drop-shadow(35px 15px 0px var(--neon-magenta)) drop-shadow(-40px -6px 0px var(--blue-kita)) drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(1.9) invert(9%) blur(1px);
+                }
+                90% {
+                    transform: translateX(-3px) skewX(-2deg);
+                    /* 14% Invert Strobe Triggered */
+                    filter: drop-shadow(39px 16px 0px var(--neon-magenta)) drop-shadow(-44px -7px 0px var(--blue-kita)) drop-shadow(-7px -12px 0px var(--yellow-nijika)) contrast(2) invert(14%);
+                }
+            }
+
+            /* ==========================================================================
+            COLLAGE SCENE BACKDROP UTILITIES (BACKGROUND POSTERS)
+            ========================================================================== */
+
+            /* The relative coordinate floor space holding the overall layout architecture */
+            .collage-scene-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5rem;
+            padding: 6rem 2rem;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            }
+
+            /* Responsive collapse: on tight displays, hide background noise to keep it scannable */
+            @media (max-width: 992px) {
+            .collage-scene-wrapper {
+                flex-direction: column;
+                gap: 7rem;
+            }
+            .bg-scrap, .bg-polaroid, .bg-ghost-blob {
+                display: none !important; /* Hides decorative assets on mobile viewports */
+            }
+            }
+
+            /* --- ASSET A: CONFIG.CONF SCRAP --- */
+            .scrap-config {
+            position: absolute;
+            top: 20px;
+            left: 12%;
+            z-index: 2;
+            background-color: #222;
+            color: #a29bfe;
+            border: 3px double #444;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            transform: rotate(-8deg);
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.4);
+            }
+            .scrap-header {
+            border-bottom: 2px dashed #444;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            font-weight: bold;
+            color: var(--white-paper);
+            }
+
+            /* --- ASSET B: BACKGROUND MINI-POLAROID --- */
+            .bg-polaroid {
+            position: absolute;
+            bottom: 40px;
+            left: 6%;
+            z-index: 1;
+            background-color: var(--white-paper);
+            border: 3px solid var(--dark-punk);
+            padding: 10px 10px 20px 10px;
+            width: 140px;
+            transform: rotate(-15deg);
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.5);
+            }
+            .polaroid-photo-box {
+            background-color: #111;
+            width: 120px;
+            height: 110px;
+            border: 2px solid var(--dark-punk);
+            position: relative;
+            overflow: hidden;
+            }
+            /* Pure CSS hand-drawn signal failure waveform inside polaroid */
+            .wave-anomaly {
+            position: absolute;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 45%, #fff 50%, transparent 55%);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            }
+            .polaroid-tag {
+            display: block;
+            font-family: monospace;
+            font-size: 0.6rem;
+            font-weight: 900;
+            color: var(--dark-punk);
+            margin-top: 8px;
+            text-align: center;
+            }
+
+            /* --- ASSET C: 500 ERROR GHOST BLOB (CENTER GUTTER) --- */
+            .bg-ghost-blob {
+            position: absolute;
+            top: 30%;
+            left: 46%;
+            transform: translateX(-50%) rotate(5deg);
+            z-index: 2;
+            width: 110px;
+            height: 120px;
+            background-color: var(--neon-magenta);
+            border: 4px solid var(--dark-punk);
+            border-radius: 50% 50% 20% 20%;
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            }
+            /* Infinite melting vibration loop mimicking show title card animations */
+            .bg-ghost-blob.panic-state {
+            animation: blobFloat 2.5s ease-in-out infinite alternate;
+            }
+            .ghost-eyes {
+            width: 40px;
+            height: 12px;
+            position: relative;
+            }
+            .ghost-eyes::before, .ghost-eyes::after {
+            content: "";
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: var(--dark-punk);
+            border-radius: 50%;
+            }
+            .ghost-eyes::before { left: 0; }
+            .ghost-eyes::after { right: 0; }
+            .ghost-alert {
+            background-color: var(--dark-punk);
+            color: var(--white-paper);
+            font-family: monospace;
+            font-weight: 900;
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            margin-top: 15px;
+            transform: rotate(-3deg);
+            }
+
+            /* --- ASSET D: STARTER MANUAL POSTER --- */
+            .scrap-manual {
+            position: absolute;
+            top: 60px;
+            right: 10%;
+            z-index: 1;
+            background-color: #f1e9cb; /* Aged parchment tone */
+            color: #5d4037;
+            border: 4px dashed #8d6e63;
+            padding: 20px;
+            width: 180px;
+            transform: rotate(11deg);
+            box-shadow: 5px 8px 0px rgba(0,0,0,0.4);
+            font-family: 'Courier New', Courier, monospace;
+            }
+            .manual-title {
+            font-weight: 900;
+            font-size: 1.1rem;
+            border-bottom: 3px solid #8d6e63;
+            padding-bottom: 4px;
+            margin-bottom: 10px;
+            text-align: center;
+            }
+            .manual-lines span {
+            display: block;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            font-weight: bold;
+            }
+
+            /* Decorative Backdrop Floating Keyframe Loop */
+            @keyframes blobFloat {
+            0% { transform: translate(-50%, 0) rotate(5deg); }
+            100% { transform: translate(-50%, -15px) rotate(-3deg); }
+            }
+
+
+            /* ==========================================================================
+            ABOUT US EXPANDED LORE AND GRID DESIGN
+            ========================================================================== */
+
+            .about-container {
+                width: 100%;
+                max-width: 1300px;
+                margin: 0 auto;
+                padding: 3rem 1.5rem 8rem 1.5rem;
+                position: relative;
+                z-index: 10;
+            }
+
+            /* --- THE LORE INTRODUCTION GRAPHIC --- */
+            .about-header-block {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                margin-bottom: 5rem;
+            }
+
+            .about-title {
+                font-family: 'Impact', 'Arial Black', sans-serif;
+                font-size: clamp(3.5rem, 8vw, 6.5rem);
+                text-transform: uppercase;
+                line-height: 0.85;
+                margin: 1.5rem 0;
+                letter-spacing: -2px;
+            }
+
+            .about-title .text-layer-1 {
+                display: block;
+                color: var(--white-paper);
+                text-shadow: 4px 4px 0px var(--dark-punk);
+                transform: rotate(-1.5deg) translateX(-10px);
+            }
+
+            .about-title .text-layer-2 {
+                display: block;
+                color: var(--neon-magenta);
+                text-shadow: 6px 6px 0px var(--dark-punk);
+                transform: rotate(2deg) scale(1.05);
+            }
+
+            /* Ripped Copy-Paper Document Background for the Story */
+            .lore-paper-scrap {
+                background-color: #fcfbf7;
+                color: var(--dark-punk);
+                border: 3px dashed var(--dark-punk);
+                padding: 2.5rem;
+                max-width: 780px;
+                margin-top: 1.5rem;
+                transform: rotate(-0.5deg);
+                box-shadow: 12px 12px 0px rgba(0,0,0,0.8);
+                font-family: monospace;
+                font-size: 1.05rem;
+                line-height: 1.6;
+                text-align: left;
+            }
+
+            .lore-paper-scrap p {
+                margin-bottom: 1.2rem;
+            }
+            .lore-paper-scrap p:last-child {
+                margin-bottom: 0;
+            }
+
+            /* --- SECTIONS SEPARATORS --- */
+            .section-divider-title {
+                font-family: monospace;
+                font-weight: 900;
+                background-color: var(--dark-punk);
+                color: var(--white-paper);
+                padding: 0.6rem 1.5rem;
+                font-size: 1.5rem;
+                text-transform: uppercase;
+                margin: 4rem 0 2rem 0;
+                display: inline-block;
+                transform: skewX(-10deg) rotate(-1deg);
+                box-shadow: 4px 4px 0px var(--neon-magenta);
+            }
+
+            /* --- GRID HOOK ADJUSTMENTS FOR CHARACTER POOLS --- */
+            .team-cards-container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: flex-start;
+                gap: 3.5rem;
+                width: 100%;
+            }
+
+            .band-roster-adjust {
+                display: grid !important; /* Overrides the base flex container layout */
+                grid-template-columns: repeat(2, minmax(0, 340px)); /* Forces exactly 2 columns up to 340px wide */
+                justify-content: center; /* Centers the 2x2 block on the page */
+                gap: 6rem 8rem; /* Distinct row-gap (4.5rem) and column-gap (5rem) for zine asymmetry */
+                width: 100%;
+            }
+
+            /* Adjust the card properties inside this specific grid to scale perfectly */
+            .band-roster-adjust .zine-member-card {
+                max-width: 100%; /* Allows the cards to match the grid column bounds precisely */
+                margin: 0 auto;
+            }
+
+            /* Responsive Fallback: Drop down to 1 column on tablets and mobile screens */
+            @media (max-width: 768px) {
+                .band-roster-adjust {
+                    grid-template-columns: minmax(0, 380px); /* Stacks them beautifully on small screens */
+                    gap: 6rem;
+                }
+            }
+
+
+            /* Distinct Character Background Mask Gradients */
+            .frame-bocchi { background: linear-gradient(135deg, #ff8da1 0%, #a12340 100%); }
+            .frame-nijika { background: linear-gradient(135deg, #ffe066 0%, #b38600 100%); }
+            .frame-ryo    { background: linear-gradient(135deg, #3399ff 0%, #004080 100%); }
+            .frame-kita   { background: linear-gradient(135deg, #ff4d4d 0%, #800000 100%); }
+
+            /* Distinctive Colored Washi-Tape Tops */
+            .tape-pink-color   { background-color: rgba(255, 141, 161, 0.85); }
+            .tape-yellow-color { background-color: rgba(255, 224, 102, 0.85); }
+            .tape-blue-color   { background-color: rgba(51, 153, 255, 0.85); }
+            .tape-teal-color   { background-color: rgba(255, 77, 77, 0.85); }
+        </style>
+    </head>
+    <body>
+      
+
+        <nav class="zine-nav" aria-label="Main Navigation">
+            <a href="home.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
+            <a href="song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
+            <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
+            <a href="#equipment-room" class="nav-sticker tape-blue">📦 Equipment</a>
+            <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
+            <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
+            <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
+        </nav>
+        
+        <div class="hero-bg-overlay" aria-hidden="true">
+            <div class="halftone-pattern"></div>
+            <div class="distressed-texture"></div>
+        </div>
+
+        <main class="about-container">
+            <header class="about-header-block">
+                <div class="badge ransom-note">SYSTEM ORIGIN LORE</div>
+                <h1 class="about-title">
+                    <span class="text-layer-1">OPERATION:</span>
+                    <span class="text-layer-2">POTATO SERVER</span>
+                </h1>
+                <div class="lore-paper-scrap">
+                    <p>
+                        <strong>THE CRISIS:</strong> Kessoku Band desperately needed an online presence to stream their tracks, but traditional cloud platforms are expensive. Ryo spent the remaining band funds on vintage bass gear, and Bocchi had a panic attack trying to understand server pricing sheets. 
+                    </p>
+                    <p>
+                        <strong>THE FIX:</strong> Enter the Tech Crew. We hijacked an ancient, dust-caked potato computer forgotten in a dark corner of the <strong>STARRY Live House</strong> basement. Written completely by hand from scratch in raw <strong>C++98</strong>, this non-blocking, asynchronous HTTP/1.1 engine is fueled entirely by low-level system sockets and intense social anxiety. It’s scrappy, it costs zero yen to host, and it works!
+                    </p>
+                </div>
+            </header>
+            
+            <h2 class="section-divider-title">🎛 THE BACKSTAGE TECH SAVIORS</h2>
+        
+            <div class="team-cards-container">
+                <!-- CARD 1: TEAM MEMBER 1 (CODE SHREDDER) -->
+                <a href="https://github.com/Sfeso13" target="_blank" rel="noopener noreferrer" class="zine-member-card card-left-tilt">
+                    <!-- Masking Tape Header Accent -->
+                    <div class="card-tape"></div>
+                    
+                    <!-- Top Black Title Bar -->
+                    <div class="card-header-banner">Team Member 1</div>
+                    
+                    <!-- Halftone Character Frame -->
+                    <div class="card-image-frame frame-yellow-pink">
+                        <img src="resources/yhossni.jpeg" data-img="yhossni.jpeg" alt="Code Shredder Character">
+                        
+                        <!-- Text overlapping directly on the lower part of the photo -->
+                        <div class="photo-overlay-title">
+                            <span class="line-1">CODE WEBSERV</span>
+                            <span class="line-2">SHREDDER</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Bottom Cutout Ransom Labels -->
+                    <div class="card-labels-footer">
+                        <div class="label-strip label-tan">CODE SHREDDER</div>
+                        <div class="label-strip label-black">C++ ENGINE MASTER</div>
+                    </div>
+                </a>
+
+                <!-- CARD 2: TEAM MEMBER 2 (CHAOS COORDINATOR) -->
+                <a href="https://github.com/zakaria-jaddad" target="_blank" rel="noopener noreferrer" class="zine-member-card card-right-tilt">
+                    <!-- Masking Tape Header Accent -->
+                    <div class="card-tape"></div>
+                    
+                    <!-- Top Black Title Bar -->
+                    <div class="card-header-banner">Team Member 2</div>
+                    
+                    <!-- Halftone Character Frame -->
+                    <div class="card-image-frame frame-blue-purple">
+                        <img src="resources/zajaddad.png" data-img="resources/zajaddad.png" alt="Chaos Coordinator Character">
+                        
+                        <!-- Text overlapping directly on the lower part of the photo -->
+                        <div class="photo-overlay-title">
+                            <span class="line-1">CHAOS</span>
+                            <span class="line-2">COORDINATOR</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Bottom Cutout Ransom Labels -->
+                    <div class="card-labels-footer">
+                        <div class="label-strip label-tan">SYSTEM MELTDOWN</div>
+                        <div class="label-strip label-tan offset-right">SURVIVOR</div>
+                    </div>
+                </a>
+            </div>
+            <h2 class="section-divider-title">🎸 KESSOKU BAND TALENT ARTISTS</h2>
+            
+            <div class="team-cards-container band-roster-adjust">  
+                <a href="https://bocchi-the-rock.fandom.com/wiki/Hitori_Gotoh" target="_blank" rel="noopener noreferrer" class="zine-member-card card-left-tilt non-clickable">
+                    <div class="card-tape tape-pink-color"></div>
+                    <div class="card-header-banner">Lead Guitar</div>
+                    <div class="card-image-frame frame-bocchi">
+                        <img src="resources/bocchi_cool_shot.jpg" class="glitch-target" data-img="resources/bocchi.png" alt="Hitori Gotoh">
+                        <div class="photo-overlay-title">
+                            <span class="line-1">GUITAR</span>
+                            <span class="line-2">HERO</span>
+                        </div>
+                    </div>
+                    <div class="card-labels-footer">
+                        <div class="label-strip label-tan">HITORI GOTOH</div>
+                        <div class="label-strip label-black">ANXIETY DRIVEN Sockets</div>
+                    </div>
+                </a>
+
+                <a href="https://bocchi-the-rock.fandom.com/wiki/Nijika_Ijichi" target="_blank" rel="noopener noreferrer" class="zine-member-card card-right-tilt non-clickable">
+                    <div class="card-tape tape-yellow-color"></div>
+                    <div class="card-header-banner">Drums / Leader</div>
+                    <div class="card-image-frame frame-nijika">
+                        <img src="resources/nijika_cool_shot.jpg" class="glitch-target" data-img="resources/nijika.png" alt="Nijika Ijichi">
+                        <div class="photo-overlay-title">
+                            <span class="line-1">STARRY LIVE</span>
+                            <span class="line-2">HOUSE MANAGER</span>
+                        </div>
+                    </div>
+                    <div class="card-labels-footer">
+                        <div class="label-strip label-tan">NIJIKA IJICHI</div>
+                        <div class="label-strip label-black">FOUND THE POTATO PC</div>
+                    </div>
+                </a>
+
+                <a href="https://bocchi-the-rock.fandom.com/wiki/Ryo_Yamada" target="_blank" rel="noopener noreferrer" class="zine-member-card card-left-tilt non-clickable">
+                    <div class="card-tape tape-blue-color"></div>
+                    <div class="card-header-banner">Bass Composer</div>
+                    <div class="card-image-frame frame-ryo">
+                        <img src="resources/ryo.jpg" class="glitch-target" data-img="resources/ryo.png" alt="Ryo Yamada">
+                        <div class="photo-overlay-title">
+                            <span class="line-1">WEBSERV HOSTING</span>
+                            <span class="line-2">BUDGET STEALER</span>
+                        </div>
+                    </div>
+                    <div class="card-labels-footer">
+                        <div class="label-strip label-tan">RYO YAMADA</div>
+                        <div class="label-strip label-black">0 YEN FUNDS STATUS</div>
+                    </div>
+                </a>
+
+                <a href="https://bocchi-the-rock.fandom.com/wiki/Ikuyo_Kita" target="_blank" rel="noopener noreferrer" class="zine-member-card card-right-tilt non-clickable">
+                    <div class="card-tape tape-teal-color"></div>
+                    <div class="card-header-banner">Vocal / Rhythm</div>
+                    <div class="card-image-frame frame-kita">
+                        <img src="resources/kita.jpg" class="glitch-target" data-img="resources/kita.png" alt="Ikuyo Kita">
+                        <div class="photo-overlay-title">
+                            <span class="line-1">FRONT-END INFECTIOUS</span>
+                            <span class="line-2">KIT-AURA ENERGY</span>
+                        </div>
+                    </div>
+                    <div class="card-labels-footer">
+                        <div class="label-strip label-tan">IKUYO KITA</div>
+                        <div class="label-strip label-black">PR BRAND AMBASSADOR</div>
+                    </div>
+                </a>
+            </div>
+
+    </body>
+</html>

@@ -224,6 +224,8 @@ class HttpParser {
 
     bool isProcessingBody();
 
+    bool keepAlive() const;
+
     httpResult parseHttpRequest(std::string rawData);
 
   private:

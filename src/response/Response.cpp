@@ -13,6 +13,9 @@ Response::Response(t_client *dep)
     this->timed_out = 0;
     this->start_time = time(NULL);
     this->cgi = NULL;
+    this->closeConnection = true;
+    if (dep->request != NULL && dep->request->isComplete())
+        this->closeConnection = !dep->request->keepAlive();
 
     this->cgi_in_pipe[0] = -1;
     this->cgi_in_pipe[1] = -1;

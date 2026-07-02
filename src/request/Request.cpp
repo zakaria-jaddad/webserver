@@ -112,6 +112,30 @@ bool HttpParser::isProcessingBody()
     return this->_phase == HttpParser::BODY && this->_body._state == Body::BODY_PROCESSING;
 }
 
+bool HttpParser::keepAlive() const
+{
+    std::map<std::string, std::vector<std::string> >::const_iterator it;
+    std::string connection;
+
+    it = this->_headers.find("Connection");
+    if (it != this->_headers.end() && !it->second.empty()) {
+        connection = it->second[0];
+        for (size_t i = 0; i < connection.size(); ++i)
+            connection[i] = static_cast<char>(tolower(connection[i]));
+    }
+
+    // HTTP/1.1 defaults to keep-alive; HTTP/1.0 (and unknown) default to close.
+    if (this->_requestVersion[0] == 1 && this->_requestVersion[1] == 1) {
+        if (connection == "close")
+            return false;
+        return true;
+    }
+
+    if (connection == "keep-alive")
+        return true;
+    return false;
+}
+
 /* ===================================================================================== */
 /* ------------------------------ PUBLIC iNTERFACE ------------------------------------- */
 /* ===================================================================================== */

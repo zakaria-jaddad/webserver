@@ -13,6 +13,7 @@
 #include <map>
 #include <netinet/in.h>
 #include <string>
+#include <netinet/tcp.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>

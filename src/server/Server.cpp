@@ -73,7 +73,13 @@ void Server::setupServerFds()
          * optval: The configuration value for the socket option
          * */
         if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-            std::cerr << "error setsockopt " << it->getIP() << std::endl;
+            std::cerr << "error setsockopt SO_REUSEADDR " << it->getIP() << std::endl;
+
+        if (setsockopt(serverSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+            std::cerr << "error setsockopt TCP_NODELAY " << it->getIP() << std::endl;
+
+        if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) == -1)
+            std::cerr << "error fcntl " << it->getIP() << std::endl;
 
         /*
          * When a socket is created with socket(2), it exists in a name space (address family) but
@@ -130,6 +136,7 @@ int Server::checkServerFd(epoll_event *events, int i)
     //  in case it is a serverFd it accepts and gets clientSocket and adds it to epoll & clientFds
     //  for next connection
     int clientSocket = -1;
+    int opt = 1;
     HttpParser *obj;
     t_client client;
     time_t now = time(NULL);
@@ -138,8 +145,19 @@ int Server::checkServerFd(epoll_event *events, int i)
          it != this->vServers.end(); it++) {
         if (events[i].data.fd == it->first) {
             clientSocket = accept(it->first, NULL, NULL);
-            if (clientSocket == -1)
+            if (clientSocket == -1) {
                 std::cerr << "failed to accept" << std::endl;
+                break;
+            }
+            if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+                std::cerr << "failed to set TCP_NODELAY" << std::endl;
+            if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) == -1)
+                std::cerr << "failed to set non-blocking" << std::endl;
+
+            int sndbuf = 256 * 1024;
+            if (setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1)
+                std::cerr << "failed to set SO_SNDBUF" << std::endl;
+
             if (addToEpoll(clientSocket, EPOLLIN))
                 std::cerr << "failed to add to epoll" << std::endl;
             obj = new HttpParser(it->second);
@@ -212,7 +230,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
                 if (b <= 0) {
                     closeSocket(&(*it));
-                    // BUG: WTF is this for yhosnsi
+                    // BUG: WTF is this for yhosnsi you were erasing the clients.begin() :|
                     clients.erase(it);
                     return 1;
                 }
@@ -234,69 +252,89 @@ int Server::checkClientFd(epoll_event *events, int i)
                 }
             }
             else if (events[i].events == EPOLLOUT) {
-                // we can write to socket
-                if (it->response == NULL)
-                    it->response = new Response(&(*it));
+                // Process as many complete pipelined requests as possible in one
+                // EPOLLOUT wake-up before yielding back to epoll.
+                while (true) {
+                    if (it->response == NULL)
+                        it->response = new Response(&(*it));
 
-                if (it->req_res != HttpParser::HTTP_RES_OK) {
-                    std::cout << "req_res : " << it->req_res << std::endl;
-                    int serv_res = it->response->servePages(it->req_res, 1);
-                    if (serv_res)
-                        std::cout << RED << "Connection Error, closing connection ..." << WHITE
-                                  << std::endl;
-                    if (serv_res || it->response->isComplete()) {
-                        switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                        std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
-                        closeSocket(&(*it));
-                        it = clients.erase(it);
-                        std::cout << "cleaned socket" << std::endl;
+                    if (it->req_res != HttpParser::HTTP_RES_OK) {
+                        std::cout << "req_res : " << it->req_res << std::endl;
+                        int serv_res = it->response->servePages(it->req_res, 1);
+                        if (serv_res)
+                            std::cout << RED << "Connection Error, closing connection ..." << WHITE
+                                      << std::endl;
+                        if (serv_res || it->response->isComplete()) {
+                            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                            std::cout << RED << "-----Switched epoll mode-----" << WHITE
+                                      << std::endl;
+                            closeSocket(&(*it));
+                            it = clients.erase(it);
+                            std::cout << "cleaned socket" << std::endl;
+                        }
+                        break;
                     }
-                    break;
-                }
 
-                // start the response crafting and sending process from the checkMethod parent
-                // method
-                it->resp_res = it->response->checkMethod();
+                    // start the response crafting and sending process from the checkMethod parent
+                    // method
+                    it->resp_res = it->response->checkMethod();
 
-                // cleanup after an error/timeout
-                if (it->resp_res != HttpParser::HTTP_RES_OK) {
-                    std::cout << " serving error " << it->resp_res << std::endl;
-                    int serv_res = it->response->servePages(it->resp_res, 1);
-                    if (serv_res)
-                        std::cout << RED << "Connection Error, closing connection ..." << WHITE
-                                  << std::endl;
-                    if (serv_res || it->response->isComplete()) {
-                        switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                        closeSocket(&(*it));
-                        it = clients.erase(it);
-                        std::cout << "cleaned socket" << std::endl;
+                    // cleanup after an error/timeout
+                    if (it->resp_res != HttpParser::HTTP_RES_OK) {
+                        std::cout << " serving error " << it->resp_res << std::endl;
+                        int serv_res = it->response->servePages(it->resp_res, 1);
+                        if (serv_res)
+                            std::cout << RED << "Connection Error, closing connection ..." << WHITE
+                                      << std::endl;
+                        if (serv_res || it->response->isComplete()) {
+                            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                            closeSocket(&(*it));
+                            it = clients.erase(it);
+                            std::cout << "cleaned socket" << std::endl;
+                        }
+                        break;
                     }
-                    break;
-                }
 
-                if (it->response->isComplete()) {
-                    resetSocket(&(*it));
+                    if (it->response->isComplete()) {
+                        if (it->response->shouldClose()) {
+                            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                            std::cout << RED << "-----Switched epoll mode-----" << WHITE
+                                      << std::endl;
+                            closeSocket(&(*it));
+                            it = clients.erase(it);
+                            std::cout << "cleaned socket on Connection: close" << std::endl;
+                            break;
+                        }
 
-                    /* NOTE: HTTP/1.1 Pipelining ya dawla */
-                    if (it->request->getPendingData().empty() == false) {
+                        resetSocket(&(*it));
 
-                        std::cout << GREEN << std::endl;
-                        HttpParser::printRaw(it->request->getPendingData());
+                        /* NOTE: HTTP/1.1 Pipelining ya dawla */
+                        if (it->request->getPendingData().empty() == false) {
 
-                        std::cout << WHITE << std::endl;
-                        HttpParser::httpResult r = it->request->parseHttpRequest("");
-                        it->req_res = r;
+                            std::cout << GREEN << std::endl;
+                            HttpParser::printRaw(it->request->getPendingData());
 
-                        if (it->request->isComplete() == true ||
-                            it->req_res != HttpParser::HTTP_RES_OK) {
-                            std::cout << "Pipelined request ready, staying in EPOLLOUT"
+                            std::cout << WHITE << std::endl;
+                            HttpParser::httpResult r = it->request->parseHttpRequest("");
+                            it->req_res = r;
+
+                            if (it->request->isComplete() == true ||
+                                it->req_res != HttpParser::HTTP_RES_OK) {
+                                std::cout << "Pipelined request ready, processing immediately"
+                                          << std::endl;
+                                continue;
+                            }
+                            switchEpollMode(clientSocket, EPOLLIN);
+                            std::cout << "Pipelined request needs more data, back to reading"
                                       << std::endl;
                             break;
                         }
+                        switchEpollMode(clientSocket, EPOLLIN);
+                        std::cout << "back to reading" << std::endl;
                     }
-                    switchEpollMode(clientSocket, EPOLLIN);
-                    std::cout << "back to reading" << std::endl;
+                    break;
                 }
+                break;
             }
             break;
         }
@@ -332,7 +370,7 @@ int Server::startServer()
 
     while (1) {
 
-        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 0);
+        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 100);
 
         if (event_count == -1) {
             std::cerr << "epoll_wait Failed!" << std::endl;
