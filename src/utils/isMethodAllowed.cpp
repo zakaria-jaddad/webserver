@@ -1,5 +1,5 @@
-#include "../../includes/utils/utils.hpp"
 #include "../../includes/request/Request.hpp"
+#include "../../includes/utils/utils.hpp"
 
 bool isMethodAllowed(std::vector<std::string> acceptedMethods, int reqType)
 {

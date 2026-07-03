@@ -98,13 +98,16 @@ void Response::craftHeader(std::string &buff)
         return;
 
     std::string headers = cgiHeaderBuffer.substr(0, headerEnd);
+    if (!headers.empty() && headers.compare(headers.size() - 2, 2, "\r\n") != 0) {
+        headers += "\r\n";
+    }
     cgiHeaderBuffer.erase(0, headerEnd + strlen(DOUBLE_CRLF));
 
     std::string statusLine = craftHeaderStatus(headers);
 
     client->outBuffer.clear();
     client->outBuffer += statusLine;
-    client->outBuffer += headers + "\r\n";
+    client->outBuffer += headers;
     client->outBuffer += "Transfer-Encoding: chunked\r\n";
     if (this->closeConnection)
         client->outBuffer += "Connection: close\r\n";

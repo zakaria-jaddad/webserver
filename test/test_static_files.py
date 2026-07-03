@@ -36,13 +36,13 @@ class TestExistingFiles:
         assert b"<!DOCTYPE html>" in body
 
     def test_get_html_file(self, server):
-        resp = _send(make_request("GET", "/test_dashboard.html", headers={"Host": "localhost"}))
+        resp = _send(make_request("GET", "/test_bench.html", headers={"Host": "localhost"}))
         assert status_code_from(resp) == 200
         _, headers, _ = parse_response(resp)
         assert headers.get("content-type") == "text/html"
 
     def test_get_jpeg_image(self, server):
-        resp = _send(make_request("GET", "/yhossni.jpg", headers={"Host": "localhost"}))
+        resp = _send(make_request("GET", "/resources/yhossni.jpeg", headers={"Host": "localhost"}))
         assert status_code_from(resp) == 200
         _, headers, _ = parse_response(resp)
         assert headers.get("content-type") in ("image/jpeg", "image/jpg")

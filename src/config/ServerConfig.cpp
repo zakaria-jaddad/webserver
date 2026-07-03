@@ -315,7 +315,7 @@ void ServerConfig::parseIndex(std::vector<std::string> &tokens, size_t &i)
             if (!std::isalnum(value[y]) && value[y] != '-' && value[y] != '.' && value[y] != '_')
                 throw std::runtime_error("Invalid index  : " + value);
         }
-        this->index.push_back(value);
+        this->index.insert(this->index.end() - 1, value);
         i++;
     }
 

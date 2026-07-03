@@ -76,8 +76,9 @@ std::string Response::chooseIndex(std::string &path)
     return "";
 }
 
-std::string Response::generateDirectoryListingHTML(const std::string &path, const std::string &requestPath,
-                                         std::vector<std::string> entries)
+std::string Response::generateDirectoryListingHTML(const std::string &path,
+                                                   const std::string &requestPath,
+                                                   std::vector<std::string> entries)
 {
     std::ostringstream html;
 
@@ -135,14 +136,13 @@ void Response::serveDirectoryContent(std::string &absPath)
     client->outBuffer.append("\r\n", 2);
     client->outBuffer.append("0\r\n\r\n", 5);
 
-    ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset, 
+    ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
                                 client->outBuffer.size() - client->writeOffset);
     if (sent == -2)
         return;
     else if (sent > 0)
         client->writeOffset += sent;
 }
-
 
 HttpParser::httpResult Response::httpGet(void)
 {
@@ -197,6 +197,7 @@ HttpParser::httpResult Response::httpGet(void)
                 absPath += index_to_serve;
         }
 
+        std::cout << "file requested : " << absPath << std::endl;
         ext = getExtension(absPath);
         std::cout << " extension to serve : " << ext << std::endl;
 

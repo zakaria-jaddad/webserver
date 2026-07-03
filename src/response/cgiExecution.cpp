@@ -3,9 +3,8 @@
 void Response::sendingCgiResponse()
 {
     if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
-        //        std::cout << GREEN << "Sending...\n"
-        //                  << YELLOW << client->outBuffer.data() + client->writeOffset << WHITE <<
-        //                  std::endl;
+        std::cout << GREEN << "Sending...\n"
+                  << YELLOW << client->outBuffer.data() + client->writeOffset << WHITE << std::endl;
         ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
                                     client->outBuffer.size() - client->writeOffset);
 
