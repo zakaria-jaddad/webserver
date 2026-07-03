@@ -682,7 +682,9 @@
         font-style: italic;
       }
     </style>
-
+  </head>
+  
+  <body>
     <nav class="zine-nav" aria-label="Main Navigation">
         <a href="index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
         <a href="sites/song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
@@ -775,79 +777,5 @@
         </div>
       </div>
     </header>
-  </head>
-
-  <body>
-    <section id="venue" class="venue-console">
-      <div class="console-header">
-        <span class="dot-red"></span><span class="dot-yellow"></span
-        ><span class="dot-green"></span>
-        <span class="console-title">STARRY_SERVER_ROUTER // CONSOLE</span>
-      </div>
-
-      <div class="console-body">
-        <div class="console-section">
-          <h3>🚪 Venue Configurations (Error Handling & Indexing)</h3>
-          <div class="interactive-row">
-            <a href="/nonexistent-path" class="btn-console"
-              >⚠️ Test Custom 404 Page</a
-            >
-            <a href="/protected-directory/" class="btn-console"
-              >🚫 Test 403 Forbidden</a
-            >
-            <a href="/uploads/" class="btn-console"
-              >📂 Autoindex Directory View</a
-            >
-            <a href="/old-route" class="btn-console"
-              >🔄 Trigger 301 Permanent Redirect</a
-            >
-          </div>
-        </div>
-
-        <hr class="console-divider" />
-
-        <div class="console-section" id="cafe">
-          <h3>🍪 The Café (State Preservation)</h3>
-          <div class="interactive-row">
-            <form action="/api/login" method="POST" class="inline-login-box">
-              <input
-                type="text"
-                placeholder="BAND_MEMBER_ID"
-                required
-                class="console-input"
-              />
-              <button type="submit" class="btn-submit-console">
-                INITIALIZE SESSION
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <footer class="eval-checklist-section" id="server-room">
-      <div class="tape-header">EVALUATION ROADMAP</div>
-      <ul class="checklist-box">
-        <li>
-          <input type="checkbox" checked disabled /> Multiple Ports & Virtual
-          Hosts Functional
-        </li>
-        <li>
-          <input type="checkbox" checked disabled /> Error Pages Override
-          Verification
-        </li>
-        <li>
-          <input type="checkbox" checked disabled /> Client Max Body Limit
-          Prevention [413 Payload Too Large]
-        </li>
-        <li>
-          <input type="checkbox" checked disabled /> CGI Execution Speed and
-          Environment Validation
-        </li>
-      </ul>
-      <p class="signature-note">
-        Kessoku Web Server Engine v1.0.0 — Ready for Live Performance.
-      </p>
-    </footer>
   </body>
 </html>

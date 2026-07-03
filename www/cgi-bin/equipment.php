@@ -265,12 +265,12 @@ $files = listFiles($root);
 
         <nav class="zine-nav" aria-label="Main Navigation">
             <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
-            <a href="song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
+            <a href="../sites/song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
             <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
             <a href="../cgi-bin/equipment.php" class="nav-sticker tape-blue">📦 Equipment</a>
             <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
             <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
-            <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
+            <a href="../sites/About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
         </nav>
 
 <div class="storage-container">
