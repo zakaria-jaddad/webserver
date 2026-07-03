@@ -49,8 +49,8 @@ HttpParser::httpResult Response::httpDelete(void)
 {
     std::string absPath = this->conf.getRoot();
 
-    normalizePath();
-    absPath += this->normalizedPath;
+    std::string uri = this->client->request->getRequestUriPath();
+    absPath += normalizePath(uri);
     std::cout << "file to delete : " << absPath << std::endl;
     if (access(absPath.c_str(), W_OK)) {
         return HttpParser::HTTP_RES_NOT_FOUND;
@@ -167,8 +167,8 @@ HttpParser::httpResult Response::httpGet(void)
 
     if (this->fileFD == -3) {
         std::string absPath = this->conf.getRoot();
-        normalizePath();
-        absPath += this->normalizedPath;
+        std::string uri = this->client->request->getRequestUriPath();
+        absPath += normalizePath(uri);
 
         struct stat info;
         std::cout << "path requested : " << absPath << std::endl;

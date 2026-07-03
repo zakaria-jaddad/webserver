@@ -45,7 +45,7 @@ if msg_parsed.is_multipart():
                 file_bytes = part.get_payload(decode=True)
                 
                 # Create a local upload repository inside STARRY server workspace
-                upload_dir = "./resources/uploads"
+                upload_dir = "./www/cgi-bin/uploads"
                 os.makedirs(upload_dir, exist_ok=True)
                 
                 # Clean up filename paths to prevent traversal vulnerabilities
@@ -56,7 +56,12 @@ if msg_parsed.is_multipart():
                 with open(save_path, "wb") as f:
                     f.write(file_bytes)
                 
-                file_status = f"Successfully saved file artifact as [ {safe_filename} ] inside STARRY archives!"
+                # file_status = f"Successfully saved file artifact as [ {safe_filename} ] inside STARRY archives!"
+                file_status = (
+                        f'Successfully saved '
+                        f'<a href="/cgi-bin/uploads/{safe_filename}" target="_blank">'
+                        f'{safe_filename}</a>'
+                    )
 else:
     # Fallback to standard application/x-www-form-urlencoded if file-upload was skipped
     import urllib.parse
@@ -74,7 +79,7 @@ print(f"""<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>STARRY Pipeline: Accepted Request</title>
+    <title>Accepted Request | Kessoku SERVER</title>
     <style>
         :root {{
             --pink-bocchi: #ffb1cb;
@@ -231,7 +236,7 @@ print(f"""<!doctype html>
             💾 PIPELINE METRIC: {file_status}
         </div>
 
-        <a href="/song_request.html" class="return-btn">← SEND ANOTHER DEMO REQUEST</a>
+        <a href="../sites/song_request.html" class="return-btn">← SEND ANOTHER DEMO REQUEST</a>
     </main>
 
 </body>

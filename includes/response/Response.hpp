@@ -66,7 +66,6 @@ class Response {
     HttpParser::httpResult checkMethod(void);
     HttpParser::httpResult routeMethod(HttpParser::requestType);
 
-    void normalizePath(void);
     std::string normalizePath(std::string &);
 
     ssize_t sendResponse(const char *resp, size_t);
