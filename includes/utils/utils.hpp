@@ -7,6 +7,7 @@
 #include <vector>
 
 bool isCgi(const std::string &uri, std::map<std::string, std::string> cgiInfo);
-std::string getExtension( std::string &path );
+std::string getExtension(std::string &path);
+bool isMethodAllowed(std::vector<std::string> acceptedMethods, int reqType);
 
 #endif

@@ -20,7 +20,7 @@ REQ_SRC		= Request.cpp
 RSP_SRC		= ResolvedConfig.cpp Response.cpp ResponseCrafting.cpp staticMethods.cpp \
 			  cgiExecution.cpp ResponseUtilities.cpp mime.cpp
 CGI_SRC		= CgiEnv.cpp Cgi.cpp envUtils.cpp
-UTI_SRC = isCgi.cpp getExtension.cpp
+UTI_SRC = isCgi.cpp getExtension.cpp isMethodAllowed.cpp
 
 ## project srcs : here you add the prefix and boom compiled ;p
 PROJECT_SRC	=	$(addprefix $(SRC_DIR)/$(SRV_DIR)/, $(SRV_SRC)) \
