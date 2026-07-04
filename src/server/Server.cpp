@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 Server::Server(std::string &path)
 {
@@ -41,6 +42,8 @@ void Server::setupServerFds()
          *
          */
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+        if (serverSocket == -1)
+            continue;
 
         // Structure describing an Internet socket address.
         sockaddr_in serverAddr;
@@ -59,8 +62,11 @@ void Server::setupServerFds()
         memset(&serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
 
         /* inet_pton - convert IPv4 and IPv6 addresses from text to binary form */
-        if (inet_pton(AF_INET, it->getIP().c_str(), &serverAddr.sin_addr) != 1)
+        if (inet_pton(AF_INET, it->getIP().c_str(), &serverAddr.sin_addr) != 1) {
             std::cerr << "error inet_pton " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
         /*
          * setsockopt — set the socket options
@@ -72,25 +78,40 @@ void Server::setupServerFds()
          *
          * optval: The configuration value for the socket option
          * */
-        if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+        if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
             std::cerr << "error setsockopt SO_REUSEADDR " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
-        if (setsockopt(serverSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+        if (setsockopt(serverSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) {
             std::cerr << "error setsockopt TCP_NODELAY " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
-        if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) == -1)
+        if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) == -1) {
             std::cerr << "error fcntl " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
         /*
          * When a socket is created with socket(2), it exists in a name space (address family) but
          * has no address assigned to it.  bind() assigns the address specified by addr to the
          * socket referred to by the file descriptor sockfd.
          */
-        if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1)
+        if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
             std::cerr << "error binding " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
-        if (listen(serverSocket, SOMAXCONN) == -1)
+        if (listen(serverSocket, SOMAXCONN) == -1) {
             std::cerr << "on listen " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
         /* Add current Socket to the */
         this->vServers[serverSocket] = &(*it);
@@ -352,11 +373,15 @@ int Server::startServer()
     int event_count;
 
     setupServerFds();
+    if (this->vServers.empty()) {
+        std::cerr << "Fatal: no listening sockets created" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
-        std::cerr << "epoll_create1() Failed!" << std::endl;
-        return 1;
+        std::cerr << "Fatal: epoll_create1() Failed!" << std::endl;
+        return EXIT_FAILURE;
     }
 
     epoll_event_t events[MAX_EVENTS];
@@ -374,7 +399,7 @@ int Server::startServer()
 
         if (event_count == -1) {
             std::cerr << "epoll_wait Failed!" << std::endl;
-            return (1);
+            return EXIT_FAILURE;
         }
         if (event_count == 0) {
             for (std::deque<t_client>::iterator it = this->clients.begin();
