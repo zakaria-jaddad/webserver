@@ -36,7 +36,8 @@ HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
     this->_mimeToExt["application/octet-stream"] = ".bin";
 }
 
-HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body()
+HttpParser::HttpParser(std::vector<ServerConfig *> *servers, ServerConfig *ServerConfig)
+    : _phase(REQUEST_LINE), _body()
 {
     this->_requestURI.path = "";
     this->_requestURI.params.clear();
@@ -46,7 +47,10 @@ HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body
     this->_requestVersion[0] = 0;
     this->_requestVersion[1] = 0;
     this->_requestType = UNKNOWN;
+
     this->_config = ServerConfig;
+    this->_servers = servers;
+
     this->_res = HTTP_RES_OK;
     this->_requestLineBuffer = "";
     this->_headerBuffer = "";
@@ -176,10 +180,11 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
          * NOTE: After discussion with mr yhossni i need to return HTTP_RES_METHOD_NOT_ALLOWED after
          * parsing the method from the request
          */
-        ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
-        if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) == false) {
-            return HTTP_RES_METHOD_NOT_ALLOWED;
-        }
+        // ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
+        // if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) ==
+        // false) {
+        //     return HTTP_RES_METHOD_NOT_ALLOWED;
+        // }
 
         this->_phase = HEADERS;
     }
@@ -206,6 +211,15 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
             return res;
         }
         this->_phase = BODY;
+
+        // yhossni trying some bs
+        if (this->_config == NULL)
+            this->_config = resolveServer(this->_servers, this->_headers["Host"]);
+
+        ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
+        if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) == false) {
+            return HTTP_RES_METHOD_NOT_ALLOWED;
+        }
     }
 
     if (this->_phase == BODY) {

@@ -5,9 +5,11 @@
 #include <map>
 #include <sstream>
 #include <string.h>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 
 Server::Server(std::string &path)
 {
@@ -19,9 +21,20 @@ void Server::setupServerFds()
 {
     int serverSocket;
     int opt = 1;
+    std::map<std::string, int> boundSockets;
 
     for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
          it != this->conf.servers.end(); it++) {
+        std::stringstream ss;
+        ss << it->getPort();
+
+        std::string key = it->getIP() + ":" + ss.str();
+        std::map<std::string, int>::iterator found = boundSockets.find(key);
+        if (found != boundSockets.end()) {
+            int existingSocket = found->second;
+            this->vServers[existingSocket].push_back(&(*it));
+            continue;
+        }
 
         /*
          * socket - create an endpoint for communication
@@ -114,7 +127,7 @@ void Server::setupServerFds()
         }
 
         /* Add current Socket to the */
-        this->vServers[serverSocket] = &(*it);
+        this->vServers[serverSocket].push_back(&(*it));
     }
 }
 
@@ -162,7 +175,7 @@ int Server::checkServerFd(epoll_event *events, int i)
     t_client client;
     time_t now = time(NULL);
 
-    for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
+    for (std::map<int, std::vector<ServerConfig *> >::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
         if (events[i].data.fd == it->first) {
             clientSocket = accept(it->first, NULL, NULL);
@@ -193,9 +206,10 @@ int Server::checkServerFd(epoll_event *events, int i)
                 close(clientSocket);
                 break;
             }
-            obj = new HttpParser(it->second);
+            obj = new HttpParser(&it->second, it->second[0]);
             client.fd = clientSocket;
-            client.config = it->second;
+            client.server = it->second;
+            client.config = NULL;
             client.request = obj;
             client.response = NULL;
             client.connection_time = now;
@@ -213,7 +227,7 @@ void Server::resetSocket(t_client *client)
     std::string pendingData = client->request->getPendingData();
     delete client->request;
     delete client->response;
-    client->request = new HttpParser(client->config);
+    client->request = new HttpParser(&client->server, client->config);
 
     // Save previous Data since connection is always open
     client->request->setPendingData(pendingData);
@@ -276,6 +290,11 @@ int Server::checkClientFd(epoll_event *events, int i)
                 std::cout << RED << "=================Request from " << GREEN << it->fd << RED
                           << "=================" << WHITE << std::endl;
                 it->req_res = it->request->parseHttpRequest(rawData);
+
+                if (it->config == NULL) {
+                    std::map<std::string, std::vector<std::string> >::iterator f =
+                        it->request->getHeaders().begin();
+                }
 
                 if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
                     switchEpollMode(clientSocket, EPOLLOUT);
