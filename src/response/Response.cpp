@@ -120,11 +120,11 @@ HttpParser::httpResult Response::checkMethod(void)
     HttpParser::requestType req_method = client->request->getRequestType();
     std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
 
-    if (!allowed_methods.empty() &&
-        std::find(allowed_methods.begin(), allowed_methods.end(), methodToString(req_method)) ==
-            allowed_methods.end()) {
-        return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
-    }
+    // if (!allowed_methods.empty() &&
+    //     std::find(allowed_methods.begin(), allowed_methods.end(), methodToString(req_method)) ==
+    //         allowed_methods.end()) {
+    //     return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
+    // }
 
     return routeMethod(req_method);
 }

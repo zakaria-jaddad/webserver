@@ -285,7 +285,6 @@ int Server::checkClientFd(epoll_event *events, int i)
                 // EPOLLOUT wake-up before yielding back to epoll.
                 while (true) {
                     if (it->response == NULL) {
-                        std::cout << YELLOW << "creating response object..." << WHITE << std::endl;
                         it->response = new Response(&(*it));
                     }
 
@@ -329,11 +328,9 @@ int Server::checkClientFd(epoll_event *events, int i)
                     if (it->response->isComplete()) {
                         if (it->response->shouldClose()) {
                             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            std::cout << RED << "-----Switched epoll mode-----" << WHITE
-                                      << std::endl;
                             closeSocket(&(*it));
                             it = clients.erase(it);
-                            std::cout << "cleaned socket on Connection: close" << std::endl;
+                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
                             break;
                         }
 
@@ -342,10 +339,11 @@ int Server::checkClientFd(epoll_event *events, int i)
                         /* NOTE: HTTP/1.1 Pipelining ya dawla */
                         if (it->request->getPendingData().empty() == false) {
 
-                            std::cout << GREEN << std::endl;
-                            HttpParser::printRaw(it->request->getPendingData());
+                            // removed pipeline debugging for now
+                            // std::cout << GREEN << std::endl;
+                            // HttpParser::printRaw(it->request->getPendingData());
 
-                            std::cout << WHITE << std::endl;
+                            // std::cout << WHITE << std::endl;
                             HttpParser::httpResult r = it->request->parseHttpRequest("");
                             it->req_res = r;
 

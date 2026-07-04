@@ -169,7 +169,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         res = _parseRequestLine(requestLine);
 
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING request line, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -204,7 +203,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = _generateHeadersMap(headerLines, this->_headers);
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING generate headers, RESULT : " << res << std::endl;
             return res;
         }
         this->_phase = BODY;
@@ -218,7 +216,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
             res = _parseRequestHeaderValue();
             std::cout << "Finished Parsing Headers" << std::endl;
             if (res != HTTP_RES_OK) {
-                std::cout << "FROM HTTP PARSING body header value, RESULT : " << res << std::endl;
                 return res;
             }
 
@@ -227,8 +224,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
                 // Save pending Data if pipelined request
                 setPendingData(rawData);
                 this->_phase = COMPLETE;
-                std::cout << "FROM HTTP PARSING ignoring body, RESULT : " << HTTP_RES_OK
-                          << std::endl;
                 return HTTP_RES_OK;
             }
 
@@ -237,7 +232,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = this->_body.parseRequestBody(rawData);
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING request body, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -247,8 +241,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         }
     }
 
-    std::cout << "FROM HTTP PARSING after finishing everything, RESULT : " << HTTP_RES_OK
-              << std::endl;
     return HTTP_RES_OK;
 };
 
@@ -577,7 +569,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             while (this->_mpState != MP_COMPLETE) {
 
                 if (!std::getline(this->file, line)) {
-                    std::cout << "bad request from here" << std::endl;
                     return HTTP_RES_BAD_REQUEST;
                 }
 
