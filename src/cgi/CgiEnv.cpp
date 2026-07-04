@@ -1,11 +1,11 @@
 #include "../../includes/cgi/Cgi.hpp"
+#include <sstream>
 
 // env building
 
 std::map<std::string, std::string>
 Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
-                   std::string script_name, std::string path_info,
-                   std::string &query)
+                   std::string script_name, std::string path_info, std::string &query)
 {
     // to do:
     // add a content type env var and content length
@@ -28,19 +28,22 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
     // content length
     if (!this->body_path.empty())
         env["CONTENT_LENGTH"] = this->content_length;
-    
+
     // content type
     if (!this->content_type.empty())
-      env["CONTENT_TYPE"] = this->content_type[0];
+        env["CONTENT_TYPE"] = this->content_type;
 
     // some cgi needed? bs
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
-    env["SERVER_NAME"] = "localhost";//TODO: change this value to the host requested by the client
-    env["SERVER_PORT"] = conf->getPort();
-    std::cout << RED << "===========PORT" << conf->getPort() << "==========" << WHITE << std::endl;
+    env["SERVER_NAME"] = "localhost"; // TODO: change this value to the host requested by the client
+                                      //
+    std::stringstream ss;
+    ss << conf->getPort();
+    env["SERVER_PORT"] = ss.str();
+
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SERVER_SOFTWARE"] = "webserv/1.0";
-    env["REMOTE_ADDR"] = "127.0.0.1"; //check get from anas
+    env["REMOTE_ADDR"] = "127.0.0.1"; // check get from anas
 
     // bs needed so php-cgi runs
     env["REDIRECT_STATUS"] = "200";
@@ -68,7 +71,6 @@ char **Cgi::charEnvBuilder(std::map<std::string, std::string> env)
     int i = 0;
     for (; it != env.end(); it++) {
         std::string kv = it->first + "=" + it->second;
-        // std::cout << "env crafted : " << kv << std::endl; check port somehow not getting passed properly
         envp[i] = strdup(kv.c_str());
         i++;
     }
@@ -83,10 +85,10 @@ HttpParser::httpResult Cgi::envBuilder()
     std::vector<std::string> script_name = deriveScriptName(uriPath);
     std::string query = request->getRequestUriRawParams();
 
-    std::map<std::string, std::string> mapEnv = mapEnvBuilder(header, script_name[0], script_name[1], query);
+    std::map<std::string, std::string> mapEnv =
+        mapEnvBuilder(header, script_name[0], script_name[1], query);
 
-    if (mapEnv.empty())
-    {
+    if (mapEnv.empty()) {
         this->env = NULL;
         return HttpParser::HTTP_RES_NOT_IMPLEMENTED;
     }

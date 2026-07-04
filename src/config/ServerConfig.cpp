@@ -16,6 +16,7 @@ ServerConfig::ServerConfig()
 {
     methods_accepted.push_back("GET");
     methods_accepted.push_back("POST");
+    methods_accepted.push_back("DELETE");
     init_error_pages();
     buildServerParsers();
 }
