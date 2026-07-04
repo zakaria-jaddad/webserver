@@ -191,7 +191,13 @@ void Server::closeSocket(t_client *client)
 {
     delete client->request;
     delete client->response;
-    // delete client->config;
+    // Drain any unread data from the receive buffer to prevent the kernel from sending an RST
+    // instead of FIN on close().
+    char drain[READ_BYTES];
+    int n;
+    do {
+        n = recv(client->fd, drain, sizeof(drain), 0);
+    } while (n > 0);
     close(client->fd);
     client->request = NULL;
     client->response = NULL;
