@@ -21,6 +21,8 @@ Response::Response(t_client *dep)
     this->cgi_in_pipe[1] = -1;
     this->cgi_out_pipe[0] = -1;
     this->cgi_out_pipe[1] = -1;
+
+    this->_pageFd = -1;
 }
 
 Response::~Response(void)

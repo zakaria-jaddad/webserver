@@ -224,7 +224,6 @@ void Server::closeSocket(t_client *client)
 {
     delete client->request;
     delete client->response;
-    // delete client->config;
     close(client->fd);
     client->request = NULL;
     client->response = NULL;
@@ -265,7 +264,6 @@ int Server::checkClientFd(epoll_event *events, int i)
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
                 if (b <= 0) {
                     closeSocket(&(*it));
-                    // BUG: WTF is this for yhosnsi you were erasing the clients.begin() :|
                     clients.erase(it);
                     return 1;
                 }
@@ -275,37 +273,34 @@ int Server::checkClientFd(epoll_event *events, int i)
                 req[b] = 0;
                 std::string rawData(req, b);
 
-                std::cout << RED << "=================Request " << GREEN << it->fd << RED
-                          << "=================" << std::endl;
-                std::cout << YELLOW << rawData << WHITE << std::endl;
+                std::cout << RED << "=================Request from " << GREEN << it->fd << RED
+                          << "=================" << WHITE << std::endl;
                 it->req_res = it->request->parseHttpRequest(rawData);
 
-                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK) {
-
+                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
                     switchEpollMode(clientSocket, EPOLLOUT);
-                    std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
-                }
             }
             else if (events[i].events == EPOLLOUT) {
                 // Process as many complete pipelined requests as possible in one
                 // EPOLLOUT wake-up before yielding back to epoll.
                 while (true) {
-                    if (it->response == NULL)
+                    if (it->response == NULL) {
+                        std::cout << YELLOW << "creating response object..." << WHITE << std::endl;
                         it->response = new Response(&(*it));
+                    }
 
                     if (it->req_res != HttpParser::HTTP_RES_OK) {
-                        std::cout << "req_res : " << it->req_res << std::endl;
                         int serv_res = it->response->servePages(it->req_res, 1);
-                        if (serv_res)
+                        if (serv_res) {
                             std::cout << RED << "Connection Error, closing connection ..." << WHITE
                                       << std::endl;
-                        if (serv_res || it->response->isComplete()) {
+                            continue;
+                        }
+                        if (it->response->isComplete()) {
                             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            std::cout << RED << "-----Switched epoll mode-----" << WHITE
-                                      << std::endl;
                             closeSocket(&(*it));
                             it = clients.erase(it);
-                            std::cout << "cleaned socket" << std::endl;
+                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
                         }
                         break;
                     }
@@ -316,16 +311,17 @@ int Server::checkClientFd(epoll_event *events, int i)
 
                     // cleanup after an error/timeout
                     if (it->resp_res != HttpParser::HTTP_RES_OK) {
-                        std::cout << " serving error " << it->resp_res << std::endl;
                         int serv_res = it->response->servePages(it->resp_res, 1);
-                        if (serv_res)
+                        if (serv_res) {
                             std::cout << RED << "Connection Error, closing connection ..." << WHITE
                                       << std::endl;
-                        if (serv_res || it->response->isComplete()) {
+                            continue;
+                        }
+                        if (it->response->isComplete()) {
                             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                             closeSocket(&(*it));
                             it = clients.erase(it);
-                            std::cout << "cleaned socket" << std::endl;
+                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
                         }
                         break;
                     }

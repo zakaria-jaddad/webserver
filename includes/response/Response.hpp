@@ -53,6 +53,8 @@ class Response {
     bool timed_out;
     bool closeConnection;
 
+    int _pageFd;
+
     time_t start_time;
 
     std::string generateDirectoryListingHTML(const std::string &path,
@@ -91,6 +93,7 @@ class Response {
     HttpParser::httpResult cgiExecution();
     void sendingCgiResponse();
 
+    int fallbackServe(int, bool);
     int servePages(int, bool);
     std::string getStatusMessage(int);
     void craftPageResponse(int, int, bool);
