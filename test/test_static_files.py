@@ -8,9 +8,7 @@ Covered requirements from subject.md:
 - Required headers and Content-Length/Transfer-Encoding
 """
 
-import pytest
 from pathlib import Path
-
 from test.helpers import (
     chunked_response_body,
     decode_chunked,
@@ -19,6 +17,8 @@ from test.helpers import (
     send_request_and_read_all,
     status_code_from,
 )
+
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 WWW_ROOT = PROJECT_ROOT / "www"
@@ -33,16 +33,20 @@ class TestExistingFiles:
         resp = _send(make_request("GET", "/", headers={"Host": "localhost"}))
         assert status_code_from(resp) == 200
         body = chunked_response_body(resp)
-        assert b"<!DOCTYPE html>" in body
+        assert b"<!doctype html>" in body
 
     def test_get_html_file(self, server):
-        resp = _send(make_request("GET", "/test_bench.html", headers={"Host": "localhost"}))
+        resp = _send(make_request("GET", "/index.html", headers={"Host": "localhost"}))
         assert status_code_from(resp) == 200
         _, headers, _ = parse_response(resp)
         assert headers.get("content-type") == "text/html"
 
     def test_get_jpeg_image(self, server):
-        resp = _send(make_request("GET", "/resources/yhossni.jpeg", headers={"Host": "localhost"}))
+        resp = _send(
+            make_request(
+                "GET", "/sites/resources/yhossni.jpeg", headers={"Host": "localhost"}
+            )
+        )
         assert status_code_from(resp) == 200
         _, headers, _ = parse_response(resp)
         assert headers.get("content-type") in ("image/jpeg", "image/jpg")
@@ -56,7 +60,9 @@ class TestExistingFiles:
 
 class TestMissingFiles:
     def test_404_for_missing_file(self, server):
-        resp = _send(make_request("GET", "/does_not_exist.html", headers={"Host": "localhost"}))
+        resp = _send(
+            make_request("GET", "/does_not_exist.html", headers={"Host": "localhost"})
+        )
         assert status_code_from(resp) == 404
 
     def test_404_body_present(self, server):
@@ -72,7 +78,7 @@ class TestDirectoryHandling:
         resp = _send(make_request("GET", "/", headers={"Host": "localhost"}))
         assert status_code_from(resp) == 200
         body = chunked_response_body(resp)
-        assert b"<!DOCTYPE html>" in body
+        assert b"<!doctype html>" in body
 
     def test_directory_autoindex_enabled(self, server):
         # /folder has autoindex on in test.conf.
@@ -98,7 +104,11 @@ class TestMimeTypes:
         assert headers.get("content-type") == "text/html"
 
     def test_jpeg_mime(self, server):
-        resp = _send(make_request("GET", "/yhossni.jpg", headers={"Host": "localhost"}))
+        resp = _send(
+            make_request(
+                "GET", "/sites/resources/yhossni.jpeg", headers={"Host": "localhost"}
+            )
+        )
         _, headers, _ = parse_response(resp)
         assert headers.get("content-type") in ("image/jpeg", "image/jpg")
 
@@ -107,7 +117,9 @@ class TestMimeTypes:
         tmp_file = WWW_ROOT / "unknown.xyz"
         tmp_file.write_text("hello")
         try:
-            resp = _send(make_request("GET", "/unknown.xyz", headers={"Host": "localhost"}))
+            resp = _send(
+                make_request("GET", "/unknown.xyz", headers={"Host": "localhost"})
+            )
             assert status_code_from(resp) == 200
             _, headers, _ = parse_response(resp)
             # Server should return some content-type.

@@ -1,9 +1,9 @@
-version: '3.8'
+version: "3.8"
 
 services:
   webserv:
     build: .
-    container_name: webserv-dev
+    container_name: ft_webserver
     # Keep container running
     stdin_open: true
     tty: true

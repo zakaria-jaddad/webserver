@@ -3,6 +3,8 @@ FROM ubuntu:22.04
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN curl -fsSL https://opencode.ai/install | bash
+
 # Install build essentials and debugging tools
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -16,11 +18,11 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     curl \
     telnet \
+    git \
+    tmux \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN curl -fsSL https://opencode.ai/install | bash
 
 # Set working directory
 WORKDIR /webserv
