@@ -50,14 +50,14 @@ test_uploads/
 venv/
 .pytest_cache/
 
-.gitignore
-
 subject.md
-dokerfile
+dockerfile
+docker-compose.yml
 run.sh
 
 venv/
+__pycache__/
+*.pyc
 test/__pycache__/
 test_upload/
-obj
-conf
+conf/
