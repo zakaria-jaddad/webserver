@@ -170,17 +170,29 @@ int Server::checkServerFd(epoll_event *events, int i)
                 std::cerr << "failed to accept" << std::endl;
                 break;
             }
-            if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+            if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) {
                 std::cerr << "failed to set TCP_NODELAY" << std::endl;
-            if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) == -1)
+                close(clientSocket);
+                break;
+            }
+            if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) == -1) {
                 std::cerr << "failed to set non-blocking" << std::endl;
+                close(clientSocket);
+                break;
+            }
 
             int sndbuf = 256 * 1024;
-            if (setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1)
+            if (setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1) {
                 std::cerr << "failed to set SO_SNDBUF" << std::endl;
+                close(clientSocket);
+                break;
+            }
 
-            if (addToEpoll(clientSocket, EPOLLIN))
+            if (addToEpoll(clientSocket, EPOLLIN)) {
                 std::cerr << "failed to add to epoll" << std::endl;
+                close(clientSocket);
+                break;
+            }
             obj = new HttpParser(it->second);
             client.fd = clientSocket;
             client.config = it->second;
@@ -221,10 +233,12 @@ void Server::closeSocket(t_client *client)
 
 int Server::checkClientTimeout(t_client *client)
 {
+    if (!client)
+        return 0;
     time_t now = time(NULL);
     time_t idle_time = now - client->last_activity;
 
-    if (client && !client->response && idle_time > IDLE_TIMEOUT) {
+    if (!client->response && idle_time >= IDLE_TIMEOUT) {
         return 1;
     }
 
@@ -406,8 +420,8 @@ int Server::startServer()
                  it != this->clients.end();) {
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
-                    std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-                    std::cout << "done sending timeout resetting socket..." << std::endl;
+                    std::cout << RED << "client fd=" << (*it).fd << " timed out" << std::endl;
+                    std::cout << YELLOW << "resetting socket..." << std::endl;
                     switchEpollMode(it->fd, EPOLL_CTL_DEL);
                     std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                     closeSocket(&(*it));
