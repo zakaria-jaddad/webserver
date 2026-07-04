@@ -7,18 +7,14 @@ Covered requirements from subject.md:
 - Accurate status codes
 """
 
-import pytest
 from pathlib import Path
+from test.helpers import (chunked_response_body, make_request,
+                          send_request_and_read_all, status_code_from)
 
-from test.helpers import (
-    chunked_response_body,
-    make_request,
-    send_request_and_read_all,
-    status_code_from,
-)
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-WWW_ROOT = PROJECT_ROOT / "www/sites"
+WWW_ROOT = PROJECT_ROOT / "www/"
 
 
 def _send(req):

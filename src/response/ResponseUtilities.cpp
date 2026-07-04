@@ -211,28 +211,20 @@ int Response::servePages(int code, bool to_close)
     static int fd = -1;
     std::string errorPath = this->conf.getErrorPages(code);
 
-    if (errorPath.empty()) {
+    if (errorPath.empty() || (fd == -1 && (fd = open(errorPath.c_str(), O_RDONLY)) == -1)) {
+        std::string msg = getStatusMessage(code);
+        std::string body = "<html><body><h1>" + msg + "</h1></body></html>";
+        std::ostringstream ss;
+        ss << "HTTP/1.1 " << msg << "\r\n"
+           << "Content-Type: text/html\r\n"
+           << "Content-Length: " << body.size() << "\r\n"
+           << "Connection: close\r\n"
+           << "\r\n"
+           << body;
+        std::string resp = ss.str();
         this->error = 1;
-        sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
-                     "Content-Type: text/plain\r\n"
-                     "Content-Length: 21\r\n\r\n"
-                     "Internal Server Error",
-                     105);
+        sendResponse(resp.data(), resp.size());
         return 1;
-    }
-
-    if (fd == -1) {
-        fd = open(errorPath.c_str(), O_RDONLY);
-
-        if (fd == -1) {
-            this->error = 1;
-            sendResponse("HTTP/1.1 500 Internal Server Error\r\n"
-                         "Content-Type: text/plain\r\n"
-                         "Content-Length: 21\r\n\r\n"
-                         "Internal Server Error",
-                         105);
-            return 1;
-        }
     }
 
     craftPageResponse(code, fd, to_close);
