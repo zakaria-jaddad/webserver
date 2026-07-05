@@ -243,9 +243,6 @@ int Response::servePages(int code, bool to_close)
     // int _pageFd;  // initialize to -1 in ctor/reset
 
     // 1) Always flush pending bytes first.
-    std::cout << "Error : " << this->error << std::endl;
-    std::cout << "offset : " << client->writeOffset << std::endl;
-    std::cout << "outbuffer size : " << client->outBuffer.size() << std::endl;
     if (error && static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
         ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
                                     client->outBuffer.size() - client->writeOffset);

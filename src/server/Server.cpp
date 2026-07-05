@@ -1,4 +1,5 @@
 #include "../../includes/server/Server.hpp"
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <fstream>
@@ -17,30 +18,49 @@ Server::Server(std::string &path)
     this->conf.loadServers();
 }
 
+bool compareConfigs(ServerConfig &a, ServerConfig &b)
+{
+    if ((a.getIP() == "0.0.0.0") && (b.getIP() != "0.0.0.0"))
+        return true;
+    if (a.getIP() != "0.0.0.0" && b.getIP() == "0.0.0.0")
+        return false;
+    return a.getPort() < b.getPort();
+}
+
 void Server::setupServerFds()
 {
     int serverSocket;
     int opt = 1;
     std::map<std::string, int> boundSockets;
 
-    // for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
-    //      it != this->conf.servers.end(); it++) {
-    //
-    //     std::cout << "Port: " << it->getPort() << std::endl;
-    //     std::cout << "IP  : " << it->getIP() << std::endl;
-    // }
-    // exit(0);
+    std::sort(this->conf.servers.begin(), this->conf.servers.end(), compareConfigs);
 
     for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
          it != this->conf.servers.end(); it++) {
+
+        // look for the ip:port pair if already have been bound
+        // if already bound just push the server config object to the already created socket
+        // otherwise create a new socket for the pair
         std::stringstream ss;
         ss << it->getPort();
 
         std::string key = it->getIP() + ":" + ss.str();
+        std::string wildcard = "0.0.0.0:" + ss.str();
+
+        int existingSocket = -1;
+
         std::map<std::string, int>::iterator found = boundSockets.find(key);
         if (found != boundSockets.end()) {
-            std::cout << key << std::endl;
-            int existingSocket = found->second;
+            existingSocket = found->second;
+        }
+
+        else {
+            std::map<std::string, int>::iterator foundWildcard = boundSockets.find(wildcard);
+            if (foundWildcard != boundSockets.end())
+                existingSocket = foundWildcard->second;
+        }
+
+        if (existingSocket != -1) {
             this->vServers[existingSocket].push_back(&(*it));
             continue;
         }
@@ -303,6 +323,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                 it->req_res = it->request->parseHttpRequest(rawData);
 
                 if (it->req_res != HttpParser::HTTP_RES_OK) {
+                    it->config = it->server[0];
                     switchEpollMode(clientSocket, EPOLLOUT);
                 }
                 else if (it->request->isComplete()) {
