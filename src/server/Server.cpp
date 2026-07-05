@@ -342,14 +342,18 @@ int Server::checkClientFd(epoll_event *events, int i)
                 std::cout << RED << "=================Request from " << GREEN << it->fd << RED
                           << "=================" << WHITE << std::endl;
                 it->req_res = it->request->parseHttpRequest(rawData);
+                std::cout << YELLOW << "HERE" << WHITE << std::endl;
 
                 if (it->req_res != HttpParser::HTTP_RES_OK) {
-                    it->config = it->server[0];
+                    if (it->config == NULL)
+                        it->config = it->server[0];
                     switchEpollMode(clientSocket, EPOLLOUT);
                 }
                 else if (it->request->isComplete()) {
-                    std::string hostHeader = it->request->getHostHeader();
-                    it->config = resolveServer(it->server, hostHeader);
+                    if (it->config == NULL) {
+                        std::string hostHeader = it->request->getHostHeader();
+                        it->config = resolveServer(it->server, hostHeader);
+                    }
                     switchEpollMode(clientSocket, EPOLLOUT);
                 }
             }

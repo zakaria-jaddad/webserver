@@ -15,7 +15,6 @@ Cgi::Cgi(int *in, int *out, t_client *client)
         if (this->body_fd == -1)
             throw std::runtime_error("error reading body");
 
-        // check need to get content length from request parsing
         std::stringstream ss;
         ss << this->request->getBodySize();
         this->content_length = ss.str();
@@ -28,7 +27,6 @@ Cgi::Cgi(int *in, int *out, t_client *client)
     }
 
     // initing the content type if its set
-    // check need to get it from the request parsing
     std::map<std::string, std::vector<std::string> > h = request->getHeaders();
     if (h.find("Content-Type") != h.end())
         this->content_type = h["Content-Type"][0];

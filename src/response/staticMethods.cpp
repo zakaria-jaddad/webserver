@@ -23,7 +23,7 @@ HttpParser::httpResult Response::httpDelete(void)
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
-    servePages(200, 0); // check later to change it to 204
+    servePages(204, 0);
     return HttpParser::HTTP_RES_OK;
 }
 

@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>200 OK | Kessoku SERVER</title>
+    <style>
+      :root {
+        --pink-bocchi: #ffb1cb;
+        --blue-kita: #82e3f5;
+        --yellow-nijika: #fff176;
+        --purple-ryo: #b39ddb;
+        --dark-punk: #121212;
+        --white-paper: #f4f4f4;
+        --neon-magenta: #ff007f;
+      }
+
+      body {
+        background-color: var(--dark-punk);
+        margin: 0;
+        font-family: monospace;
+      }
+
+      /* ==========================================================================
+               TEXTURES & BACKGROUND LAYER
+               ========================================================================== */
+      .hero-bg-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0.15;
+      }
+
+      .halftone-pattern {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(
+          var(--white-paper) 15%,
+          transparent 16%
+        );
+        background-size: 12px 12px;
+      }
+
+      .distressed-texture {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+          linear-gradient(
+            90deg,
+            rgba(255, 0, 0, 0.06),
+            rgba(0, 255, 255, 0.02),
+            rgba(0, 0, 255, 0.06)
+          );
+        background-size:
+          100% 4px,
+          6px 100%;
+      }
+
+      /* ==========================================================================
+               FIXED NAVIGATION
+               ========================================================================== */
+      .zine-nav {
+        position: fixed;
+        top: 15%;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        z-index: 100;
+        transform: rotate(2deg);
+      }
+
+      @media (max-width: 768px) {
+        .zine-nav {
+          position: static;
+          transform: none;
+          padding: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          display: grid;
+        }
+      }
+
+      .nav-sticker {
+        color: var(--dark-punk);
+        font-weight: 900;
+        text-decoration: none;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        border: 2px solid var(--dark-punk);
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+        box-shadow: 4px 4px 0px var(--dark-punk);
+      }
+
+      .tape-pink {
+        background-color: var(--pink-bocchi);
+        transform: rotate(-3deg);
+      }
+      .tape-dark {
+        background-color: var(--dark-punk);
+        color: var(--yellow-nijika);
+        transform: rotate(-4deg);
+      }
+
+      .nav-sticker:hover {
+        transform: scale(1.1) rotate(0deg);
+        box-shadow: 6px 6px 0px var(--neon-magenta);
+      }
+
+      /* ==========================================================================
+               ERROR CONTENT CONTAINER
+               ========================================================================== */
+      .error-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 5rem 1.5rem 8rem 1.5rem;
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .ransom-note {
+        background-color: var(--neon-magenta);
+        color: var(--dark-punk);
+        padding: 0.5rem 1rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        transform: rotate(-3deg);
+        box-shadow: 4px 4px 0px var(--white-paper);
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+        display: inline-block;
+      }
+
+      .error-title {
+        font-family: "Impact", "Arial Black", sans-serif;
+        font-size: clamp(4rem, 10vw, 8rem);
+        text-transform: uppercase;
+        line-height: 0.85;
+        margin: 1.5rem 0 3rem 0;
+        letter-spacing: -2px;
+      }
+
+      .error-title .layer-1 {
+        display: block;
+        color: var(--white-paper);
+        text-shadow: 4px 4px 0px var(--dark-punk);
+        transform: rotate(-2deg) translateX(-10px);
+      }
+
+      .error-title .layer-2 {
+        display: block;
+        color: var(--neon-magenta);
+        text-shadow: 6px 6px 0px var(--dark-punk);
+        transform: rotate(3deg) scale(1.05);
+      }
+
+      /* ==========================================================================
+               POLAROID ANXIOUS ART BOX
+               ========================================================================== */
+      .error-card-polaroid {
+        position: relative;
+        background-color: var(--white-paper);
+        border: 5px solid var(--dark-punk);
+        border-radius: 4px;
+        padding: 18px 18px 40px 18px;
+        width: 100%;
+        max-width: 360px;
+        box-shadow: 12px 16px 0px rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        transform: rotate(-4deg);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        margin-bottom: 4rem;
+      }
+
+      .card-tape {
+        position: absolute;
+        top: -22px;
+        left: 50%;
+        transform: translateX(-50%) rotate(2deg);
+        width: 90px;
+        height: 28px;
+        background-color: rgba(230, 222, 190, 0.75);
+        border-left: 2px dashed rgba(0, 0, 0, 0.1);
+        border-right: 2px dashed rgba(0, 0, 0, 0.1);
+        box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.05);
+        z-index: 50;
+      }
+
+      .card-image-frame {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        border: 4px solid var(--dark-punk);
+        overflow: hidden;
+        background: linear-gradient(135deg, #ff8da1 0%, #a12340 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* The Fallback WebServ Panic Image Element */
+      .card-image-frame img {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1;
+        transition:
+          transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+          filter 0.2s ease-out;
+      }
+
+      /* --- INTENSE BOCHHI GLITCH HOVER TIMELINE --- */
+      .error-card-polaroid:hover {
+        transform: scale(1.03) rotate(0deg);
+        box-shadow: 16px 22px 0px rgba(0, 0, 0, 1);
+      }
+
+      .error-card-polaroid:hover .card-image-frame img {
+        animation: bocchiPanicStrobe 0.8s steps(1) infinite;
+      }
+
+      /* Polaroid Bottom Handwritten Label */
+      .polaroid-caption {
+        margin-top: 18px;
+        font-family: monospace;
+        font-weight: 900;
+        font-size: 1.1rem;
+        padding: 0.3rem 0.6rem;
+        border: 3px solid var(--dark-punk);
+        text-transform: uppercase;
+        box-shadow: 2px 2px 0px var(--dark-punk);
+        background-color: #f7eed3;
+        color: var(--dark-punk);
+        transform: rotate(1deg);
+        align-self: center;
+      }
+
+      /* ==========================================================================
+               LORE RIPPED TEXT BOX
+               ========================================================================== */
+      .lore-paper-scrap {
+        background-color: #fcfbf7;
+        color: var(--dark-punk);
+        border: 3px dashed var(--dark-punk);
+        padding: 2.2rem;
+        max-width: 640px;
+        transform: rotate(1deg);
+        box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.8);
+        font-size: 1.05rem;
+        line-height: 1.6;
+        text-align: left;
+      }
+
+      .lore-paper-scrap strong {
+        color: var(--neon-magenta);
+      }
+
+      /* ==========================================================================
+               UNIFIED PANIC TIMELINE KEYFRAMES
+               ========================================================================== */
+      @keyframes bocchiPanicStrobe {
+        0%,
+        100% {
+          filter: drop-shadow(35px 15px 0px var(--neon-magenta))
+            drop-shadow(-40px -6px 0px var(--blue-kita))
+            drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(2)
+            invert(0%);
+        }
+        10% {
+          filter: drop-shadow(38px 12px 0px var(--neon-magenta))
+            drop-shadow(-35px -8px 0px var(--blue-kita))
+            drop-shadow(-8px -8px 0px var(--yellow-nijika)) contrast(2)
+            blur(2px);
+        }
+        20% {
+          filter: drop-shadow(35px 15px 0px var(--neon-magenta))
+            drop-shadow(-40px -6px 0px var(--blue-kita))
+            drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(2.2)
+            blur(0);
+        }
+        30% {
+          filter: drop-shadow(42px 18px 0px var(--neon-magenta))
+            drop-shadow(-45px -4px 0px var(--blue-kita))
+            drop-shadow(-4px -12px 0px var(--yellow-nijika)) contrast(1.8)
+            invert(14%) blur(3px);
+        }
+        40% {
+          filter: drop-shadow(32px 13px 0px var(--neon-magenta))
+            drop-shadow(-38px -5px 0px var(--blue-kita))
+            drop-shadow(-5px -9px 0px var(--yellow-nijika)) contrast(2)
+            invert(10%) blur(0);
+        }
+        50% {
+          transform: translateX(3px) skewX(0deg);
+          filter: drop-shadow(35px 15px 0px var(--neon-magenta))
+            drop-shadow(-40px -6px 0px var(--blue-kita))
+            drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(2)
+            invert(7%);
+        }
+        60% {
+          filter: drop-shadow(30px 17px 0px var(--neon-magenta))
+            drop-shadow(-42px -8px 0px var(--blue-kita))
+            drop-shadow(-8px -11px 0px var(--yellow-nijika)) contrast(2.5)
+            invert(10%) blur(4px);
+        }
+        70% {
+          filter: drop-shadow(37px 14px 0px var(--neon-magenta))
+            drop-shadow(-38px -4px 0px var(--blue-kita))
+            drop-shadow(-4px -10px 0px var(--yellow-nijika)) contrast(2)
+            invert(12%) blur(0);
+        }
+        80% {
+          transform: translateX(5px) skewX(0deg);
+          filter: drop-shadow(35px 15px 0px var(--neon-magenta))
+            drop-shadow(-40px -6px 0px var(--blue-kita))
+            drop-shadow(-6px -10px 0px var(--yellow-nijika)) contrast(1.9)
+            invert(9%) blur(1px);
+        }
+        90% {
+          transform: translateX(-3px) skewX(-2deg);
+          filter: drop-shadow(39px 16px 0px var(--neon-magenta))
+            drop-shadow(-44px -7px 0px var(--blue-kita))
+            drop-shadow(-7px -12px 0px var(--yellow-nijika)) contrast(2)
+            invert(14%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="zine-nav" aria-label="Error Navigation">
+      <a href="../index.html" class="nav-sticker tape-pink">🎸 Back Home</a>
+      <a href="About_us.html" class="nav-sticker tape-dark"
+        >⚙ Server Backstage</a
+      >
+    </nav>
+
+    <div class="hero-bg-overlay" aria-hidden="true">
+      <div class="halftone-pattern"></div>
+      <div class="distressed-texture"></div>
+    </div>
+
+    <main class="error-container">
+      <div class="badge ransom-note">HTTP STATUS: 200</div>
+
+      <h1 class="error-title">
+        <span class="layer-1">TARGET PAGE</span>
+        <span class="layer-2">NOT FOUND</span>
+      </h1>
+
+      <div class="error-card-polaroid">
+        <div class="card-tape"></div>
+        <div class="card-image-frame">
+          <img
+            src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXg1em4wOWE4cnlpZmR0ZWVobWdwZjVqNjJya3NqZXN6cWtycmNhNCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UsVX1QDSLlCjw8PpJS/giphy.gif"
+            alt="Panicking Anime Girl"
+          />
+        </div>
+        <div class="polaroid-caption">⚠️ ANXIOUS BREAKDOWN STATE</div>
+      </div>
+    </main>
+  </body>
+</html>

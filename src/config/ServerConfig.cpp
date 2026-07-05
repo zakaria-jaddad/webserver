@@ -23,17 +23,18 @@ ServerConfig::ServerConfig()
 
 void ServerConfig::init_error_pages()
 {
-    error_pages[200] = "pages/200_delete.html";
-    error_pages[400] = "pages/400.html";
-    error_pages[403] = "pages/403.html";
-    error_pages[404] = "pages/404.html";
-    error_pages[405] = "pages/405.html";
-    error_pages[413] = "pages/413.html";
-    error_pages[408] = "pages/408.html";
-    error_pages[500] = "pages/500.html";
-    error_pages[501] = "pages/501.html";
-    error_pages[504] = "pages/504.html";
-    error_pages[505] = "pages/505.html";
+    error_pages[200] = "www/pages/200.html";
+    error_pages[204] = "www/pages/204.html";
+    error_pages[400] = "www/pages/400.html";
+    error_pages[403] = "www/pages/403.html";
+    error_pages[404] = "www/pages/404.html";
+    error_pages[405] = "www/pages/405.html";
+    error_pages[413] = "www/pages/413.html";
+    error_pages[408] = "www/pages/408.html";
+    error_pages[500] = "www/pages/500.html";
+    error_pages[501] = "www/pages/501.html";
+    error_pages[504] = "www/pages/504.html";
+    error_pages[505] = "www/pages/505.html";
 }
 
 void ServerConfig::buildServerParsers()
