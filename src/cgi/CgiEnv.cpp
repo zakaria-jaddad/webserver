@@ -7,18 +7,7 @@ std::map<std::string, std::string>
 Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
                    std::string script_name, std::string path_info, std::string &query)
 {
-    // to do:
-    // add a content type env var and content length
-    // check if some needed env vars are needed
-
-    // if (checkVarSanity(path_info))
-    //     return std::map<std::string, std::string>();
-
     std::map<std::string, std::string> env;
-
-    std::cout << "***********************CGI ENV VARS********************" << std::endl;
-    std::cout << "script name : " << script_name << std::endl;
-    std::cout << "path info: " << path_info << std::endl;
 
     env["SCRIPT_NAME"] = script_name;
     env["PATH_INFO"] = path_info;
@@ -35,15 +24,16 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
 
     // some cgi needed? bs
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
-    env["SERVER_NAME"] = "localhost"; // TODO: change this value to the host requested by the client
-                                      //
+    env["SERVER_NAME"] = this->request->getHostHeader()[0];
+
     std::stringstream ss;
     ss << conf->getPort();
     env["SERVER_PORT"] = ss.str();
 
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SERVER_SOFTWARE"] = "webserv/1.0";
-    env["REMOTE_ADDR"] = "127.0.0.1"; // check get from anas
+    env["REMOTE_ADDR"] = this->client->ip;
+    std::cout << "IP : " << env["REMOTE_ADDR"] << std::endl;
 
     // bs needed so php-cgi runs
     env["REDIRECT_STATUS"] = "200";

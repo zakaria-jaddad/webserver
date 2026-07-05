@@ -11,7 +11,8 @@
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
 /* ===================================================================================== */
 
-HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
+HttpParser::HttpParser(std::vector<ServerConfig *> &servers)
+    : _phase(REQUEST_LINE), _servers(servers), _body()
 {
     this->_requestURI.path = "";
     this->_requestURI.params.clear();
@@ -21,32 +22,9 @@ HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
     this->_requestVersion[0] = 0;
     this->_requestVersion[1] = 0;
     this->_requestType = UNKNOWN;
+
     this->_config = NULL;
-    this->_res = HTTP_RES_OK;
-    this->_requestLineBuffer = "";
-    this->_headerBuffer = "";
-    this->_pendingData = "";
-    this->_mimeToExt["image/png"] = ".png";
-    this->_mimeToExt["image/jpeg"] = ".jpg";
-    this->_mimeToExt["image/gif"] = ".gif";
-    this->_mimeToExt["text/plain"] = ".txt";
-    this->_mimeToExt["text/html"] = ".html";
-    this->_mimeToExt["application/json"] = ".json";
-    this->_mimeToExt["application/pdf"] = ".pdf";
-    this->_mimeToExt["application/octet-stream"] = ".bin";
-}
 
-HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body()
-{
-    this->_requestURI.path = "";
-    this->_requestURI.params.clear();
-    this->_requestURI.rawURI = "";
-    this->_requestURI.rawParams = "";
-
-    this->_requestVersion[0] = 0;
-    this->_requestVersion[1] = 0;
-    this->_requestType = UNKNOWN;
-    this->_config = ServerConfig;
     this->_res = HTTP_RES_OK;
     this->_requestLineBuffer = "";
     this->_headerBuffer = "";
@@ -99,6 +77,8 @@ std::string HttpParser::getPendingData() const { return this->_pendingData; }
 std::string HttpParser::getRequestRawBodyFilePath() const { return this->_body.filePath; }
 
 size_t HttpParser::getBodySize() const { return this->_body._bytesReceived; }
+
+std::string HttpParser::getHostHeader() { return this->_headers["Host"][0]; }
 
 /* ---- SETTERS ----*/
 
@@ -169,7 +149,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         res = _parseRequestLine(requestLine);
 
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING request line, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -177,10 +156,11 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
          * NOTE: After discussion with mr yhossni i need to return HTTP_RES_METHOD_NOT_ALLOWED after
          * parsing the method from the request
          */
-        ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
-        if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) == false) {
-            return HTTP_RES_METHOD_NOT_ALLOWED;
-        }
+        // ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
+        // if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) ==
+        // false) {
+        //     return HTTP_RES_METHOD_NOT_ALLOWED;
+        // }
 
         this->_phase = HEADERS;
     }
@@ -204,7 +184,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = _generateHeadersMap(headerLines, this->_headers);
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING generate headers, RESULT : " << res << std::endl;
             return res;
         }
         this->_phase = BODY;
@@ -216,10 +195,25 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
             std::cout << "Start Parsing Headers" << std::endl;
             res = _parseRequestHeaderValue();
+
+            // Verify Host Header
+            std::vector<std::string> hostHeader = this->_headers["Host"];
+            if (hostHeader.size() != 1) {
+                return HTTP_RES_BAD_REQUEST;
+            }
             std::cout << "Finished Parsing Headers" << std::endl;
             if (res != HTTP_RES_OK) {
-                std::cout << "FROM HTTP PARSING body header value, RESULT : " << res << std::endl;
                 return res;
+            }
+
+            // yhossni trying some bs
+            if (this->_config == NULL)
+                this->_config = resolveServer(this->_servers, hostHeader[0]);
+
+            ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
+            if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) ==
+                false) {
+                return HTTP_RES_METHOD_NOT_ALLOWED;
             }
 
             /* If request type other than POST ignore the body */
@@ -227,8 +221,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
                 // Save pending Data if pipelined request
                 setPendingData(rawData);
                 this->_phase = COMPLETE;
-                std::cout << "FROM HTTP PARSING ignoring body, RESULT : " << HTTP_RES_OK
-                          << std::endl;
                 return HTTP_RES_OK;
             }
 
@@ -237,7 +229,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = this->_body.parseRequestBody(rawData);
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING request body, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -247,8 +238,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         }
     }
 
-    std::cout << "FROM HTTP PARSING after finishing everything, RESULT : " << HTTP_RES_OK
-              << std::endl;
     return HTTP_RES_OK;
 };
 
@@ -531,8 +520,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 
         /* NOTE: When POST request rout is a script, body shouldn't be parsed */
         if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi())) {
-
-            std::cout << GREEN << this->filePath << WHITE << std::endl;
             this->_state = BODY_COMPLETE;
             this->file.close();
             return HTTP_RES_OK;
@@ -577,7 +564,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             while (this->_mpState != MP_COMPLETE) {
 
                 if (!std::getline(this->file, line)) {
-                    std::cout << "bad request from here" << std::endl;
                     return HTTP_RES_BAD_REQUEST;
                 }
 
@@ -679,7 +665,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             this->_currentPart.file.close();
                         }
 
-                        // TODO: Check if the name already exist
                         this->_formFields[this->_currentPart.name].push_back(this->_currentPart);
 
                         /* if normal boundary found reset the state machine */

@@ -21,6 +21,8 @@ Response::Response(t_client *dep)
     this->cgi_in_pipe[1] = -1;
     this->cgi_out_pipe[0] = -1;
     this->cgi_out_pipe[1] = -1;
+
+    this->_pageFd = -1;
 }
 
 Response::~Response(void)
@@ -55,7 +57,6 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
             waitpid(childpid, NULL, 0);
             return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
         }
-
         if (!this->exec_status) {
             HttpParser::httpResult res = cgiExecution();
 
@@ -65,7 +66,6 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
             return HttpParser::HTTP_RES_OK;
         }
 
-        std::cout << "cgi executed!" << std::endl;
         if (this->_phase != COMPLETE) {
             HttpParser::httpResult cr = craftResponse();
             if (cr != HttpParser::HTTP_RES_OK) {
@@ -78,9 +78,7 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
         if (error) {
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
-
-        std::cout << "Done sending the response" << std::endl;
-        resp.clear();
+        // resp.clear();
     }
 
     else {
@@ -101,10 +99,6 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
 
 HttpParser::httpResult Response::checkMethod(void)
 {
-    // check if its needed
-    // if (this->timed_out)
-    // 	return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;//placeholder
-
     std::pair<int, std::string> redir = conf.getRedir();
     if (!redir.second.empty()) {
         std::cout << YELLOW << "Redirecting : " << redir.first << " ==== " << redir.second << WHITE
@@ -117,12 +111,5 @@ HttpParser::httpResult Response::checkMethod(void)
     }
     HttpParser::requestType req_method = client->request->getRequestType();
     std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
-
-    if (!allowed_methods.empty() &&
-        std::find(allowed_methods.begin(), allowed_methods.end(), methodToString(req_method)) ==
-            allowed_methods.end()) {
-        return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
-    }
-
     return routeMethod(req_method);
 }

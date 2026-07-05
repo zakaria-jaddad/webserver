@@ -1,12 +1,18 @@
 #include "../../includes/server/Server.hpp"
+#include <algorithm>
+#include <arpa/inet.h>
 #include <cstddef>
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <netinet/in.h>
 #include <sstream>
 #include <string.h>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <unistd.h>
+#include <vector>
 
 Server::Server(std::string &path)
 {
@@ -14,13 +20,52 @@ Server::Server(std::string &path)
     this->conf.loadServers();
 }
 
+bool compareConfigs(ServerConfig &a, ServerConfig &b)
+{
+    if ((a.getIP() == "0.0.0.0") && (b.getIP() != "0.0.0.0"))
+        return true;
+    if (a.getIP() != "0.0.0.0" && b.getIP() == "0.0.0.0")
+        return false;
+    return a.getPort() < b.getPort();
+}
+
 void Server::setupServerFds()
 {
     int serverSocket;
     int opt = 1;
+    std::map<std::string, int> boundSockets;
+
+    std::sort(this->conf.servers.begin(), this->conf.servers.end(), compareConfigs);
 
     for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
          it != this->conf.servers.end(); it++) {
+
+        // look for the ip:port pair if already have been bound
+        // if already bound just push the server config object to the already created socket
+        // otherwise create a new socket for the pair
+        std::stringstream ss;
+        ss << it->getPort();
+
+        std::string key = it->getIP() + ":" + ss.str();
+        std::string wildcard = "0.0.0.0:" + ss.str();
+
+        int existingSocket = -1;
+
+        std::map<std::string, int>::iterator found = boundSockets.find(key);
+        if (found != boundSockets.end()) {
+            existingSocket = found->second;
+        }
+
+        else {
+            std::map<std::string, int>::iterator foundWildcard = boundSockets.find(wildcard);
+            if (foundWildcard != boundSockets.end())
+                existingSocket = foundWildcard->second;
+        }
+
+        if (existingSocket != -1) {
+            this->vServers[existingSocket].push_back(&(*it));
+            continue;
+        }
 
         /*
          * socket - create an endpoint for communication
@@ -41,6 +86,8 @@ void Server::setupServerFds()
          *
          */
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+        if (serverSocket == -1)
+            continue;
 
         // Structure describing an Internet socket address.
         sockaddr_in serverAddr;
@@ -59,8 +106,11 @@ void Server::setupServerFds()
         memset(&serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
 
         /* inet_pton - convert IPv4 and IPv6 addresses from text to binary form */
-        if (inet_pton(AF_INET, it->getIP().c_str(), &serverAddr.sin_addr) != 1)
+        if (inet_pton(AF_INET, it->getIP().c_str(), &serverAddr.sin_addr) != 1) {
             std::cerr << "error inet_pton " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
         /*
          * setsockopt — set the socket options
@@ -72,28 +122,45 @@ void Server::setupServerFds()
          *
          * optval: The configuration value for the socket option
          * */
-        if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+        if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
             std::cerr << "error setsockopt SO_REUSEADDR " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
-        if (setsockopt(serverSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+        if (setsockopt(serverSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) {
             std::cerr << "error setsockopt TCP_NODELAY " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
-        if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) == -1)
+        if (fcntl(serverSocket, F_SETFL, O_NONBLOCK) == -1) {
             std::cerr << "error fcntl " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
         /*
          * When a socket is created with socket(2), it exists in a name space (address family) but
          * has no address assigned to it.  bind() assigns the address specified by addr to the
          * socket referred to by the file descriptor sockfd.
          */
-        if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1)
+        if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
             std::cerr << "error binding " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
-        if (listen(serverSocket, SOMAXCONN) == -1)
+        if (listen(serverSocket, SOMAXCONN) == -1) {
             std::cerr << "on listen " << it->getIP() << std::endl;
+            close(serverSocket);
+            continue;
+        }
 
         /* Add current Socket to the */
-        this->vServers[serverSocket] = &(*it);
+        this->vServers[serverSocket].push_back(&(*it));
+
+        boundSockets[key] = serverSocket;
     }
 }
 
@@ -141,33 +208,65 @@ int Server::checkServerFd(epoll_event *events, int i)
     t_client client;
     time_t now = time(NULL);
 
-    for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
+    for (std::map<int, std::vector<ServerConfig *> >::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
         if (events[i].data.fd == it->first) {
-            clientSocket = accept(it->first, NULL, NULL);
+
+            // struct for saving incoming client's metadata
+            struct sockaddr_in clientAddr;
+            socklen_t clientAddrLen = sizeof(clientAddr);
+            // clears out any garbage value inside
+            memset(&clientAddr, 0, sizeof(clientAddr));
+
+            // handshake with the user and filling the struct
+            // with the client's IP address and connecting port
+            clientSocket = accept(it->first, (struct sockaddr *)&clientAddr, &clientAddrLen);
+
             if (clientSocket == -1) {
                 std::cerr << "failed to accept" << std::endl;
                 break;
             }
-            if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
+
+            // converting the ip from network byte order to a string
+            char ipstr[INET_ADDRSTRLEN];
+            if (inet_ntop(AF_INET, &(clientAddr.sin_addr), ipstr, INET_ADDRSTRLEN) == NULL)
+                std::cerr << "Failed to convert client IP to string" << std::endl;
+
+            std::cout << GREEN << "Connection accepted from IP : " << ipstr << WHITE << std::endl;
+
+            if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) {
                 std::cerr << "failed to set TCP_NODELAY" << std::endl;
-            if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) == -1)
+                close(clientSocket);
+                break;
+            }
+            if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) == -1) {
                 std::cerr << "failed to set non-blocking" << std::endl;
+                close(clientSocket);
+                break;
+            }
 
             int sndbuf = 256 * 1024;
-            if (setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1)
+            if (setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1) {
                 std::cerr << "failed to set SO_SNDBUF" << std::endl;
+                close(clientSocket);
+                break;
+            }
 
-            if (addToEpoll(clientSocket, EPOLLIN))
+            if (addToEpoll(clientSocket, EPOLLIN)) {
                 std::cerr << "failed to add to epoll" << std::endl;
+                close(clientSocket);
+                break;
+            }
             obj = new HttpParser(it->second);
             client.fd = clientSocket;
-            client.config = it->second;
+            client.server = it->second;
+            client.config = NULL;
             client.request = obj;
             client.response = NULL;
             client.connection_time = now;
             client.last_activity = now;
             client.writeOffset = 0;
+            client.ip = ipstr;
             clients.push_back(client);
             break;
         }
@@ -180,7 +279,7 @@ void Server::resetSocket(t_client *client)
     std::string pendingData = client->request->getPendingData();
     delete client->request;
     delete client->response;
-    client->request = new HttpParser(client->config);
+    client->request = new HttpParser(client->server);
 
     // Save previous Data since connection is always open
     client->request->setPendingData(pendingData);
@@ -206,10 +305,12 @@ void Server::closeSocket(t_client *client)
 
 int Server::checkClientTimeout(t_client *client)
 {
+    if (!client)
+        return 0;
     time_t now = time(NULL);
     time_t idle_time = now - client->last_activity;
 
-    if (client && !client->response && idle_time > IDLE_TIMEOUT) {
+    if (!client->response && idle_time >= IDLE_TIMEOUT) {
         return 1;
     }
 
@@ -236,7 +337,6 @@ int Server::checkClientFd(epoll_event *events, int i)
                 b = recv(clientSocket, req, sizeof(req) - 1, 0);
                 if (b <= 0) {
                     closeSocket(&(*it));
-                    // BUG: WTF is this for yhosnsi you were erasing the clients.begin() :|
                     clients.erase(it);
                     return 1;
                 }
@@ -246,37 +346,44 @@ int Server::checkClientFd(epoll_event *events, int i)
                 req[b] = 0;
                 std::string rawData(req, b);
 
-                std::cout << RED << "=================Request " << GREEN << it->fd << RED
-                          << "=================" << std::endl;
-                std::cout << YELLOW << rawData << WHITE << std::endl;
+                std::cout << RED << "=================Request from " << GREEN << it->fd << RED
+                          << "=================" << WHITE << std::endl;
                 it->req_res = it->request->parseHttpRequest(rawData);
+                std::cout << YELLOW << "HERE" << WHITE << std::endl;
 
-                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK) {
-
+                if (it->req_res != HttpParser::HTTP_RES_OK) {
+                    if (it->config == NULL)
+                        it->config = it->server[0];
                     switchEpollMode(clientSocket, EPOLLOUT);
-                    std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
+                }
+                else if (it->request->isComplete()) {
+                    if (it->config == NULL) {
+                        std::string hostHeader = it->request->getHostHeader();
+                        it->config = resolveServer(it->server, hostHeader);
+                    }
+                    switchEpollMode(clientSocket, EPOLLOUT);
                 }
             }
             else if (events[i].events == EPOLLOUT) {
                 // Process as many complete pipelined requests as possible in one
                 // EPOLLOUT wake-up before yielding back to epoll.
                 while (true) {
-                    if (it->response == NULL)
+                    if (it->response == NULL) {
                         it->response = new Response(&(*it));
+                    }
 
                     if (it->req_res != HttpParser::HTTP_RES_OK) {
-                        std::cout << "req_res : " << it->req_res << std::endl;
                         int serv_res = it->response->servePages(it->req_res, 1);
-                        if (serv_res)
+                        if (serv_res) {
                             std::cout << RED << "Connection Error, closing connection ..." << WHITE
                                       << std::endl;
-                        if (serv_res || it->response->isComplete()) {
+                            continue;
+                        }
+                        if (it->response->isComplete()) {
                             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            std::cout << RED << "-----Switched epoll mode-----" << WHITE
-                                      << std::endl;
                             closeSocket(&(*it));
                             it = clients.erase(it);
-                            std::cout << "cleaned socket" << std::endl;
+                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
                         }
                         break;
                     }
@@ -287,16 +394,17 @@ int Server::checkClientFd(epoll_event *events, int i)
 
                     // cleanup after an error/timeout
                     if (it->resp_res != HttpParser::HTTP_RES_OK) {
-                        std::cout << " serving error " << it->resp_res << std::endl;
                         int serv_res = it->response->servePages(it->resp_res, 1);
-                        if (serv_res)
+                        if (serv_res) {
                             std::cout << RED << "Connection Error, closing connection ..." << WHITE
                                       << std::endl;
-                        if (serv_res || it->response->isComplete()) {
+                            continue;
+                        }
+                        if (it->response->isComplete()) {
                             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
                             closeSocket(&(*it));
                             it = clients.erase(it);
-                            std::cout << "cleaned socket" << std::endl;
+                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
                         }
                         break;
                     }
@@ -304,11 +412,9 @@ int Server::checkClientFd(epoll_event *events, int i)
                     if (it->response->isComplete()) {
                         if (it->response->shouldClose()) {
                             switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            std::cout << RED << "-----Switched epoll mode-----" << WHITE
-                                      << std::endl;
                             closeSocket(&(*it));
                             it = clients.erase(it);
-                            std::cout << "cleaned socket on Connection: close" << std::endl;
+                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
                             break;
                         }
 
@@ -317,10 +423,11 @@ int Server::checkClientFd(epoll_event *events, int i)
                         /* NOTE: HTTP/1.1 Pipelining ya dawla */
                         if (it->request->getPendingData().empty() == false) {
 
-                            std::cout << GREEN << std::endl;
-                            HttpParser::printRaw(it->request->getPendingData());
+                            // removed pipeline debugging for now
+                            // std::cout << GREEN << std::endl;
+                            // HttpParser::printRaw(it->request->getPendingData());
 
-                            std::cout << WHITE << std::endl;
+                            // std::cout << WHITE << std::endl;
                             HttpParser::httpResult r = it->request->parseHttpRequest("");
                             it->req_res = r;
 
@@ -336,7 +443,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                             break;
                         }
                         switchEpollMode(clientSocket, EPOLLIN);
-                        std::cout << "back to reading" << std::endl;
+                        std::cout << GREEN << "back to reading" << WHITE << std::endl;
                     }
                     break;
                 }
@@ -358,16 +465,20 @@ int Server::startServer()
     int event_count;
 
     setupServerFds();
+    if (this->vServers.empty()) {
+        std::cerr << "Fatal: no listening sockets created" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
-        std::cerr << "epoll_create1() Failed!" << std::endl;
-        return 1;
+        std::cerr << "Fatal: epoll_create1() Failed!" << std::endl;
+        return EXIT_FAILURE;
     }
 
     epoll_event_t events[MAX_EVENTS];
 
-    for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
+    for (std::map<int, std::vector<ServerConfig *> >::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
         if (addToEpoll(it->first, EPOLLIN)) {
             return EXIT_FAILURE;
@@ -380,15 +491,15 @@ int Server::startServer()
 
         if (event_count == -1) {
             std::cerr << "epoll_wait Failed!" << std::endl;
-            return (1);
+            return EXIT_FAILURE;
         }
         if (event_count == 0) {
             for (std::deque<t_client>::iterator it = this->clients.begin();
                  it != this->clients.end();) {
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {
-                    std::cout << "client fd=" << (*it).fd << " timed out " << std::endl;
-                    std::cout << "done sending timeout resetting socket..." << std::endl;
+                    std::cout << RED << "client fd=" << (*it).fd << " timed out" << std::endl;
+                    std::cout << YELLOW << "resetting socket..." << std::endl;
                     switchEpollMode(it->fd, EPOLL_CTL_DEL);
                     std::cout << RED << "-----Switched epoll mode-----" << WHITE << std::endl;
                     closeSocket(&(*it));

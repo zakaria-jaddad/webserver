@@ -12,8 +12,8 @@
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
-#include <string>
 #include <netinet/tcp.h>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -30,6 +30,8 @@ class Response;
 struct t_client {
     int fd;
 
+    std::string ip;
+
     time_t last_activity;
     time_t connection_time;
 
@@ -37,9 +39,11 @@ struct t_client {
     std::string outBuffer;
 
     ServerConfig *config;
-    HttpParser::httpResult req_res; // check later should be changed and included in the request &
-                                    // resp objects themselves
+    std::vector<ServerConfig *> server;
+
+    HttpParser::httpResult req_res;
     HttpParser::httpResult resp_res;
+
     HttpParser *request;
     Response *response;
     void printInfo() const
@@ -61,7 +65,7 @@ class Server {
     Config conf;  // Config info
     int epoll_fd; // fd referring to the new epoll instance
 
-    std::map<int, ServerConfig *> vServers;
+    std::map<int, std::vector<ServerConfig *> > vServers;
 
     // std::vector<int> clientFds;
     // std::map<int, HttpParser *> clientFds;

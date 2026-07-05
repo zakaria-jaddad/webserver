@@ -1,350 +1,398 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>STARRY Door Control // Session Logger</title>
-  <style>
-    /* --- DESIGN SYSTEM TOKENS --- */
-    :root {
-      --pink-bocchi: #ff66b2;
-      --neon-magenta: #ff007f;
-      --blue-kita: #00e5ff;
-      --purple-ryo: #7000ff;
-      --yellow-nijika: #fff200;
-      --dark-punk: #090909;
-      --white-paper: #f7eed3;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Courier New', Courier, monospace;
-    }
-
-    body {
-      background-color: var(--dark-punk);
-      background-image: radial-gradient(rgba(255,255,255,0.07) 15%, transparent 15%);
-      background-size: 12px 12px;
-      color: var(--white-paper);
-      padding: 3rem 1rem;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* --- DUAL LAYER LAYOUT CONTAINER --- */
-    .session-matrix {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2rem;
-      max-width: 850px;
-      width: 100%;
-    }
-
-    @media (min-width: 768px) {
-      .session-matrix {
-        grid-template-columns: 1.2fr 1fr;
-        align-items: start;
+  <head>
+    <meta charset="utf-8" />
+    <title>STARRY Door Control // Session Logger</title>
+    <style>
+      /* --- DESIGN SYSTEM TOKENS --- */
+      :root {
+        --pink-bocchi: #ff66b2;
+        --neon-magenta: #ff007f;
+        --blue-kita: #00e5ff;
+        --purple-ryo: #7000ff;
+        --yellow-nijika: #fff200;
+        --dark-punk: #090909;
+        --white-paper: #f7eed3;
       }
-    }
 
-    /* --- LEFT COMPONENT: THE PHYSICAL VIP PASS --- */
-    .vip-pass-card {
-      background: var(--white-paper);
-      color: var(--dark-punk);
-      border: 5px solid var(--dark-punk);
-      padding: 2rem;
-      position: relative;
-      box-shadow: 12px 12px 0px var(--purple-ryo);
-      transform: rotate(-1.5deg);
-      transition: transform 0.15s steps(2);
-    }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Courier New", Courier, monospace;
+      }
 
-    /* Lanyard Clip Hole Overlay */
-    .vip-pass-card::before {
-      content: '';
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 35px;
-      height: 12px;
-      background: var(--dark-punk);
-      border-radius: 20px;
-    }
+      body {
+        background-color: var(--dark-punk);
+        background-image: radial-gradient(
+          rgba(255, 255, 255, 0.07) 15%,
+          transparent 15%
+        );
+        background-size: 12px 12px;
+        color: var(--white-paper);
+        padding: 3rem 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
 
-    .pass-header {
-      text-align: center;
-      margin-top: 1rem;
-      border-bottom: 3px dashed var(--dark-punk);
-      padding-bottom: 1rem;
-    }
+      /* --- DUAL LAYER LAYOUT CONTAINER --- */
+      .session-matrix {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        max-width: 850px;
+        width: 100%;
+      }
 
-    .pass-title {
-      font-size: 1.8rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: -1px;
-      line-height: 1;
-    }
+      @media (min-width: 768px) {
+        .session-matrix {
+          grid-template-columns: 1.2fr 1fr;
+          align-items: start;
+        }
+      }
 
-    .pass-title span {
-      background: var(--dark-punk);
-      color: var(--pink-bocchi);
-      padding: 0 6px;
-      display: inline-block;
-      margin-top: 4px;
-    }
+      /* --- LEFT COMPONENT: THE PHYSICAL VIP PASS --- */
+      .vip-pass-card {
+        background: var(--white-paper);
+        color: var(--dark-punk);
+        border: 5px solid var(--dark-punk);
+        padding: 2rem;
+        position: relative;
+        box-shadow: 12px 12px 0px var(--purple-ryo);
+        transform: rotate(-1.5deg);
+        transition: transform 0.15s steps(2);
+      }
 
-    .pass-status-zone {
-      margin: 2rem 0;
-      text-align: center;
-      padding: 15px;
-      border: 3px solid var(--dark-punk);
-      background: #e8dfc5;
-      position: relative;
-    }
+      /* Lanyard Clip Hole Overlay */
+      .vip-pass-card::before {
+        content: "";
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 35px;
+        height: 12px;
+        background: var(--dark-punk);
+        border-radius: 20px;
+      }
 
-    /* The Hand Stamp Impression Effect */
-    .ink-stamp {
-      font-size: 2.2rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      transform: scale(1) rotate(-10deg);
-      transition: all 0.2s steps(2);
-    }
+      .pass-header {
+        text-align: center;
+        margin-top: 1rem;
+        border-bottom: 3px dashed var(--dark-punk);
+        padding-bottom: 1rem;
+      }
 
-    .status-unverified {
-      color: #777;
-      border: 4px dashed #777;
-      padding: 10px;
-      display: block;
-    }
+      .pass-title {
+        font-size: 1.8rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: -1px;
+        line-height: 1;
+      }
 
-    .status-verified {
-      color: var(--neon-magenta);
-      border: 5px double var(--neon-magenta);
-      padding: 10px;
-      display: none;
-      background: rgba(255, 0, 127, 0.05);
-      text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
-      animation: stamp-slam 0.15s steps(1) forwards;
-    }
+      .pass-title span {
+        background: var(--dark-punk);
+        color: var(--pink-bocchi);
+        padding: 0 6px;
+        display: inline-block;
+        margin-top: 4px;
+      }
 
-    @keyframes stamp-slam {
-      0% { transform: scale(3) rotate(-30deg); opacity: 0; }
-      100% { transform: scale(1) rotate(-8deg); opacity: 1; }
-    }
+      .pass-status-zone {
+        margin: 2rem 0;
+        text-align: center;
+        padding: 15px;
+        border: 3px solid var(--dark-punk);
+        background: #e8dfc5;
+        position: relative;
+      }
 
-    /* --- RIGHT COMPONENT: THE INTERACTIVE CONSOLE BLOCK --- */
-    .console-block {
-      background: #111;
-      border: 4px solid var(--white-paper);
-      padding: 1.5rem;
-      box-shadow: 8px 8px 0px var(--dark-punk);
-    }
+      /* The Hand Stamp Impression Effect */
+      .ink-stamp {
+        font-size: 2.2rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transform: scale(1) rotate(-10deg);
+        transition: all 0.2s steps(2);
+      }
 
-    .console-heading {
-      font-size: 0.9rem;
-      font-weight: bold;
-      text-transform: uppercase;
-      background: var(--yellow-nijika);
-      color: var(--dark-punk);
-      padding: 4px 8px;
-      margin-bottom: 1rem;
-      display: inline-block;
-    }
+      .status-unverified {
+        color: #777;
+        border: 4px dashed #777;
+        padding: 10px;
+        display: block;
+      }
 
-    .raw-header-monitor {
-      background: var(--dark-punk);
-      border: 2px solid #333;
-      padding: 12px;
-      font-size: 0.75rem;
-      color: #00ff00;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-      height: 110px;
-      margin-bottom: 1.5rem;
-    }
+      .status-verified {
+        color: var(--neon-magenta);
+        border: 5px double var(--neon-magenta);
+        padding: 10px;
+        display: none;
+        background: rgba(255, 0, 127, 0.05);
+        text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+        animation: stamp-slam 0.15s steps(1) forwards;
+      }
 
-    /* --- CONTROL MATRIX ACTION BUTTONS --- */
-    .action-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
+      @keyframes stamp-slam {
+        0% {
+          transform: scale(3) rotate(-30deg);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1) rotate(-8deg);
+          opacity: 1;
+        }
+      }
 
-    .ctrl-btn {
-      width: 100%;
-      padding: 12px;
-      font-size: 0.9rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      cursor: pointer;
-      border: 3px solid var(--dark-punk);
-      box-shadow: 4px 4px 0px var(--dark-punk);
-      transition: transform 0.1s steps(1);
-    }
+      /* --- RIGHT COMPONENT: THE INTERACTIVE CONSOLE BLOCK --- */
+      .console-block {
+        background: #111;
+        border: 4px solid var(--white-paper);
+        padding: 1.5rem;
+        box-shadow: 8px 8px 0px var(--dark-punk);
+      }
 
-    .ctrl-btn:active {
-      transform: translate(4px, 4px);
-      box-shadow: 0px 0px 0px var(--dark-punk);
-    }
+      .console-heading {
+        font-size: 0.9rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        background: var(--yellow-nijika);
+        color: var(--dark-punk);
+        padding: 4px 8px;
+        margin-bottom: 1rem;
+        display: inline-block;
+      }
 
-    .btn-stamp   { background: var(--blue-kita); color: var(--dark-punk); }
-    .btn-corrupt { background: var(--yellow-nijika); color: var(--dark-punk); }
-    .btn-wipe    { background: #ff3333; color: white; }
+      .raw-header-monitor {
+        background: var(--dark-punk);
+        border: 2px solid #333;
+        padding: 12px;
+        font-size: 0.75rem;
+        color: #00ff00;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        height: 110px;
+        margin-bottom: 1.5rem;
+      }
 
-    .session-data-display {
-      font-size: 0.8rem;
-      font-weight: bold;
-      margin-top: 0.5rem;
-      display: none;
-      word-break: break-all;
-      border-top: 1px dashed var(--dark-punk);
-      padding-top: 0.5rem;
-    }
-  </style>
-</head>
-<body>
+      /* --- CONTROL MATRIX ACTION BUTTONS --- */
+      .action-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
 
+      .ctrl-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 0.9rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        cursor: pointer;
+        border: 3px solid var(--dark-punk);
+        box-shadow: 4px 4px 0px var(--dark-punk);
+        transition: transform 0.1s steps(1);
+      }
+
+      .ctrl-btn:active {
+        transform: translate(4px, 4px);
+        box-shadow: 0px 0px 0px var(--dark-punk);
+      }
+
+      .btn-stamp {
+        background: var(--blue-kita);
+        color: var(--dark-punk);
+      }
+      .btn-corrupt {
+        background: var(--yellow-nijika);
+        color: var(--dark-punk);
+      }
+      .btn-wipe {
+        background: #ff3333;
+        color: white;
+      }
+
+      .session-data-display {
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-top: 0.5rem;
+        display: none;
+        word-break: break-all;
+        border-top: 1px dashed var(--dark-punk);
+        padding-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
     <nav class="zine-nav" aria-label="Main Navigation">
-        <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
-        <a href="song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
-        <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
-        <a href="../cgi-bin/equipment.php" class="nav-sticker tape-blue">📦 Equipment</a>
-        <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
-        <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
-        <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
+      <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
+      <a href="song_request.html" class="nav-sticker tape-yellow"
+        >📝 Song Requests</a
+      >
+      <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
+      <a href="../cgi-bin/equipment.php" class="nav-sticker tape-blue"
+        >📦 Equipment</a
+      >
+      <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
+      <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
+      <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
     </nav>
 
-  <div class="session-matrix">
-    
-    <div class="vip-pass-card" id="vipPass">
-      <div class="pass-header">
-        <div class="pass-title">STARRY BACKSTAGE<br><span>PASS // ACCESS_02</span></div>
-      </div>
+    <div class="session-matrix">
+      <div class="vip-pass-card" id="vipPass">
+        <div class="pass-header">
+          <div class="pass-title">
+            STARRY BACKSTAGE<br /><span>PASS // ACCESS_02</span>
+          </div>
+        </div>
 
-      <div class="pass-status-zone">
-        <div id="stateUnverified" class="ink-stamp status-unverified">NO STAMP</div>
-        
-        <div id="stateVerified" class="ink-stamp status-verified">VIP ACCESS</div>
-        
-        <div class="session-data-display" id="sessionMetadata">
-          TOKEN: <span id="tokenString" style="color: var(--purple-ryo)">NULL</span>
+        <div class="pass-status-zone">
+          <div id="stateUnverified" class="ink-stamp status-unverified">
+            NO STAMP
+          </div>
+
+          <div id="stateVerified" class="ink-stamp status-verified">
+            VIP ACCESS
+          </div>
+
+          <div class="session-data-display" id="sessionMetadata">
+            TOKEN:
+            <span id="tokenString" style="color: var(--purple-ryo)">NULL</span>
+          </div>
+        </div>
+
+        <div
+          style="
+            font-size: 0.7rem;
+            text-align: center;
+            font-weight: bold;
+            color: #555;
+          "
+        >
+          [VALID FOR 300S // INK FADES ON SOCKET DISCONNECT]
         </div>
       </div>
 
-      <div style="font-size: 0.7rem; text-align: center; font-weight: bold; color: #555;">
-        [VALID FOR 300S // INK FADES ON SOCKET DISCONNECT]
+      <div class="console-block">
+        <div class="console-heading">HTTP Inbound Header Sniffer</div>
+
+        <div class="raw-header-monitor" id="headerMonitor">
+          Cookie: Empty (No hand stamp detected)
+        </div>
+
+        <div class="console-heading" style="background: var(--pink-bocchi)">
+          Session Controls
+        </div>
+
+        <div class="action-panel">
+          <button class="ctrl-btn btn-stamp" onclick="issueSession()">
+            Stamp Hand (Set-Cookie)
+          </button>
+          <button class="ctrl-btn btn-corrupt" onclick="corruptSession()">
+            Corrupt Cookie String
+          </button>
+          <button class="ctrl-btn btn-wipe" onclick="clearSession()">
+            Wipe Stamp (Delete Cookie)
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="console-block">
-      <div class="console-heading">HTTP Inbound Header Sniffer</div>
-      
-      <div class="raw-header-monitor" id="headerMonitor">Cookie: Empty (No hand stamp detected)</div>
+    <script>
+      const COOKIE_NAME = "STARRY_PASS";
 
-      <div class="console-heading" style="background: var(--pink-bocchi);">Session Controls</div>
-      
-      <div class="action-panel">
-        <button class="ctrl-btn btn-stamp" onclick="issueSession()">Stamp Hand (Set-Cookie)</button>
-        <button class="ctrl-btn btn-corrupt" onclick="corruptSession()">Corrupt Cookie String</button>
-        <button class="ctrl-btn btn-wipe" onclick="clearSession()">Wipe Stamp (Delete Cookie)</button>
-      </div>
-    </div>
+      // Standard client lifecycle initialization loop
+      window.onload = function () {
+        evaluateSessionState();
+      };
 
-  </div>
+      // 1. EVALUATE & PARSE INBOUND COOKIE STRINGS
+      function evaluateSessionState() {
+        const currentCookies = document.cookie;
+        const monitor = document.getElementById("headerMonitor");
+        const unverifiedUI = document.getElementById("stateUnverified");
+        const verifiedUI = document.getElementById("stateVerified");
+        const metadataUI = document.getElementById("sessionMetadata");
+        const tokenSpan = document.getElementById("tokenString");
 
-  <script>
-    const COOKIE_NAME = "STARRY_PASS";
+        if (currentCookies.includes(COOKIE_NAME)) {
+          // Splitting array chains using pure standard client methods
+          const cookieValue = currentCookies
+            .split("; ")
+            .find((row) => row.startsWith(COOKIE_NAME + "="))
+            .split("=")[1];
 
-    // Standard client lifecycle initialization loop
-    window.onload = function() {
-      evaluateSessionState();
-    };
+          // Echo the exact raw wire string our C++98 server expects
+          monitor.innerText = `👉 Inbound Request Header:\nCookie: ${COOKIE_NAME}=${cookieValue}\n\n[CGI Status: std::map entry MATCH]`;
+          monitor.style.color = "#00ff00";
 
-    // 1. EVALUATE & PARSE INBOUND COOKIE STRINGS
-    function evaluateSessionState() {
-      const currentCookies = document.cookie;
-      const monitor = document.getElementById('headerMonitor');
-      const unverifiedUI = document.getElementById('stateUnverified');
-      const verifiedUI = document.getElementById('stateVerified');
-      const metadataUI = document.getElementById('sessionMetadata');
-      const tokenSpan = document.getElementById('tokenString');
+          // Flip graphic visual tokens
+          unverifiedUI.style.display = "none";
+          verifiedUI.style.display = "block";
+          metadataUI.style.display = "block";
+          tokenSpan.innerText = cookieValue;
+        } else {
+          // Fallback layout mapping for missing or broken allocations
+          monitor.innerText = `⚠️ Inbound Request Header:\nCookie: NULL\n\n[CGI Status: 401 Unauthorized - Access Denied]`;
+          monitor.style.color = varToHex("--neon-magenta");
 
-      if (currentCookies.includes(COOKIE_NAME)) {
-        // Splitting array chains using pure standard client methods
-        const cookieValue = currentCookies
-          .split('; ')
-          .find(row => row.startsWith(COOKIE_NAME + '='))
-          .split('=')[1];
-
-        // Echo the exact raw wire string our C++98 server expects
-        monitor.innerText = `👉 Inbound Request Header:\nCookie: ${COOKIE_NAME}=${cookieValue}\n\n[CGI Status: std::map entry MATCH]`;
-        monitor.style.color = "#00ff00";
-
-        // Flip graphic visual tokens
-        unverifiedUI.style.display = "none";
-        verifiedUI.style.display = "block";
-        metadataUI.style.display = "block";
-        tokenSpan.innerText = cookieValue;
-      } else {
-        // Fallback layout mapping for missing or broken allocations
-        monitor.innerText = `⚠️ Inbound Request Header:\nCookie: NULL\n\n[CGI Status: 401 Unauthorized - Access Denied]`;
-        monitor.style.color = varToHex('--neon-magenta');
-        
-        unverifiedUI.style.display = "block";
-        verifiedUI.style.display = "none";
-        metadataUI.style.display = "none";
+          unverifiedUI.style.display = "block";
+          verifiedUI.style.display = "none";
+          metadataUI.style.display = "none";
+        }
       }
-    }
 
-    // 2. GENERATE AND DEPLOY RUNTIME VALUE STRINGS (SET-COOKIE SIMULATION)
-    function issueSession() {
-      // Create a frantic pseudorandom hexadecimal string hash identifier
-      const pseudoHash = "STARRY_" + Math.random().toString(16).substring(2, 10).toUpperCase() + "_SYS";
-      
-      // Slaps the tracking value directly onto the client browser structure
-      document.cookie = `${COOKIE_NAME}=${pseudoHash}; path=/; max-age=300; SameSite=Strict`;
-      
-      evaluateSessionState();
-    }
+      // 2. GENERATE AND DEPLOY RUNTIME VALUE STRINGS (SET-COOKIE SIMULATION)
+      function issueSession() {
+        // Create a frantic pseudorandom hexadecimal string hash identifier
+        const pseudoHash =
+          "STARRY_" +
+          Math.random().toString(16).substring(2, 10).toUpperCase() +
+          "_SYS";
 
-    // 3. ARTIFICIALLY BREAK THE HEADER TOKEN VALUE TO SIMULATE CORRUPT ALLOCATIONS
-    function corruptSession() {
-      if (!document.cookie.includes(COOKIE_NAME)) {
-        alert("No active hand stamp found! Get stamped first.");
-        return;
+        // Slaps the tracking value directly onto the client browser structure
+        document.cookie = `${COOKIE_NAME}=${pseudoHash}; path=/; max-age=300; SameSite=Strict`;
+
+        evaluateSessionState();
       }
-      // Inject illegal characters to demonstrate validation routine structural breaking points
-      document.cookie = `${COOKIE_NAME}=BAD_DATA_⚠️_ERR; path=/; max-age=300; SameSite=Strict`;
-      
-      const monitor = document.getElementById('headerMonitor');
-      evaluateSessionState();
-      
-      // Explicitly override to mirror how our C++ server rejects bad lookups
-      monitor.innerText += `\n\n[ALERT] map.find() FAILED: Token corrupted. Kicking client out...`;
-      monitor.style.color = "#ff3333";
-    }
 
-    // 4. PURGE ALLOCATED COOKIE STATE STRINGS
-    function clearSession() {
-      // Backdating structural limits safely flags eviction across standard clients
-      document.cookie = `${COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-      evaluateSessionState();
-    }
+      // 3. ARTIFICIALLY BREAK THE HEADER TOKEN VALUE TO SIMULATE CORRUPT ALLOCATIONS
+      function corruptSession() {
+        if (!document.cookie.includes(COOKIE_NAME)) {
+          alert("No active hand stamp found! Get stamped first.");
+          return;
+        }
+        // Inject illegal characters to demonstrate validation routine structural breaking points
+        document.cookie = `${COOKIE_NAME}=BAD_DATA_⚠️_ERR; path=/; max-age=300; SameSite=Strict`;
 
-    // Utility helper for inline style generation adjustments
-    function varToHex(varName) {
-      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-    }
-  </script>
+        const monitor = document.getElementById("headerMonitor");
+        evaluateSessionState();
 
-</body>
+        // Explicitly override to mirror how our C++ server rejects bad lookups
+        monitor.innerText += `\n\n[ALERT] map.find() FAILED: Token corrupted. Kicking client out...`;
+        monitor.style.color = "#ff3333";
+      }
+
+      // 4. PURGE ALLOCATED COOKIE STATE STRINGS
+      function clearSession() {
+        // Backdating structural limits safely flags eviction across standard clients
+        document.cookie = `${COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+        evaluateSessionState();
+      }
+
+      // Utility helper for inline style generation adjustments
+      function varToHex(varName) {
+        return getComputedStyle(document.documentElement)
+          .getPropertyValue(varName)
+          .trim();
+      }
+    </script>
+  </body>
 </html>
+

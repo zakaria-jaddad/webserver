@@ -3,8 +3,6 @@
 void Response::sendingCgiResponse()
 {
     if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
-        std::cout << GREEN << "Sending...\n"
-                  << YELLOW << client->outBuffer.data() + client->writeOffset << WHITE << std::endl;
         ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
                                     client->outBuffer.size() - client->writeOffset);
 
@@ -27,44 +25,6 @@ void Response::sendingCgiResponse()
     }
 }
 
-// void Response::sendingCgiResponse()
-//{
-//     if (!this->headerFlag) {
-//         sendResponse(head_resp.c_str(), head_resp.size());
-//         head_resp.clear();
-//         if (this->_phase != HEADERS)
-//             this->headerFlag = 1;
-//     }
-//
-//     if (error)
-//         return;
-//
-//     if (this->headerFlag) {
-//         std::stringstream ss;
-//         ss << std::hex << chunk_size;
-//         std::string hexStr = ss.str();
-//         hexStr += "\r\n";
-//         sendResponse(hexStr.c_str(), hexStr.size());
-//         chunk_size = 0;
-//     }
-//
-//     if (error)
-//         return;
-//
-//     if (this->_phase == BODY) {
-//         sendResponse(resp.c_str(), resp.size());
-//     }
-//
-//     if (error)
-//         return;
-//
-//     if (this->_phase == COMPLETE) {
-//         sendResponse("0\r\n\r\n", 5);
-//         this->status = 1;
-//         this->exec_status = 0;
-//     }
-// }
-
 HttpParser::httpResult Response::cgiExecution()
 {
     if (this->cgi_in_pipe[0] == -1 && pipe(this->cgi_in_pipe) == -1)
@@ -84,7 +44,7 @@ HttpParser::httpResult Response::cgiExecution()
 
     if (cgi->getChildStatus() == cgi->getChild()) {
         this->exec_status = 1;
-        std::cout << "finished executing" << std::endl;
+        std::cout << GREEN << "finished executing" << WHITE << std::endl;
     }
 
     return HttpParser::HTTP_RES_OK;
