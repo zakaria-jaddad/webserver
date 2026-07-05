@@ -365,7 +365,7 @@ class HttpParser {
 
     int _requestVersion[2];
     ServerConfig *_config;
-    std::vector<ServerConfig *> &_servers;
+    std::vector<ServerConfig *> _servers;
     std::map<std::string, std::vector<std::string> > _headers;
     Body _body;
     httpResult _res;
