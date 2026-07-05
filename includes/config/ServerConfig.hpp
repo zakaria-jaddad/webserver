@@ -54,8 +54,6 @@ class ServerConfig {
     // utility methods
 
     LocationConfig *matchLocation(const std::string &);
-    ServerConfig *resolveServer(const std::vector<ServerConfig *> &serverConfigs,
-                                const std::string &hostHeader);
 
     // getters
     std::map<std::string, int> getListeningPairs(void);

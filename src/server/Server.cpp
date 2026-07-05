@@ -23,6 +23,14 @@ void Server::setupServerFds()
     int opt = 1;
     std::map<std::string, int> boundSockets;
 
+    // for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
+    //      it != this->conf.servers.end(); it++) {
+    //
+    //     std::cout << "Port: " << it->getPort() << std::endl;
+    //     std::cout << "IP  : " << it->getIP() << std::endl;
+    // }
+    // exit(0);
+
     for (std::vector<ServerConfig>::iterator it = this->conf.servers.begin();
          it != this->conf.servers.end(); it++) {
         std::stringstream ss;
@@ -31,6 +39,7 @@ void Server::setupServerFds()
         std::string key = it->getIP() + ":" + ss.str();
         std::map<std::string, int>::iterator found = boundSockets.find(key);
         if (found != boundSockets.end()) {
+            std::cout << key << std::endl;
             int existingSocket = found->second;
             this->vServers[existingSocket].push_back(&(*it));
             continue;
@@ -128,6 +137,8 @@ void Server::setupServerFds()
 
         /* Add current Socket to the */
         this->vServers[serverSocket].push_back(&(*it));
+
+        boundSockets[key] = serverSocket;
     }
 }
 
@@ -206,7 +217,7 @@ int Server::checkServerFd(epoll_event *events, int i)
                 close(clientSocket);
                 break;
             }
-            obj = new HttpParser(&it->second, it->second[0]);
+            obj = new HttpParser(it->second);
             client.fd = clientSocket;
             client.server = it->second;
             client.config = NULL;
@@ -227,7 +238,7 @@ void Server::resetSocket(t_client *client)
     std::string pendingData = client->request->getPendingData();
     delete client->request;
     delete client->response;
-    client->request = new HttpParser(&client->server, client->config);
+    client->request = new HttpParser(client->server);
 
     // Save previous Data since connection is always open
     client->request->setPendingData(pendingData);
@@ -291,13 +302,14 @@ int Server::checkClientFd(epoll_event *events, int i)
                           << "=================" << WHITE << std::endl;
                 it->req_res = it->request->parseHttpRequest(rawData);
 
-                if (it->config == NULL) {
-                    std::map<std::string, std::vector<std::string> >::iterator f =
-                        it->request->getHeaders().begin();
-                }
-
-                if (it->request->isComplete() || it->req_res != HttpParser::HTTP_RES_OK)
+                if (it->req_res != HttpParser::HTTP_RES_OK) {
                     switchEpollMode(clientSocket, EPOLLOUT);
+                }
+                else if (it->request->isComplete()) {
+                    std::string hostHeader = it->request->getHostHeader();
+                    it->config = resolveServer(it->server, hostHeader);
+                    switchEpollMode(clientSocket, EPOLLOUT);
+                }
             }
             else if (events[i].events == EPOLLOUT) {
                 // Process as many complete pipelined requests as possible in one
@@ -413,7 +425,7 @@ int Server::startServer()
 
     epoll_event_t events[MAX_EVENTS];
 
-    for (std::map<int, ServerConfig *>::iterator it = this->vServers.begin();
+    for (std::map<int, std::vector<ServerConfig *> >::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
         if (addToEpoll(it->first, EPOLLIN)) {
             return EXIT_FAILURE;

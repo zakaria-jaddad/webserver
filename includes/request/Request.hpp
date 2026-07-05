@@ -90,7 +90,7 @@ class HttpParser {
 
   public:
     HttpParser(void);
-    HttpParser(std::vector<ServerConfig *> *servers, ServerConfig *ServerConfig);
+    HttpParser(std::vector<ServerConfig *> &servers);
     ~HttpParser();
 
   public:
@@ -214,6 +214,7 @@ class HttpParser {
     std::string getPendingData() const;
     std::string getRequestRawBodyFilePath() const;
     size_t getBodySize() const;
+    std::string getHostHeader();
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
@@ -326,11 +327,11 @@ class HttpParser {
         // Declared size of the chunk currently being read. Used to resume reading when a chunk
         // spans multiple recv() calls
         long currentChunkSize;
-        // Number of bytes already read for the current chunk. Compared against currentChunkSize to
-        // verify completeness.
+        // Number of bytes already read for the current chunk. Compared against currentChunkSize
+        // to verify completeness.
         long currentChunkRead;
-        // Set to true when the terminating chunk (size 0) is received, signaling that the entire
-        // chunked body has been fully read.
+        // Set to true when the terminating chunk (size 0) is received, signaling that the
+        // entire chunked body has been fully read.
         bool currentChunkComplete;
         bool chunkSizeReceived;
         std::string rawChunkSize;
@@ -364,7 +365,7 @@ class HttpParser {
 
     int _requestVersion[2];
     ServerConfig *_config;
-    std::vector<ServerConfig *> *_servers;
+    std::vector<ServerConfig *> &_servers;
     std::map<std::string, std::vector<std::string> > _headers;
     Body _body;
     httpResult _res;
