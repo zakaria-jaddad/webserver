@@ -38,9 +38,10 @@ struct t_client {
 
     ServerConfig *config;
     std::vector<ServerConfig *> server;
-    HttpParser::httpResult req_res; // check later should be changed and included in the request &
-                                    // resp objects themselves
+
+    HttpParser::httpResult req_res;
     HttpParser::httpResult resp_res;
+
     HttpParser *request;
     Response *response;
     void printInfo() const
