@@ -57,7 +57,6 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
             waitpid(childpid, NULL, 0);
             return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
         }
-
         if (!this->exec_status) {
             HttpParser::httpResult res = cgiExecution();
 
@@ -67,7 +66,6 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
             return HttpParser::HTTP_RES_OK;
         }
 
-        std::cout << "cgi executed!" << std::endl;
         if (this->_phase != COMPLETE) {
             HttpParser::httpResult cr = craftResponse();
             if (cr != HttpParser::HTTP_RES_OK) {
@@ -80,9 +78,7 @@ HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
         if (error) {
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
-
-        std::cout << "Done sending the response" << std::endl;
-        resp.clear();
+        // resp.clear();
     }
 
     else {

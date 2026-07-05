@@ -520,8 +520,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 
         /* NOTE: When POST request rout is a script, body shouldn't be parsed */
         if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi())) {
-
-            std::cout << GREEN << this->filePath << WHITE << std::endl;
             this->_state = BODY_COMPLETE;
             this->file.close();
             return HTTP_RES_OK;

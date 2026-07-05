@@ -239,15 +239,11 @@ int Response::fallbackServe(int code, bool to_close)
 // serving pages
 int Response::servePages(int code, bool to_close)
 {
-    // Assumes you add this member in Response:
-    // int _pageFd;  // initialize to -1 in ctor/reset
-
-    // 1) Always flush pending bytes first.
+    // flush pending bytes first
     if (error && static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
         ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
                                     client->outBuffer.size() - client->writeOffset);
         if (sent == -2) {
-            std::cout << RED << "from flushing: buff full waiting..." << WHITE << std::endl;
             return 1;
         }
 
@@ -255,8 +251,6 @@ int Response::servePages(int code, bool to_close)
             client->writeOffset += sent;
 
         if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
-            std::cout << RED << "from flushing: out buffer still full retrying..." << WHITE
-                      << std::endl;
             return 1;
         }
 
@@ -268,15 +262,15 @@ int Response::servePages(int code, bool to_close)
         return 0;
     }
 
-    // 2) Resolve custom error page path.
+    // Resolve custom error page path
     const std::string errorPath = this->conf.getErrorPages(code);
 
-    // 3) Fallback path (no custom page or open failed)
+    // Fallback path (no custom page)
     if (errorPath.empty()) {
         return fallbackServe(code, to_close);
     }
 
-    // 4) Ensure custom page fd is opened once per response instance.
+    // Ensure custom page fd is opened once per response instance
     if (this->_pageFd == -1) {
         this->_pageFd = open(errorPath.c_str(), O_RDONLY);
         if (this->_pageFd == -1) {
@@ -284,7 +278,7 @@ int Response::servePages(int code, bool to_close)
         }
     }
 
-    // 5) Stream custom error page (chunked) using helper.
+    // Stream custom error page (chunked) using helper
     craftPageResponse(code, this->_pageFd, to_close);
 
     if (this->error) {
@@ -306,67 +300,6 @@ int Response::servePages(int code, bool to_close)
 
     return 1;
 }
-
-// int Response::servePages(int code, bool to_close)
-//{
-//     static int fd = -1;
-//     std::string errorPath = this->conf.getErrorPages(code);
-//
-//     if (errorPath.empty() || (fd == -1 && (fd = open(errorPath.c_str(), O_RDONLY)) == -1)) {
-//
-//         if (static_cast<size_t>(client->writeOffset) < client->outBuffer.size()) {
-//             ssize_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
-//                                         client->outBuffer.size() - client->writeOffset);
-//             if (sent == -2)
-//                 return 1;
-//             else if (sent > 0)
-//                 client->writeOffset += sent;
-//             return 1; // check to change
-//         }
-//
-//         if (client->outBuffer.empty()) {
-//             std::string msg = getStatusMessage(code);
-//             std::string body = "<html><body><h1>" + msg + "</h1></body></html>";
-//             std::ostringstream ss;
-//             ss << "HTTP/1.1 " << msg << "\r\n"
-//                << "Content-Type: text/html\r\n"
-//                << "Content-Length: " << body.size() << "\r\n"
-//                << "Connection: close\r\n"
-//                << "\r\n"
-//                << body;
-//             client->outBuffer.append(ss.str());
-//         }
-//         // this->error = 1;
-//         size_t sent = sendResponse(client->outBuffer.data() + client->writeOffset,
-//                                    client->outBuffer.size() - client->writeOffset);
-//         if (sent == -2)
-//             return 1;
-//         else if (sent > 0)
-//             client->writeOffset += sent;
-//         return 1; // check to change
-//
-//         if (static_cast<size_t>(client->writeOffset) == client->outBuffer.size()) {
-//             this->_phase = COMPLETE;
-//             client->writeOffset = 0;
-//             client->outBuffer.clear();
-//             return 0;
-//         }
-//         return 1;
-//     }
-//
-//     craftPageResponse(code, fd, to_close);
-//
-//     if (this->error)
-//         return 1;
-//
-//     if (this->_phase == COMPLETE) {
-//         close(fd);
-//         this->status = 1;
-//         fd = -1;
-//     }
-//
-//     return 0;
-// }
 
 // redir overload
 int Response::servePages(int code, std::string &location, bool to_close)

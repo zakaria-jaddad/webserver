@@ -1,4 +1,5 @@
 #include "../../includes/cgi/Cgi.hpp"
+#include <iostream>
 #include <sstream>
 
 // constructor/destructor
@@ -10,7 +11,6 @@ Cgi::Cgi(int *in, int *out, t_client *client)
     // initing the body file path, fd of the file and dupping the infd to the body fd
     if (methodToString(request->getRequestType()) == "POST") {
         this->body_path = request->getRequestRawBodyFilePath();
-        std::cout << GREEN << "body file path : " << body_path << std::endl;
         this->body_fd = open(this->body_path.c_str(), O_RDONLY);
         if (this->body_fd == -1)
             throw std::runtime_error("error reading body");
@@ -19,8 +19,6 @@ Cgi::Cgi(int *in, int *out, t_client *client)
         std::stringstream ss;
         ss << this->request->getBodySize();
         this->content_length = ss.str();
-
-        std::cout << GREEN << "yaaaay" << this->content_length << std::endl;
 
         dup2(this->body_fd, in_fds[0]);
     }
@@ -40,8 +38,6 @@ Cgi::Cgi(int *in, int *out, t_client *client)
     this->client = client;
 
     uriPath = request->getRequestUriPath();
-    std::cout << "uri : " << uriPath << std::endl;
-
     conf = new ResolvedConfig(uriPath, client->config);
 
     scriptPath = conf->getRoot() + deriveScriptName(uriPath)[0];
@@ -51,21 +47,25 @@ Cgi::Cgi(int *in, int *out, t_client *client)
 
     std::map<std::string, std::string> cg = conf->getCgi();
     cgiPath = cg[ext];
-    std::cout << RED << "cgi used : " << cgiPath << std::endl;
 
     std::cout << "--------------end of cgi constructor----------------" << std::endl;
 }
 
 Cgi::~Cgi()
 {
+    if (this->body_fd != -1)
+        close(body_fd);
+    if (std::remove(this->body_path.c_str()) != 0)
+        std::cerr << "Error deleting tmp file" << std::endl;
     delete conf;
-    delete[] env; // to check
+    delete[] env;
 }
 
 // execution
 void Cgi::executor(void)
 {
     if (child == -10) {
+        std::cout << YELLOW << "Executing cgi..." << WHITE << std::endl;
         const char *argv[] = {cgiPath.c_str(), scriptPath.c_str(), NULL};
 
         child = fork();
@@ -74,14 +74,6 @@ void Cgi::executor(void)
             close(out_fds[0]);
             close(in_fds[1]);
 
-            // std::cout << "params passed to execve: " << std::endl;
-            // std::cout << "cgi path : " << cgiPath << std::endl;
-            // for (int i = 0; argv[i]; i++)
-            //     std::cout << "argv[" << i << "] : " << argv[i] << std::endl;
-
-            // for (int i = 0; env[i]; i++)
-            //     std::cout << "env[" << i << "] : " << env[i] << std::endl;
-
             dup2(out_fds[1], STDOUT_FILENO);
             dup2(in_fds[0], STDIN_FILENO);
 
@@ -89,9 +81,6 @@ void Cgi::executor(void)
             perror("execve");
         }
         else {
-
-            std::cout << "child created : " << child << std::endl;
-            // if (methodToString(request->getRequestType()) == "GET") {
             close(in_fds[0]);
             in_fds[0] = -1;
             close(out_fds[1]);
@@ -99,30 +88,13 @@ void Cgi::executor(void)
 
             close(in_fds[1]);
             in_fds[1] = -1;
-            // }
-            // else if (methodToString(request->getRequestType()) == "POST") {
-            //     close(in_fds[0]);
-            //     close(out_fds[1]);
-
-            //     // write(in_fds[1], request.getBody(), request.getBodyLength());
-            //     //  write(in_fds[1], fake_body.c_str(), fake_body_len);
-
-            //     close(in_fds[1]);
-            // }
         }
     }
 
     int status;
-    // std::cout << "waiting for child" << std::endl;
     child_status = waitpid(child, &status, WNOHANG);
 }
 
 int *Cgi::getPipe(void) { return out_fds; }
 int Cgi::getChild(void) { return child; }
 int Cgi::getChildStatus(void) { return child_status; }
-
-// int main()
-// {
-//  	Cgi cgi;
-//  	cgi.executor();
-// }

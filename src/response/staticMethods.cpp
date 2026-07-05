@@ -6,42 +6,7 @@
 
 HttpParser::httpResult Response::httpPost()
 {
-    // normalizePath();
-    // std::string upload_path = conf.getUploadPath();
-    // std::cout << "This is the uploaded path" << upload_path << std::endl;
-    //
-    // if (upload_path.empty()) {
-    //     servePages(405);
-    //     return 1;
-    // }
-    //
-    // if (access(upload_path.c_str(), R_OK) == -1) {
-    //     servePages(500);
-    //     return 1;
-    // }
-    //
-    // std::string file_path = resolveFilePath(upload_path);
-    // std::cout << "file path : " << file_path << std::endl;
-    // std::cout << "upload path : " << upload_path << std::endl;
-    //
-    // // if (createUploadFolder(upload_path, file_path))
-    // //   return 1;
-    //
-    // int fd = open(file_path.c_str(), O_WRONLY | O_CREAT, 0755);
-    // if (fd == -1) {
-    //     perror("open failed");
-    //     servePages(500);
-    //     return 1;
-    // }
-    //
-    // // placeholder for body provided by kiraje
-    // std::string fake_body = "file_content=Hello+world+this+is+a+test+file";
-    // write(fd, fake_body.c_str(), fake_body.length());
-    // std::cout << "created!!" << std::endl;
-    //
     servePages(200, 0);
-    // Edited by Zakaria
-
     return HttpParser::HTTP_RES_OK;
 }
 
@@ -51,7 +16,6 @@ HttpParser::httpResult Response::httpDelete(void)
 
     std::string uri = this->client->request->getRequestUriPath();
     absPath += normalizePath(uri);
-    std::cout << "file to delete : " << absPath << std::endl;
     if (access(absPath.c_str(), W_OK)) {
         return HttpParser::HTTP_RES_NOT_FOUND;
     }
@@ -171,7 +135,7 @@ HttpParser::httpResult Response::httpGet(void)
         absPath += normalizePath(uri);
 
         struct stat info;
-        std::cout << "path requested : " << absPath << std::endl;
+        std::cout << YELLOW << "Looking for your requested resource..." << WHITE << std::endl;
 
         if (stat(absPath.c_str(), &info) != 0) {
             return HttpParser::HTTP_RES_NOT_FOUND;
@@ -197,9 +161,8 @@ HttpParser::httpResult Response::httpGet(void)
                 absPath += index_to_serve;
         }
 
-        std::cout << "file requested : " << absPath << std::endl;
         ext = getExtension(absPath);
-        std::cout << " extension to serve : " << ext << std::endl;
+        std::cout << "extension to serve : " << ext << std::endl;
 
         if (access(absPath.c_str(), R_OK)) {
             return HttpParser::HTTP_RES_NOT_FOUND;

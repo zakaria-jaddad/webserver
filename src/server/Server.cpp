@@ -232,7 +232,7 @@ int Server::checkServerFd(epoll_event *events, int i)
             if (inet_ntop(AF_INET, &(clientAddr.sin_addr), ipstr, INET_ADDRSTRLEN) == NULL)
                 std::cerr << "Failed to convert client IP to string" << std::endl;
 
-            std::cout << GREEN << "Connection accepted from IP" << ipstr << WHITE << std::endl;
+            std::cout << GREEN << "Connection accepted from IP : " << ipstr << WHITE << std::endl;
 
             if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) {
                 std::cerr << "failed to set TCP_NODELAY" << std::endl;
@@ -432,7 +432,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                             break;
                         }
                         switchEpollMode(clientSocket, EPOLLIN);
-                        std::cout << "back to reading" << std::endl;
+                        std::cout << GREEN << "back to reading" << WHITE << std::endl;
                     }
                     break;
                 }

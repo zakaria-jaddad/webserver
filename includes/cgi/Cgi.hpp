@@ -9,6 +9,7 @@
 #include "../response/ResolvedConfig.hpp"
 #include "../server/Server.hpp"
 #include "envUtils.hpp"
+#include <cstdio>
 
 struct t_client;
 
