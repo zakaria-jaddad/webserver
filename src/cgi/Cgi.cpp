@@ -37,6 +37,8 @@ Cgi::Cgi(int *in, int *out, t_client *client)
     else
         this->content_type = "";
 
+    this->client = client;
+
     uriPath = request->getRequestUriPath();
     std::cout << "uri : " << uriPath << std::endl;
 

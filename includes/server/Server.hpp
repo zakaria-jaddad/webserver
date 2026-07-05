@@ -30,6 +30,8 @@ class Response;
 struct t_client {
     int fd;
 
+    std::string ip;
+
     time_t last_activity;
     time_t connection_time;
 

@@ -1,9 +1,11 @@
 #include "../../includes/server/Server.hpp"
 #include <algorithm>
+#include <arpa/inet.h>
 #include <cstddef>
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <netinet/in.h>
 #include <sstream>
 #include <string.h>
 #include <string>
@@ -209,11 +211,29 @@ int Server::checkServerFd(epoll_event *events, int i)
     for (std::map<int, std::vector<ServerConfig *> >::iterator it = this->vServers.begin();
          it != this->vServers.end(); it++) {
         if (events[i].data.fd == it->first) {
-            clientSocket = accept(it->first, NULL, NULL);
+
+            // struct for saving incoming client's metadata
+            struct sockaddr_in clientAddr;
+            socklen_t clientAddrLen = sizeof(clientAddr);
+            // clears out any garbage value inside
+            memset(&clientAddr, 0, sizeof(clientAddr));
+
+            // handshake with the user and filling the struct
+            // with the client's IP address and connecting port
+            clientSocket = accept(it->first, (struct sockaddr *)&clientAddr, &clientAddrLen);
+
             if (clientSocket == -1) {
                 std::cerr << "failed to accept" << std::endl;
                 break;
             }
+
+            // converting the ip from network byte order to a string
+            char ipstr[INET_ADDRSTRLEN];
+            if (inet_ntop(AF_INET, &(clientAddr.sin_addr), ipstr, INET_ADDRSTRLEN) == NULL)
+                std::cerr << "Failed to convert client IP to string" << std::endl;
+
+            std::cout << GREEN << "Connection accepted from IP" << ipstr << WHITE << std::endl;
+
             if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) {
                 std::cerr << "failed to set TCP_NODELAY" << std::endl;
                 close(clientSocket);
@@ -246,6 +266,7 @@ int Server::checkServerFd(epoll_event *events, int i)
             client.connection_time = now;
             client.last_activity = now;
             client.writeOffset = 0;
+            client.ip = ipstr;
             clients.push_back(client);
             break;
         }

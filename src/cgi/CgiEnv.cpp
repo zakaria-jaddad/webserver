@@ -32,7 +32,8 @@ Cgi::mapEnvBuilder(std::map<std::string, std::vector<std::string> > &header,
 
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SERVER_SOFTWARE"] = "webserv/1.0";
-    env["REMOTE_ADDR"] = "127.0.0.1"; // check get from anas
+    env["REMOTE_ADDR"] = this->client->ip;
+    std::cout << "IP : " << env["REMOTE_ADDR"] << std::endl;
 
     // bs needed so php-cgi runs
     env["REDIRECT_STATUS"] = "200";

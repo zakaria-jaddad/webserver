@@ -13,14 +13,6 @@
 struct t_client;
 
 class Cgi {
-
-    // typedef enum {
-    // 	HEADERS,
-    // 	BODY,
-    // 	COMPLETE,
-    // 	ERROR,
-    // } phase;
-
     ResolvedConfig *conf;
     HttpParser *request;
     std::string uriPath;
@@ -34,6 +26,8 @@ class Cgi {
 
     std::string body_path;
     int body_fd;
+
+    t_client *client;
 
     std::string content_type;
     std::string content_length;
