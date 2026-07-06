@@ -35,6 +35,11 @@ html_content = f"""<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Backstage Mixer | Kessoku SERVER</title>
+    <link
+      rel="icon"
+      type="image/jpeg"
+      href="../sites/resources/bocchi_icon.jpg"
+    />
   <style>
     /* --- DESIGN SYSTEM TOKENS --- */
     :root {{
@@ -254,7 +259,7 @@ html_content = f"""<!DOCTYPE html>
     <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
     <a href="../sites/song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
     <a href="backstage.py" class="nav-sticker tape-purple">🎛 Backstage</a>
-    <a href="equipment.py" class="nav-sticker tape-blue">📦 Equipment</a>
+    <a href="equipment.php" class="nav-sticker tape-blue">📦 Equipment</a>
     <a href="session.py" class="nav-sticker tape-white">🍪 Café</a>
     <a href="../sites/About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
   </nav>

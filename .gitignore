@@ -46,6 +46,8 @@ obj/
 external/googletest/
 
 www/uploads/
+www/cgi-bin/uploads/
+www/cgi-bin/session_vault/
 test_uploads/
 venv/
 .pytest_cache/
