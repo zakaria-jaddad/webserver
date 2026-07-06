@@ -7,6 +7,7 @@
 #include <map>
 #include <netinet/in.h>
 #include <sstream>
+#include <stdexcept>
 #include <string.h>
 #include <string>
 #include <sys/epoll.h>
@@ -325,122 +326,126 @@ int Server::checkClientFd(epoll_event *events, int i)
         if (events[i].data.fd == it->fd) {
 
             clientSocket = it->fd;
-            if (events[i].events == EPOLLIN) {
+            try {
+                if (events[i].events == EPOLLIN) {
 
-                b = recv(clientSocket, req, sizeof(req) - 1, 0);
-                if (b <= 0) {
-                    closeSocket(&(*it));
-                    clients.erase(it);
-                    return 1;
-                }
-
-                it->last_activity = time(NULL);
-
-                req[b] = 0;
-                std::string rawData(req, b);
-
-                std::cout << RED << "=================Request from " << GREEN << it->fd << RED
-                          << "=================" << WHITE << std::endl;
-                it->req_res = it->request->parseHttpRequest(rawData);
-
-                if (it->req_res != HttpParser::HTTP_RES_OK) {
-                    if (it->config == NULL)
-                        it->config = it->server[0];
-                    switchEpollMode(clientSocket, EPOLLOUT);
-                }
-                else if (it->request->isComplete()) {
-                    if (it->config == NULL) {
-                        std::string hostHeader = it->request->getHostHeader();
-                        it->config = resolveServer(it->server, hostHeader);
+                    b = recv(clientSocket, req, sizeof(req) - 1, 0);
+                    if (b <= 0) {
+                        closeSocket(&(*it));
+                        clients.erase(it);
+                        return 1;
                     }
-                    switchEpollMode(clientSocket, EPOLLOUT);
-                }
-            }
-            else if (events[i].events == EPOLLOUT) {
-                // Process as many complete pipelined requests as possible in one
-                // EPOLLOUT wake-up before yielding back to epoll.
-                while (true) {
-                    if (it->response == NULL) {
-                        it->response = new Response(&(*it));
-                    }
+
+                    it->last_activity = time(NULL);
+
+                    req[b] = 0;
+                    std::string rawData(req, b);
+
+                    std::cout << RED << "=================Request from " << GREEN << it->fd << RED
+                              << "=================" << WHITE << std::endl;
+                    it->req_res = it->request->parseHttpRequest(rawData);
 
                     if (it->req_res != HttpParser::HTTP_RES_OK) {
-                        int serv_res = it->response->servePages(it->req_res, 1);
-                        if (serv_res) {
-                            std::cout << RED << "Connection Error, closing connection ..." << WHITE
-                                      << std::endl;
-                            continue;
-                        }
-                        if (it->response->isComplete()) {
-                            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            closeSocket(&(*it));
-                            it = clients.erase(it);
-                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
-                        }
-                        break;
+                        if (it->config == NULL)
+                            it->config = it->server[0];
+                        switchEpollMode(clientSocket, EPOLLOUT);
                     }
-
-                    // start the response crafting and sending process from the checkMethod parent
-                    // method
-                    it->resp_res = it->response->checkMethod();
-                    it->resp_res = HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-
-                    // cleanup after an error/timeout
-                    if (it->resp_res != HttpParser::HTTP_RES_OK) {
-                        int serv_res = it->response->servePages(it->resp_res, 1);
-                        if (serv_res) {
-                            std::cout << RED << "Connection Error, closing connection ..." << WHITE
-                                      << std::endl;
-                            continue;
+                    else if (it->request->isComplete()) {
+                        if (it->config == NULL) {
+                            std::string hostHeader = it->request->getHostHeader();
+                            it->config = resolveServer(it->server, hostHeader);
                         }
-                        if (it->response->isComplete()) {
-                            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            closeSocket(&(*it));
-                            it = clients.erase(it);
-                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
-                        }
-                        break;
+                        switchEpollMode(clientSocket, EPOLLOUT);
                     }
-
-                    if (it->response->isComplete()) {
-                        if (it->response->shouldClose()) {
-                            switchEpollMode((*it).fd, EPOLL_CTL_DEL);
-                            closeSocket(&(*it));
-                            it = clients.erase(it);
-                            std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
-                            break;
+                }
+                else if (events[i].events == EPOLLOUT) {
+                    // Process as many complete pipelined requests as possible in one
+                    // EPOLLOUT wake-up before yielding back to epoll.
+                    while (true) {
+                        if (it->response == NULL) {
+                            it->response = new Response(&(*it));
                         }
 
-                        resetSocket(&(*it));
-
-                        /* NOTE: HTTP/1.1 Pipelining ya dawla */
-                        if (it->request->getPendingData().empty() == false) {
-
-                            // removed pipeline debugging for now
-                            // std::cout << GREEN << std::endl;
-                            // HttpParser::printRaw(it->request->getPendingData());
-
-                            // std::cout << WHITE << std::endl;
-                            HttpParser::httpResult r = it->request->parseHttpRequest("");
-                            it->req_res = r;
-
-                            if (it->request->isComplete() == true ||
-                                it->req_res != HttpParser::HTTP_RES_OK) {
-                                std::cout << "Pipelined request ready, processing immediately"
-                                          << std::endl;
+                        if (it->req_res != HttpParser::HTTP_RES_OK) {
+                            int serv_res = it->response->servePages(it->req_res, 1);
+                            if (serv_res) {
+                                std::cout << RED << "Connection Error, closing connection ..."
+                                          << WHITE << std::endl;
                                 continue;
                             }
-                            switchEpollMode(clientSocket, EPOLLIN);
-                            std::cout << "Pipelined request needs more data, back to reading"
-                                      << std::endl;
+                            if (it->response->isComplete()) {
+                                switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                                closeSocket(&(*it));
+                                it = clients.erase(it);
+                                std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
+                            }
                             break;
                         }
-                        switchEpollMode(clientSocket, EPOLLIN);
-                        std::cout << GREEN << "back to reading" << WHITE << std::endl;
+
+                        // start the response crafting and sending process from the checkMethod
+                        // parent method
+                        it->resp_res = it->response->checkMethod();
+
+                        // cleanup after an error/timeout
+                        if (it->resp_res != HttpParser::HTTP_RES_OK) {
+                            int serv_res = it->response->servePages(it->resp_res, 1);
+                            if (serv_res) {
+                                std::cout << RED << "Connection Error, closing connection ..."
+                                          << WHITE << std::endl;
+                                continue;
+                            }
+                            if (it->response->isComplete()) {
+                                switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                                closeSocket(&(*it));
+                                it = clients.erase(it);
+                                std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
+                            }
+                            break;
+                        }
+
+                        if (it->response->isComplete()) {
+                            if (it->response->shouldClose()) {
+                                switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                                closeSocket(&(*it));
+                                it = clients.erase(it);
+                                std::cout << GREEN << "cleaned socket" << WHITE << std::endl;
+                                break;
+                            }
+
+                            resetSocket(&(*it));
+
+                            /* NOTE: HTTP/1.1 Pipelining ya dawla */
+                            if (it->request->getPendingData().empty() == false) {
+
+                                // removed pipeline debugging for now
+                                // std::cout << GREEN << std::endl;
+                                // HttpParser::printRaw(it->request->getPendingData());
+
+                                // std::cout << WHITE << std::endl;
+                                HttpParser::httpResult r = it->request->parseHttpRequest("");
+                                it->req_res = r;
+
+                                if (it->request->isComplete() == true ||
+                                    it->req_res != HttpParser::HTTP_RES_OK) {
+                                    std::cout << "Pipelined request ready, processing immediately"
+                                              << std::endl;
+                                    continue;
+                                }
+                                switchEpollMode(clientSocket, EPOLLIN);
+                                std::cout << "Pipelined request needs more data, back to reading"
+                                          << std::endl;
+                                break;
+                            }
+                            switchEpollMode(clientSocket, EPOLLIN);
+                            std::cout << GREEN << "back to reading" << WHITE << std::endl;
+                        }
+                        break;
                     }
                     break;
                 }
-                break;
+            }
+            catch (const std::runtime_error &e) {
+                std::cerr << "Exception : " << e.what() << std::endl;
             }
             break;
         }

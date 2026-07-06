@@ -292,15 +292,15 @@ ssize_t Response::sendResponse(const char *resp, size_t size)
     if (size == 0)
         return 0;
 
-    ssize_t bytes_sent = send(client->fd, resp, size, 0);
+    ssize_t bytes_sent = send(client->fd, resp, size, MSG_NOSIGNAL);
 
     if (bytes_sent == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return -2;
 
-        std::cerr << "failed to send" << std::endl;
+        // std::cerr << "failed to send" << std::endl;
         this->error = 1;
-        return -1;
+        throw std::runtime_error("Failed to send response: client closed the connection");
     }
 
     return bytes_sent;
