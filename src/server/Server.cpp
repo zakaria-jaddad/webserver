@@ -342,7 +342,6 @@ int Server::checkClientFd(epoll_event *events, int i)
                 std::cout << RED << "=================Request from " << GREEN << it->fd << RED
                           << "=================" << WHITE << std::endl;
                 it->req_res = it->request->parseHttpRequest(rawData);
-                std::cout << YELLOW << "HERE" << WHITE << std::endl;
 
                 if (it->req_res != HttpParser::HTTP_RES_OK) {
                     if (it->config == NULL)
@@ -384,6 +383,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                     // start the response crafting and sending process from the checkMethod parent
                     // method
                     it->resp_res = it->response->checkMethod();
+                    it->resp_res = HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 
                     // cleanup after an error/timeout
                     if (it->resp_res != HttpParser::HTTP_RES_OK) {

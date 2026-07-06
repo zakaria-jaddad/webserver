@@ -334,25 +334,29 @@ void ServerConfig::parseError(std::vector<std::string> &tokens, size_t &i)
     if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
         throw std::runtime_error("Found an unexpected : " + tokens[i]);
 
-    std::vector<int> codes;
+    std::vector<std::string> codes;
     while (tokens[i] != ";") {
         if (tokens[i] == "{" || tokens[i] == "}")
             throw std::runtime_error("Unexpected token in error_page: " + tokens[i]);
 
-        codes.push_back(std::atoi(tokens[i].c_str()));
+        codes.push_back(tokens[i]);
         i++;
     }
 
     if (codes.size() < 2)
         throw std::runtime_error("error_page requires at least one code and a path");
 
-    std::string path = tokens[i - 1];
+    std::string path = codes.back();
+    codes.pop_back();
 
-    if (path.empty() || path[0] != '/')
+    if (path.empty())
         throw std::runtime_error("error_page path must start with '/'");
 
-    for (size_t j = 0; j < codes.size() - 1; j++) {
-        int code = codes[j];
+    for (size_t j = 0; j < codes.size(); j++) {
+        if (codes[j].find_first_not_of("0123456789") != std::string::npos) {
+            throw std::runtime_error("Invalid non-numeric error code token: " + codes[j]);
+        }
+        int code = std::atoi(codes[j].c_str());
 
         if (code < 400 || code > 599)
             throw std::runtime_error("Invalid HTTP error code");
