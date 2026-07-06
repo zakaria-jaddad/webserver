@@ -369,7 +369,7 @@ void ServerConfig::parseError(std::vector<std::string> &tokens, size_t &i)
 }
 
 // parsing max body size
-std::size_t checkSize(std::string &value)
+std::size_t ServerConfig::checkSize(std::string &value)
 {
     if (value.empty())
         throw std::runtime_error("client_max_body_size: empty value");

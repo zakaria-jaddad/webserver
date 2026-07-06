@@ -8,7 +8,7 @@
 
 LocationConfig::LocationConfig()
     : cgi_info(), index(), methods_accepted(), redir(), root(""), upload_path(""),
-      location_path(""), directory_listing(false)
+      location_path(""), directory_listing(false), max_body(1024)
 {
     is_set_cgi_info = false;
     is_set_index = false;
@@ -18,6 +18,7 @@ LocationConfig::LocationConfig()
     is_set_upload_path = false;
     is_set_location_path = false;
     is_set_directory_listing = false;
+    is_set_body_size = false;
     buildLocationParsers();
 }
 
@@ -28,6 +29,7 @@ void LocationConfig::buildLocationParsers()
     locationParsers["upload_store"] = &LocationConfig::parsePath;
     locationParsers["autoindex"] = &LocationConfig::parseListing;
     locationParsers["return"] = &LocationConfig::parseRedir;
+    locationParsers["client_max_body_size"] = &LocationConfig::parseSize;
     locationParsers["allow"] = &LocationConfig::parseMethods;
     locationParsers["cgi"] = &LocationConfig::parseCgi;
 }
@@ -262,8 +264,70 @@ void LocationConfig::parseRedir(std::vector<std::string> &tokens, size_t &i)
     i++;
 }
 
+// client_max_body_size directive parsing
+std::size_t LocationConfig::checkSize(std::string &value)
+{
+    if (value.empty())
+        throw std::runtime_error("client_max_body_size: empty value");
+
+    char suffix = value[value.size() - 1];
+    std::size_t multiplier = 1;
+    std::string numberPart = value;
+
+    if (!std::isdigit(static_cast<unsigned char>(suffix))) {
+        if (suffix == 'k' || suffix == 'K')
+            multiplier = 1024;
+        else if (suffix == 'm' || suffix == 'M')
+            multiplier = 1024 * 1024;
+        else if (suffix == 'g' || suffix == 'G')
+            multiplier = 1024 * 1024 * 1024;
+        else
+            throw std::runtime_error("client_max_body_size: invalid suffix");
+
+        numberPart = value.substr(0, value.size() - 1);
+    }
+
+    if (numberPart.empty())
+        throw std::runtime_error("client_max_body_size: invalid value");
+
+    if (!isNumber(numberPart))
+        throw std::runtime_error("client_max_body_size: invalid number");
+
+    std::size_t size = static_cast<std::size_t>(std::atoi(numberPart.c_str()));
+
+    if (size == 0)
+        throw std::runtime_error("client_max_body_size: must be greater than zero");
+
+    return size * multiplier;
+}
+
+void LocationConfig::parseSize(std::vector<std::string> &tokens, size_t &i)
+{
+    // skip the directive name token
+    i++;
+
+    if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+        throw std::runtime_error("Found an unexpected : " + tokens[i]);
+
+    std::string value = tokens[i];
+    // skip the value token
+    i++;
+
+    if (tokens[i] != ";")
+        throw std::runtime_error(
+            "Invalid number of arguments in \"client_max_body_size\" directive");
+
+    // skip the closing ';'
+    i++;
+
+    this->max_body = checkSize(value);
+    this->is_set_body_size = true;
+}
+
 // getters
 std::vector<std::string> LocationConfig::getIndex(void) { return index; }
+
+std::size_t LocationConfig::getSize(void) { return max_body; }
 
 std::vector<std::string> LocationConfig::getAcceptedMethods(void) { return methods_accepted; }
 
