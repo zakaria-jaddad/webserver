@@ -63,4 +63,3 @@ __pycache__/
 *.pyc
 test/__pycache__/
 test_upload/
-conf/

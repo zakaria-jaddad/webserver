@@ -152,16 +152,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
             return res;
         }
 
-        /*
-         * NOTE: After discussion with mr yhossni i need to return HTTP_RES_METHOD_NOT_ALLOWED after
-         * parsing the method from the request
-         */
-        // ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
-        // if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) ==
-        // false) {
-        //     return HTTP_RES_METHOD_NOT_ALLOWED;
-        // }
-
         this->_phase = HEADERS;
     }
 
@@ -726,9 +716,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 void HttpParser::Body::init(HttpParser *httpParser)
 {
     this->httpParser = httpParser;
-    this->_maxBodySize = this->httpParser->_config->getSize();
 
     this->conf = new ResolvedConfig(httpParser->getRequestUriPath(), httpParser->_config);
+    this->_maxBodySize = this->conf->getBodySize();
     _normalizePath();
 }
 
