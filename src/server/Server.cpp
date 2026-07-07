@@ -86,7 +86,7 @@ void Server::setupServerFds()
          *   serverSocket = socket(AF_INET, SOCK_STREAM, 0);
          *
          */
-        serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+        serverSocket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
         if (serverSocket == -1)
             continue;
 
@@ -339,6 +339,12 @@ int Server::checkClientFd(epoll_event *events, int i)
 
             clientSocket = it->fd;
             try {
+                if (events[i].events & (EPOLLERR | EPOLLHUP)) {
+                    switchEpollMode((*it).fd, EPOLL_CTL_DEL);
+                    closeSocket(&(*it));
+                    it = clients.erase(it);
+                    break;
+                }
                 if (events[i].events & EPOLLIN) {
 
                     b = recv(clientSocket, req, sizeof(req) - 1, 0);
@@ -500,7 +506,7 @@ int Server::startServer()
 
     while (1) {
 
-        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 100);
+        event_count = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
 
         if (event_count == -1) {
             std::cerr << "epoll_wait Failed!" << std::endl;

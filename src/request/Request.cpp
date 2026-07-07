@@ -573,7 +573,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         this->_mpState = MP_COMPLETE;
                         this->_state = BODY_COMPLETE;
 
-                        this->file.close();
+                        this->_fileCleanUp();
                         return HTTP_RES_OK;
                     }
                     continue;
@@ -667,19 +667,17 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         /* if end boundary found set body complete */
                         this->_mpState = MP_COMPLETE;
 
-                        this->file.close();
+                        _fileCleanUp();
                         this->_state = BODY_COMPLETE;
 
                         return HTTP_RES_OK;
                     }
 
-                    // NOTE: What the hack is this
                     if (this->_mpCurrentLine.empty() == false) {
                         this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
                                                       this->_mpCurrentLine.size());
                     }
 
-                    // NOTE: What the hack is this
                     this->_mpCurrentLine = line;
                     if (hadCr == true) {
                         this->_mpCurrentLine += "\r";
