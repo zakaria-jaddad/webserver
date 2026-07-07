@@ -7,6 +7,49 @@ import random
 # Ensure standard output uses UTF-8 encoding for emojis
 sys.stdout.reconfigure(encoding='utf-8')
 
+# --- SESSION VAULT CONFIGURATION ---
+# Path relative to where the CGI server spawns/executes the script
+VAULT_DIR = "./www/cgi-bin/session_vault"
+
+try:
+    if not os.path.exists(VAULT_DIR):
+        os.makedirs(VAULT_DIR, exist_ok=True)
+except Exception:
+    pass # Fallback safety if server environment restricts directory creation
+
+def register_session(token):
+    """Creates a physical file tracking this active session token."""
+    if not token or "BAD_DATA" in token:
+        return
+    try:
+        token_path = os.path.join(VAULT_DIR, token)
+        with open(token_path, "w") as f:
+            f.write("STATUS=ACTIVE\n")
+    except Exception:
+        pass
+
+def revoke_session(token):
+    """Deletes the session tracking file from disk."""
+    if not token:
+        return
+    try:
+        token_path = os.path.join(VAULT_DIR, token)
+        if os.path.exists(token_path):
+            os.remove(token_path)
+    except Exception:
+        pass
+
+def is_session_valid(token):
+    """Verifies if the token physically exists inside our hard-drive vault."""
+    if not token or "BAD_DATA" in token:
+        return False
+    try:
+        token_path = os.path.join(VAULT_DIR, token)
+        return os.path.exists(token_path)
+    except Exception:
+        return False
+
+
 # 1. PARSE INCOMING COOKIES & QUERY PARAMS
 cookie_env = os.environ.get("HTTP_COOKIE", "")
 query_env = os.environ.get("QUERY_STRING", "")
@@ -21,7 +64,7 @@ if cookie_env:
     for c in cookie_env.split(";"):
         if "=" in c:
             k, v = c.strip().split("=", 1)
-            cookies[k] = v
+            cookies[k] = v.strip().rstrip(',').rstrip('\"')
 
 COOKIE_NAME = "STARRY_PASS"
 current_token = cookies.get(COOKIE_NAME, None)
@@ -30,16 +73,33 @@ current_token = cookies.get(COOKIE_NAME, None)
 headers = ["Content-Type: text/html; charset=utf-8"]
 
 if action == "stamp":
+    # If a previous token existed, clear it out first to avoid dead file accumulation
+    if current_token:
+        revoke_session(current_token)
+        
     # Generate frantic pseudorandom hexadecimal string hash identifier
     pseudo_hash = f"STARRY_{hex(random.randint(0x10000000, 0xffffffff))[2:].upper()}_SYS"
     headers.append(f"Set-Cookie: {COOKIE_NAME}={pseudo_hash}; Path=/; Max-Age=300; SameSite=Strict")
     current_token = pseudo_hash
+    
+    # Commit token to the server hard-drive cache
+    register_session(current_token)
+
 elif action == "corrupt":
-    # Inject bad data token
+    # Revoke the actual clean token from the vault first
+    if current_token:
+        revoke_session(current_token)
+        
+    # Inject bad data token (will NOT be registered in the vault)
     corrupt_val = "BAD_DATA_ERR_MUTATION"
     headers.append(f"Set-Cookie: {COOKIE_NAME}={corrupt_val}; Path=/; Max-Age=300; SameSite=Strict")
     current_token = corrupt_val
+
 elif action == "wipe":
+    # Explicitly clear file footprint from the server vault
+    if current_token:
+        revoke_session(current_token)
+    
     # Backdating structural limits flags eviction across standard clients
     headers.append(f"Set-Cookie: {COOKIE_NAME}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
     current_token = None
@@ -52,17 +112,23 @@ token_string = "NULL"
 monitor_color = "#ff007f" # --neon-magenta
 monitor_text = f"⚠️ Inbound Request Header:\nCookie: NULL\n\n[CGI Status: 401 Unauthorized - Access Denied]"
 
+# Check state against the real server-side file system vault
 if current_token:
     if "BAD_DATA" in current_token:
         monitor_text = f"👉 Inbound Request Header:\nCookie: {COOKIE_NAME}={current_token}\n\n[ALERT] map.find() FAILED: Token corrupted. Kicking client out..."
         monitor_color = "#ff3333"
-    else:
+    elif is_session_valid(current_token):
         unverified_display = "none"
         verified_display = "block"
         metadata_display = "block"
         token_string = current_token
-        monitor_text = f"👉 Inbound Request Header:\nCookie: {COOKIE_NAME}={current_token}\n\n[CGI Status: std::map entry MATCH]"
+        monitor_text = f"👉 Inbound Request Header:\nCookie: {COOKIE_NAME}={current_token}\n\n[CGI Status: Hard-Drive Vault File MATCH]"
         monitor_color = "#00ff00"
+    else:
+        # Token exists in browser but is missing from server vault (e.g. Server cleared files or token is forged)
+        monitor_text = f"👉 Inbound Request Header:\nCookie: {COOKIE_NAME}={current_token}\n\n[ALERT] Vault Verification Failed: Token absent from cache."
+        monitor_color = "#ffaa00"
+
 
 # 4. PRINT HTTP CGI HEADERS (CRITICAL FOR WEBSERV)
 for h in headers:
@@ -75,15 +141,21 @@ print(f"""<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <title>STARRY Door Control // Session Logger</title>
+    <link
+      rel="icon"
+      type="image/jpeg"
+      href="../sites/resources/bocchi_icon.jpg"
+    />
   <style>
     :root {{
-      --pink-bocchi: #ff66b2;
-      --neon-magenta: #ff007f;
-      --blue-kita: #00e5ff;
-      --purple-ryo: #7000ff;
-      --yellow-nijika: #fff200;
-      --dark-punk: #090909;
+      --pink-bocchi: #ffb1cb;
+      --blue-kita: #82e3f5;
+      --yellow-nijika: #fff176;
+      --purple-ryo: #b39ddb;
+      --dark-punk: #121212;
       --white-paper: #f7eed3;
+      --neon-magenta: #ff007f;
+      --tan-cardboard: #f7eed3;
     }}
 
     * {{
@@ -267,61 +339,59 @@ print(f"""<!DOCTYPE html>
       border-top: 1px dashed var(--dark-punk);
       padding-top: 0.5rem;
     }}
-            /* ==========================================================================
-            6. FIXed ZINE NAVIGATION (STICKER TAPE)
-            ========================================================================== */
-            .zine-nav {{
-                position: fixed;
-                top: 15%;
-                right: 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 0.8rem;
-                z-index: 100;
-                transform: rotate(2deg);
-            }}
-        
-            @media (max-width: 768px) {{
-                .zine-nav {{
-                position: static;
-                transform: none;
-                padding: 1rem;
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                display: grid;
-                }}
-            }}
-        
-            .nav-sticker {{
-                color: var(--dark-punk);
-                font-weight: 900;
-                text-decoration: none;
-                padding: 0.6rem 1.2rem;
-                font-size: 0.9rem;
-                text-transform: uppercase;
-                border: 2px solid var(--dark-punk);
-                transition: transform 0.15s ease, box-shadow 0.15s ease;
-                box-shadow: 4px 4px 0px var(--dark-punk);
-                }}
-            
-            .tape-pink {{ background-color: var(--pink-bocchi); transform: rotate(-3deg); }}
-            .tape-yellow {{ background-color: var(--yellow-nijika); transform: rotate(2deg); }}
-            .tape-purple {{ background-color: var(--purple-ryo); transform: rotate(-1deg); }}
-            .tape-blue {{ background-color: var(--blue-kita); transform: rotate(4deg); }}
-            .tape-white {{ background-color: var(--white-paper); transform: rotate(-2deg); }}
-            .tape-magenta {{ background-color: var(--neon-magenta); color: white; transform: rotate(1deg); }}
-            .tape-dark {{ background-color: var(--dark-punk); color: var(--yellow-nijika); transform: rotate(-4deg); }}
-            
-            .nav-sticker:hover {{
-                transform: scale(1.1) rotate(0deg);
-                box-shadow: 6px 6px 0px var(--neon-magenta);
-            }}
+    
+    .zine-nav {{
+        position: fixed;
+        top: 15%;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        z-index: 100;
+        transform: rotate(2deg);
+    }}
+
+    @media (max-width: 768px) {{
+        .zine-nav {{
+        position: static;
+        transform: none;
+        padding: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        display: grid;
+        }}
+    }}
+
+    .nav-sticker {{
+        color: var(--dark-punk);
+        font-weight: 900;
+        text-decoration: none;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        border: 2px solid var(--dark-punk);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        box-shadow: 4px 4px 0px var(--dark-punk);
+        }}
+
+    .tape-pink {{ background-color: var(--pink-bocchi); transform: rotate(-3deg); }}
+    .tape-yellow {{ background-color: var(--yellow-nijika); transform: rotate(2deg); }}
+    .tape-purple {{ background-color: var(--purple-ryo); transform: rotate(-1deg); }}
+    .tape-blue {{ background-color: var(--blue-kita); transform: rotate(4deg); }}
+    .tape-white {{ background-color: var(--white-paper); transform: rotate(-2deg); }}
+    .tape-magenta {{ background-color: var(--neon-magenta); color: white; transform: rotate(1deg); }}
+    .tape-dark {{ background-color: var(--dark-punk); color: var(--yellow-nijika); transform: rotate(-4deg); }}
+
+    .nav-sticker:hover {{
+        transform: scale(1.1) rotate(0deg);
+        box-shadow: 6px 6px 0px var(--neon-magenta);
+    }}
   </style>
 </head>
 <body>
         <nav class="zine-nav" aria-label="Main Navigation">
             <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
             <a href="../sites/song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
-            <a href="../sites/backstage.html" class="nav-sticker tape-purple">🎛 Backstage</a>
+            <a href="backstage.py" class="nav-sticker tape-purple">🎛 Backstage</a>
             <a href="equipment.php" class="nav-sticker tape-blue">📦 Equipment</a>
             <a href="session.py" class="nav-sticker tape-white">🍪 Café</a>
             <a href="../sites/About_us.html" class="nav-sticker tape-dark">⚙ About us</a>

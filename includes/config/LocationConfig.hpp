@@ -1,61 +1,63 @@
-#ifndef  LOCATIONCONFIG_HPP 
-# define LOCATIONCONFIG_HPP
+#ifndef LOCATIONCONFIG_HPP
+#define LOCATIONCONFIG_HPP
 
 #include <cstddef>
 #include <map>
 #include <string>
 #include <vector>
 
-class LocationConfig{
-	
-	std::map<std::string, std::string>		cgi_info;
-	std::vector<std::string>    					index;
-	std::vector<std::string>							methods_accepted;
-	std::pair<int, std::string>						redir;
-	std::string                 					root;
-	std::string                 					upload_path;
-	std::string                 					location_path;
-	bool                        					directory_listing;
+class LocationConfig {
 
-	
-	typedef void (LocationConfig::*Parser)(std::vector<std::string>&, size_t&);
-	std::map<std::string, Parser> locationParsers;
-	
-	void buildLocationParsers( void );
-	
-public:
+    std::map<std::string, std::string> cgi_info;
+    std::vector<std::string> index;
+    std::vector<std::string> methods_accepted;
+    std::pair<int, std::string> redir;
+    std::string root;
+    std::string upload_path;
+    std::string location_path;
+    bool directory_listing;
+    std::size_t max_body;
 
-	bool	is_set_cgi_info;
-	bool	is_set_index;
-	bool	is_set_methods_accepted;
-	bool	is_set_redir;
-	bool	is_set_root;
-	bool	is_set_upload_path;
-	bool	is_set_location_path;
-	bool	is_set_directory_listing;
-	LocationConfig( void );
-	
-	void parseBlock( std::vector<std::string>&, size_t& );
+    typedef void (LocationConfig::*Parser)(std::vector<std::string> &, size_t &);
+    std::map<std::string, Parser> locationParsers;
 
-	void init_error_pages();
+    void buildLocationParsers(void);
 
-	void parseRoot( std::vector<std::string>&, size_t& );
-	void parseIndex( std::vector<std::string>&, size_t& );
-	void parsePath( std::vector<std::string>&, size_t& );
-	void parseListing( std::vector<std::string>&, size_t& );
-	void parseRedir( std::vector<std::string>&, size_t& );
-	void parseMethods( std::vector<std::string>&, size_t& );
-	void parseCgi( std::vector<std::string>&, size_t& );
+  public:
+    bool is_set_cgi_info;
+    bool is_set_index;
+    bool is_set_methods_accepted;
+    bool is_set_redir;
+    bool is_set_root;
+    bool is_set_upload_path;
+    bool is_set_location_path;
+    bool is_set_directory_listing;
+    bool is_set_body_size;
+    LocationConfig(void);
 
-	std::vector<std::string>	getIndex( void );
-	std::vector<std::string>	getAcceptedMethods( void );
-	std::pair<int, std::string>	getRedir( void );
-	std::string 				getRoot( void );
-	std::string 				getUploadPath( void );
-	bool 						getDirectoyListing( void );
-	std::string					getLocationPath( void );
-	std::map<std::string, std::string>		getCgi( void );
+    void parseBlock(std::vector<std::string> &, size_t &);
 
+    std::size_t checkSize(std::string &);
+    void init_error_pages();
+
+    void parseRoot(std::vector<std::string> &, size_t &);
+    void parseIndex(std::vector<std::string> &, size_t &);
+    void parsePath(std::vector<std::string> &, size_t &);
+    void parseListing(std::vector<std::string> &, size_t &);
+    void parseRedir(std::vector<std::string> &, size_t &);
+    void parseMethods(std::vector<std::string> &, size_t &);
+    void parseCgi(std::vector<std::string> &, size_t &);
+    void parseSize(std::vector<std::string> &tokens, size_t &i);
+
+    std::vector<std::string> getIndex(void);
+    std::vector<std::string> getAcceptedMethods(void);
+    std::pair<int, std::string> getRedir(void);
+    std::string getRoot(void);
+    std::string getUploadPath(void);
+    bool getDirectoyListing(void);
+    std::string getLocationPath(void);
+    std::map<std::string, std::string> getCgi(void);
+    std::size_t getSize(void);
 };
 
 #endif

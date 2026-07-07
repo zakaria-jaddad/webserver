@@ -39,6 +39,8 @@ Response::~Response(void)
         if (this->cgi_out_pipe[i] >= 0)
             close(this->cgi_out_pipe[i]);
     }
+    if (this->_pageFd != -1)
+        close(this->_pageFd);
 }
 
 HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)

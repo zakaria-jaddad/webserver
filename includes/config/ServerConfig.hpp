@@ -24,6 +24,7 @@ class ServerConfig {
     std::vector<LocationConfig> location; // don't forget to make it private
     ServerConfig();
 
+    std::size_t checkSize(std::string &);
     void buildServerParsers(void);
     void init_error_pages(void);
 

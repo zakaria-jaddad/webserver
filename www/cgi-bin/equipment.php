@@ -31,17 +31,22 @@ $files = listFiles($root);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Equipment Room | Kessoku SERVER</title>
+    <link
+      rel="icon"
+      type="image/jpeg"
+      href="../sites/resources/bocchi_icon.jpg"
+    />
   <style>
     /* --- DESIGN SYSTEM TOKENS --- */
     :root {
-      --pink-bocchi: #ffb1cb;
-      --blue-kita: #82e3f5;
-      --yellow-nijika: #fff176;
-      --purple-ryo: #b39ddb;
-      --dark-punk: #121212;
-      --white-paper: #f7eed3;
-      --neon-magenta: #ff007f;
-      --tan-cardboard: #f7eed3;
+            --pink-bocchi: #ffb1cb;
+            --blue-kita: #82e3f5;
+            --yellow-nijika: #fff176;
+            --purple-ryo: #b39ddb;
+            --dark-punk: #121212;
+            --white-paper: #f4f4f4;
+            --neon-magenta: #ff007f;
+            --tan-cardboard: #f7eed3;
     }
 
     * {
@@ -266,10 +271,9 @@ $files = listFiles($root);
         <nav class="zine-nav" aria-label="Main Navigation">
             <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
             <a href="../sites/song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
-            <a href="#backstage" class="nav-sticker tape-purple">🎛 Backstage</a>
-            <a href="../cgi-bin/equipment.php" class="nav-sticker tape-blue">📦 Equipment</a>
-            <a href="#cafe" class="nav-sticker tape-white">🍪 Café</a>
-            <a href="#venue" class="nav-sticker tape-magenta">🚪 Venue</a>
+            <a href="backstage.py" class="nav-sticker tape-purple">🎛 Backstage</a>
+            <a href="equipment.php" class="nav-sticker tape-blue">📦 Equipment</a>
+            <a href="session.py" class="nav-sticker tape-white">🍪 Café</a>
             <a href="../sites/About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
         </nav>
 

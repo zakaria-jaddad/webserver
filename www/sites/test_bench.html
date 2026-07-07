@@ -1,322 +1,413 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STARRY Test Bench // NODE_01</title>
-  <style>
-    /* --- DESIGN SYSTEM TOKENS --- */
-    :root {
-      --pink-bocchi: #ffb1cb;
-      --blue-kita: #82e3f5;
-      --yellow-nijika: #fff176;
-      --purple-ryo: #b39ddb;
-      --dark-punk: #090909;
-      --white-paper: #f7eed3;
-      --neon-magenta: #ff007f;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Courier New', Courier, monospace;
-    }
-
-    body {
-      background-color: var(--dark-punk);
-      background-image: radial-gradient(rgba(255,255,255,0.07) 15%, transparent 15%);
-      background-size: 12px 12px;
-      color: var(--white-paper);
-      padding: 2rem 1rem;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* --- LABORATORY HEADER SECTION --- */
-    .bench-header {
-      max-width: 1300px;
-      margin: 2rem auto 0 auto;
-      background: var(--white-paper);
-      color: var(--dark-punk);
-      border: 4px solid var(--dark-punk);
-      padding: 2rem;
-      box-shadow: 10px 10px 0px var(--neon-magenta);
-      transform: rotate(-0.5deg);
-      position: relative;
-    }
-
-    .bench-header h1 {
-      font-size: 2.5rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      line-height: 0.9;
-    }
-
-    .bench-header h1 span {
-      background: var(--dark-punk);
-      color: var(--yellow-nijika);
-      padding: 2px 8px;
-      display: inline-block;
-      margin-top: 4px;
-    }
-
-    .bench-intro {
-      font-size: 0.95rem;
-      font-weight: bold;
-      margin-top: 1rem;
-      color: #333;
-      line-height: 1.4;
-      border-left: 5px solid var(--purple-ryo);
-      padding-left: 10px;
-    }
-
-    .system-status-ribbon {
-      position: absolute;
-      top: -15px;
-      left: 20px;
-      background: var(--dark-punk);
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: bold;
-      padding: 4px 12px;
-      border: 2px dashed var(--blue-kita);
-    }
-
-    /* --- FIXED ZINE NAVIGATION (STICKER TAPE) --- */
-    .zine-nav {
-      position: fixed;
-      top: 15%;
-      right: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      z-index: 100;
-      transform: rotate(2deg);
-    }
-
-    @media (max-width: 1024px) {
-      .zine-nav {
-        position: static;
-        transform: none;
-        padding: 1rem 0;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        display: grid;
-        max-width: 1300px;
-        margin: 1rem auto;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>STARRY Test Bench // NODE_01</title>
+    <link rel="icon" type="image/jpeg" href="./resources/bocchi_icon.jpg" />
+    <style>
+      /* --- DESIGN SYSTEM TOKENS --- */
+      :root {
+        --pink-bocchi: #ffb1cb;
+        --blue-kita: #82e3f5;
+        --yellow-nijika: #fff176;
+        --purple-ryo: #b39ddb;
+        --dark-punk: #090909;
+        --white-paper: #f7eed3;
+        --neon-magenta: #ff007f;
       }
-    }
 
-    .nav-sticker {
-      color: var(--dark-punk);
-      font-weight: 900;
-      text-decoration: none;
-      padding: 0.6rem 1.2rem;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      border: 2px solid var(--dark-punk);
-      transition: transform 0.15s steps(2), box-shadow 0.15s steps(2);
-      box-shadow: 4px 4px 0px var(--dark-punk);
-    }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Courier New", Courier, monospace;
+      }
 
-    .tape-pink { background-color: var(--pink-bocchi); transform: rotate(-3deg); }
-    .tape-yellow { background-color: var(--yellow-nijika); transform: rotate(2deg); }
-    .tape-purple { background-color: var(--purple-ryo); transform: rotate(-1deg); }
-    .tape-blue { background-color: var(--blue-kita); transform: rotate(4deg); }
-    .tape-white { background-color: var(--white-paper); transform: rotate(-2deg); }
-    .tape-magenta { background-color: var(--neon-magenta); color: white; transform: rotate(1deg); }
-    .tape-dark { background-color: var(--dark-punk); color: var(--yellow-nijika); transform: rotate(-4deg); }
-    
-    .nav-sticker:hover {
-      transform: scale(1.05) rotate(0deg);
-      box-shadow: 6px 6px 0px var(--neon-magenta);
-    }
+      body {
+        background-color: var(--dark-punk);
+        background-image: radial-gradient(
+          rgba(255, 255, 255, 0.07) 15%,
+          transparent 15%
+        );
+        background-size: 12px 12px;
+        color: var(--white-paper);
+        padding: 2rem 1rem;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
 
-    /* --- DASHBOARD MAIN HUB STRUCTURE --- */
-    .dashboard-grid {
-      padding: 3rem 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2.5rem;
-      max-width: 1300px;
-      margin: 0 auto;
-    }
+      /* --- LABORATORY HEADER SECTION --- */
+      .bench-header {
+        max-width: 1300px;
+        margin: 2rem auto 0 auto;
+        background: var(--white-paper);
+        color: var(--dark-punk);
+        border: 4px solid var(--dark-punk);
+        padding: 2rem;
+        box-shadow: 10px 10px 0px var(--neon-magenta);
+        transform: rotate(-0.5deg);
+        position: relative;
+      }
 
-    /* Base Punk Zine Card Panel */
-    .dashboard-card {
-      background-color: var(--white-paper);
-      color: var(--dark-punk);
-      border: 4px solid var(--dark-punk);
-      padding: 2.5rem 1.5rem 1.5rem 1.5rem;
-      position: relative;
-      box-shadow: 10px 10px 0px var(--dark-punk);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 320px;
-      transition: transform 0.1s steps(1);
-    }
+      .bench-header h1 {
+        font-size: 2.5rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        line-height: 0.9;
+      }
 
-    .dashboard-card h2 {
-      font-size: 1.6rem;
-      text-transform: uppercase;
-      margin-top: 0.5rem;
-      margin-bottom: 0.8rem;
-      letter-spacing: -1px;
-      border-bottom: 3px dashed rgba(9,9,9,0.2);
-      padding-bottom: 4px;
-    }
+      .bench-header h1 span {
+        background: var(--dark-punk);
+        color: var(--yellow-nijika);
+        padding: 2px 8px;
+        display: inline-block;
+        margin-top: 4px;
+      }
 
-    .card-desc {
-      font-size: 0.85rem;
-      line-height: 1.4;
-      color: #333;
-      margin-bottom: 1.5rem;
-      font-weight: bold;
-    }
+      .bench-intro {
+        font-size: 0.95rem;
+        font-weight: bold;
+        margin-top: 1rem;
+        color: #333;
+        line-height: 1.4;
+        border-left: 5px solid var(--purple-ryo);
+        padding-left: 10px;
+      }
 
-    /* Asymmetric Variations */
-    .alt-tilt { transform: rotate(-1.5deg); box-shadow: 10px 10px 0px var(--purple-ryo); }
-    .alt-tilt-2 { transform: rotate(1.2deg); box-shadow: 10px 10px 0px var(--blue-kita); }
-    .alt-tilt-3 { transform: rotate(-1deg); box-shadow: 10px 10px 0px var(--pink-bocchi); }
+      .system-status-ribbon {
+        position: absolute;
+        top: -15px;
+        left: 20px;
+        background: var(--dark-punk);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: bold;
+        padding: 4px 12px;
+        border: 2px dashed var(--blue-kita);
+      }
 
-    /* Absolute Corner Tag Elements */
-    .card-tag {
-      position: absolute;
-      top: -14px;
-      left: 15px;
-      background-color: var(--dark-punk);
-      color: var(--white-paper);
-      font-size: 0.75rem;
-      font-weight: 900;
-      padding: 4px 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border: 2px solid var(--dark-punk);
-    }
-    .tag-magenta { background-color: var(--neon-magenta); color: #fff; }
-    .tag-yellow { background-color: var(--yellow-nijika); color: var(--dark-punk); }
-    .tag-blue { background-color: var(--blue-kita); color: var(--dark-punk); }
-    .tag-purple { background-color: var(--purple-ryo); color: #fff; }
+      /* --- FIXED ZINE NAVIGATION (STICKER TAPE) --- */
+      .zine-nav {
+        position: fixed;
+        top: 15%;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        z-index: 100;
+        transform: rotate(2deg);
+      }
+      @media (max-width: 768px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+        }
+      }
 
-    /* Links Styled as Cutout Ticket Headers */
-    .test-links {
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
+      @media (max-width: 1024px) {
+        .zine-nav {
+          position: static;
+          transform: none;
+          padding: 1rem 0;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          display: grid;
+          max-width: 1300px;
+          margin: 1rem auto;
+        }
+      }
 
-    .zine-link {
-      display: block;
-      padding: 10px;
-      background-color: #fff;
-      border: 3px solid var(--dark-punk);
-      text-decoration: none;
-      color: var(--dark-punk);
-      font-weight: 900;
-      font-size: 0.85rem;
-      box-shadow: 3px 3px 0px rgba(0,0,0,0.1);
-      transition: all 0.1s steps(2);
-    }
+      .nav-sticker {
+        color: var(--dark-punk);
+        font-weight: 900;
+        text-decoration: none;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        border: 2px solid var(--dark-punk);
+        transition:
+          transform 0.15s steps(2),
+          box-shadow 0.15s steps(2);
+        box-shadow: 4px 4px 0px var(--dark-punk);
+      }
 
-    .zine-link:hover {
-      background-color: var(--pink-bocchi);
-      transform: translate(-4px, -4px);
-      box-shadow: 6px 6px 0px var(--dark-punk);
-    }
+      .tape-pink {
+        background-color: var(--pink-bocchi);
+        transform: rotate(-3deg);
+      }
+      .tape-yellow {
+        background-color: var(--yellow-nijika);
+        transform: rotate(2deg);
+      }
+      .tape-purple {
+        background-color: var(--purple-ryo);
+        transform: rotate(-1deg);
+      }
+      .tape-blue {
+        background-color: var(--blue-kita);
+        transform: rotate(4deg);
+      }
+      .tape-white {
+        background-color: var(--white-paper);
+        transform: rotate(-2deg);
+      }
+      .tape-magenta {
+        background-color: var(--neon-magenta);
+        color: white;
+        transform: rotate(1deg);
+      }
+      .tape-dark {
+        background-color: var(--dark-punk);
+        color: var(--yellow-nijika);
+        transform: rotate(-4deg);
+      }
 
-    /* Protocol Specific Hover Indicators */
-    .zine-link.py-accent:hover { background-color: var(--blue-kita); }
-    .zine-link.php-accent:hover { background-color: var(--purple-ryo); }
-    .zine-link.del-accent:hover { background-color: #ff4444; color: #fff; }
+      .nav-sticker:hover {
+        transform: scale(1.05) rotate(0deg);
+        box-shadow: 6px 6px 0px var(--neon-magenta);
+      }
 
-    /* --- WIDGET ACCENT FOOTER --- */
-    .bench-footer {
-      max-width: 1300px;
-      margin: 0 auto 3rem auto;
-      text-align: center;
-      font-size: 0.75rem;
-      color: #666;
-      font-weight: bold;
-      border-top: 2px dashed #333;
-      padding-top: 1.5rem;
-    }
-  </style>
-</head>
-<body>
+      /* --- DASHBOARD MAIN HUB STRUCTURE --- */
+      .dashboard-grid {
+        padding: 3rem 0;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem;
+        max-width: 1300px;
+        margin: 0 auto;
+      }
 
-  <nav class="zine-nav" aria-label="Main Navigation">
-    <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
-    <a href="song_request.html" class="nav-sticker tape-yellow">📝 Song Requests</a>
-    <a href="../cgi-bin/backstage.py" class="nav-sticker tape-purple">🎛 Backstage</a>
-    <a href="../cgi-bin/equipment.py" class="nav-sticker tape-blue">📦 Equipment</a>
-    <a href="../cgi-bin/session_validator.py" class="nav-sticker tape-white">🍪 Café</a>
-    <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
-  </nav>
 
-  <header class="bench-header">
-    <div class="system-status-ribbon">ENGINE_MODE: DISPATCH_TEST_BENCH</div>
-    <h1>POTATO LAB // <span>ROUTING MATRIX</span></h1>
-    <p class="bench-intro">
-      Welcome to the hardware evaluation bay. Below are the grouped access points to verify raw C++98 socket interactions, payload limitations, and script boundaries running under the STARRY main stage.
-    </p>
-  </header>
+      /* Base Punk Zine Card Panel */
+      .dashboard-card {
+        background-color: var(--white-paper);
+        color: var(--dark-punk);
+        border: 4px solid var(--dark-punk);
+        padding: 2.5rem 1.5rem 1.5rem 1.5rem;
+        position: relative;
+        box-shadow: 10px 10px 0px var(--dark-punk);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 320px;
+        transition: transform 0.1s steps(1);
+      }
 
-  <main class="dashboard-grid">
-    
-    <section id="practice-room" class="dashboard-card alt-tilt-3">
-      <div class="card-tag tag-blue">METHOD: GET</div>
-      <h2>🎸 Static Assets</h2>
-      <p class="card-desc">
-        Evaluate how our C++ engine maps standard directory routes to flat files without leaking connection objects.
+      .dashboard-card h2 {
+        font-size: 1.6rem;
+        text-transform: uppercase;
+        margin-top: 0.5rem;
+        margin-bottom: 0.8rem;
+        letter-spacing: -1px;
+        border-bottom: 3px dashed rgba(9, 9, 9, 0.2);
+        padding-bottom: 4px;
+      }
+
+      .card-desc {
+        font-size: 0.85rem;
+        line-height: 1.4;
+        color: #333;
+        margin-bottom: 1.5rem;
+        font-weight: bold;
+      }
+
+      /* Asymmetric Variations */
+      .alt-tilt {
+        transform: rotate(-1.5deg);
+        box-shadow: 10px 10px 0px var(--purple-ryo);
+      }
+      .alt-tilt-2 {
+        transform: rotate(1.2deg);
+        box-shadow: 10px 10px 0px var(--blue-kita);
+      }
+      .alt-tilt-3 {
+        transform: rotate(-1deg);
+        box-shadow: 10px 10px 0px var(--pink-bocchi);
+      }
+
+      /* Absolute Corner Tag Elements */
+      .card-tag {
+        position: absolute;
+        top: -14px;
+        left: 15px;
+        background-color: var(--dark-punk);
+        color: var(--white-paper);
+        font-size: 0.75rem;
+        font-weight: 900;
+        padding: 4px 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 2px solid var(--dark-punk);
+      }
+      .tag-magenta {
+        background-color: var(--neon-magenta);
+        color: #fff;
+      }
+      .tag-yellow {
+        background-color: var(--yellow-nijika);
+        color: var(--dark-punk);
+      }
+      .tag-blue {
+        background-color: var(--blue-kita);
+        color: var(--dark-punk);
+      }
+      .tag-purple {
+        background-color: var(--purple-ryo);
+        color: #fff;
+      }
+
+      /* Links Styled as Cutout Ticket Headers */
+      .test-links {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .zine-link {
+        display: block;
+        padding: 10px;
+        background-color: #fff;
+        border: 3px solid var(--dark-punk);
+        text-decoration: none;
+        color: var(--dark-punk);
+        font-weight: 900;
+        font-size: 0.85rem;
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.1);
+        transition: all 0.1s steps(2);
+      }
+
+      .zine-link:hover {
+        background-color: var(--pink-bocchi);
+        transform: translate(-4px, -4px);
+        box-shadow: 6px 6px 0px var(--dark-punk);
+      }
+
+      /* Protocol Specific Hover Indicators */
+      .zine-link.py-accent:hover {
+        background-color: var(--blue-kita);
+      }
+      .zine-link.php-accent:hover {
+        background-color: var(--purple-ryo);
+      }
+      .zine-link.del-accent:hover {
+        background-color: #ff4444;
+        color: #fff;
+      }
+
+      /* --- WIDGET ACCENT FOOTER --- */
+      .bench-footer {
+        max-width: 1300px;
+        margin: 0 auto 3rem auto;
+        text-align: center;
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: bold;
+        border-top: 2px dashed #333;
+        padding-top: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="zine-nav" aria-label="Main Navigation">
+      <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
+      <a href="song_request.html" class="nav-sticker tape-yellow"
+        >📝 Song Requests</a
+      >
+      <a href="../cgi-bin/backstage.py" class="nav-sticker tape-purple"
+        >🎛 Backstage</a
+      >
+      <a href="../cgi-bin/equipment.php" class="nav-sticker tape-blue"
+        >📦 Equipment</a
+      >
+      <a href="../cgi-bin/session_validator.py" class="nav-sticker tape-white"
+        >🍪 Café</a
+      >
+      <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
+    </nav>
+
+    <header class="bench-header">
+      <div class="system-status-ribbon">ENGINE_MODE: DISPATCH_TEST_BENCH</div>
+      <h1>POTATO LAB // <span>ROUTING MATRIX</span></h1>
+      <p class="bench-intro">
+        Welcome to the hardware evaluation bay. Below are the grouped access
+        points to verify raw C++98 socket interactions, payload limitations, and
+        script boundaries running under the STARRY main stage.
       </p>
-      <div class="test-links">
-        <a href="/index.html" class="zine-link">📁 Root Index Layout</a>
-        <a href="/pages/404.html" class="zine-link">📍 Custom 404 Error Page</a>
-        <a href="/pages/500.html" class="zine-link">💥 Custom 500 Error Page</a>
-      </div>
-    </section>
+    </header>
 
-    <section id="song-requests" class="dashboard-card alt-tilt">
-      <div class="card-tag tag-magenta">METHOD: POST</div>
-      <h2>📝 Input Payloads</h2>
-      <p class="card-desc">
-        Stress-test byte parsers using url-encoded string blocks or segmented multi-part form parameters.
-      </p>
-      <div class="test-links">
-        <a href="song_request.html" class="zine-link">✏️ Standard Request Form</a>
-        <a href="/requests/multipart.html" class="zine-link">📎 Binary Form-Data Splitter</a>
-      </div>
-    </section>
+    <main class="dashboard-grid">
+      <section id="practice-room" class="dashboard-card alt-tilt-3">
+        <div class="card-tag tag-blue">METHOD: GET</div>
+        <h2>🎸 Static Assets</h2>
+        <p class="card-desc">
+          Evaluate how our C++ engine maps standard directory routes to static
+          files.
+        </p>
+        <div class="test-links">
+          <a href="/index.html" class="zine-link">📁 Root Index Layout</a>
+          <a href="../pages/404.html" class="zine-link"
+            >📍 Custom 404 Error Page</a
+          >
+          <a href="../pages/500.html" class="zine-link"
+            >💥 Custom 500 Error Page</a
+          >
+          <a href="../cgi-bin/backstage.py" class="zine-link"
+            >💥 All Error Pages</a
+          >
+        </div>
+      </section>
 
-    <section id="backstage" class="dashboard-card">
-      <div class="card-tag tag-yellow">EXECUTION: CGI</div>
-      <h2>🎛 Backstage Pipes</h2>
-      <p class="card-desc">
-        Verify system pipe redirection and child-process spawning parameters using environmental trackers.
-      </p>
-      <div class="test-links">
-        <a href="../cgi-bin/backstage.py" class="zine-link py-accent">🐍 Python Error Mixer</a>
-        <a href="../cgi-bin/session_validator.py" class="zine-link php-accent">🍪 State Cookie Tracker</a>
-      </div>
-    </section>
+      <section id="backstage" class="dashboard-card">
+        <div class="card-tag tag-yellow">EXECUTION: CGI</div>
+        <h2>🎛 Backstage Pipes</h2>
+        <p class="card-desc">
+          Verify system pipe redirection and child-process spawning parameters
+          using environmental trackers.
+        </p>
+        <div class="test-links">
+          <a href="../cgi-bin/backstage.py" class="zine-link py-accent"
+            >🐍 Python Error Mixer</a
+          >
+          <a href="../cgi-bin/session.py" class="zine-link php-accent"
+            >🍪 State Cookie Tracker</a
+          >
+          <a href="../cgi-bin/equipment.php" class="zine-link php-accent"
+            >🍪 Deleting Files</a
+          >
+        </div>
+      </section>
 
-    <section id="equipment-room" class="dashboard-card alt-tilt-2">
-      <div class="card-tag tag-purple">METHOD: DELETE</div>
-      <h2>📦 Storage Cleanup</h2>
-      <p class="card-desc">
-        Perform physical file evictions. Test system response when targeting actual data footprints on disk.
-      </p>
-      <div class="test-links">
-        <a href="../cgi-bin/equipment.py" class="zine-link del-accent">🗑️ Tape Shredder Console</a>
-      </div>
-    </section>
+      <section id="song-requests" class="dashboard-card alt-tilt">
+        <div class="card-tag tag-magenta">METHOD: POST</div>
+        <h2>📝 Input Payloads</h2>
+        <p class="card-desc">
+          Stress-test byte parsers using url-encoded string blocks or segmented
+          multi-part form parameters.
+        </p>
+        <div class="test-links">
+          <a href="song_request.html" class="zine-link">✏️ Request Form</a>
+        </div>
+      </section>
 
-  </main>
+      <section id="equipment-room" class="dashboard-card alt-tilt-2">
+        <div class="card-tag tag-purple">METHOD: DELETE</div>
+        <h2>📦 Storage Cleanup</h2>
+        <p class="card-desc">
+          Perform physical file evictions. Test system response when targeting
+          actual data footprints on disk.
+        </p>
+        <div class="test-links">
+          <a href="../cgi-bin/equipment.php" class="zine-link del-accent"
+            >🗑️ Tape Shredder Console</a
+          >
+        </div>
+      </section>
+    </main>
 
-  <footer class="bench-footer">
-    [POLL_DRIVEN_EVENT_LOOP] // MAX_CLIENTS: 1024 // STARRY STORAGE DECK INTERACTION TERMINAL
-  </footer>
-
-</body>
+    <footer class="bench-footer">
+      [POLL_DRIVEN_EVENT_LOOP] // MAX_CLIENTS: 1024 // STARRY STORAGE DECK
+      INTERACTION TERMINAL
+    </footer>
+  </body>
 </html>
+

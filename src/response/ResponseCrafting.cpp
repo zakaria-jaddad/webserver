@@ -1,5 +1,6 @@
 #include "../../includes/response/Response.hpp"
 #include <ostream>
+#include <stdexcept>
 #include <sys/stat.h>
 
 // std::string Response::craftHeaderStatus(std::string &header)
@@ -288,14 +289,19 @@ void printRaw(const std::string str)
 
 ssize_t Response::sendResponse(const char *resp, size_t size)
 {
-    ssize_t bytes_sent = send(client->fd, resp, size, 0);
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
-        return -2;
+    if (size == 0)
+        return 0;
 
-    if (bytes_sent >= 0) // check later this function's errors should be taken into consideration
-        return bytes_sent;
+    ssize_t bytes_sent = send(client->fd, resp, size, MSG_NOSIGNAL);
 
-    std::cerr << "failed to send" << std::endl;
-    this->error = 1;
-    return -1;
+    if (bytes_sent == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return -2;
+
+        // std::cerr << "failed to send" << std::endl;
+        this->error = 1;
+        throw std::runtime_error("Failed to send response: client closed the connection");
+    }
+
+    return bytes_sent;
 }

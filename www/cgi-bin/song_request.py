@@ -80,6 +80,11 @@ print(f"""<!doctype html>
 <head>
     <meta charset="utf-8">
     <title>Accepted Request | Kessoku SERVER</title>
+    <link
+      rel="icon"
+      type="image/jpeg"
+      href="../sites/resources/bocchi_icon.jpg"
+    />
     <style>
         :root {{
             --pink-bocchi: #ffb1cb;
