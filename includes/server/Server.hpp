@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstring>
-#include <deque>
+#include <list>
 #include <fcntl.h>
 #include <iostream>
 #include <map>
@@ -69,7 +69,7 @@ class Server {
 
     // std::vector<int> clientFds;
     // std::map<int, HttpParser *> clientFds;
-    std::deque<t_client> clients;
+    std::list<t_client> clients;
 
   public:
     Server(std::string &file);
@@ -88,9 +88,9 @@ class Server {
     void printInfo() const
     {
         std::cout << "========== Server Info ==========" << std::endl;
-        std::cout << "epoll_fd: " << this->epoll_fd << endl;
+        std::cout << "epoll_fd: " << this->epoll_fd << std::endl;
         std::cout << "clients: " << std::endl;
-        for (std::deque<t_client>::const_iterator it = this->clients.begin();
+        for (std::list<t_client>::const_iterator it = this->clients.begin();
              it != this->clients.end(); it++) {
             std::cout << "t_client fd: " << it->fd << std::endl;
             std::cout << "t_client config address : " << it->config << std::endl;

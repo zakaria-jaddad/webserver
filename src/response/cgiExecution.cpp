@@ -27,9 +27,9 @@ void Response::sendingCgiResponse()
 
 HttpParser::httpResult Response::cgiExecution()
 {
-    if (this->cgi_in_pipe[0] == -1 && pipe(this->cgi_in_pipe) == -1)
+    if (this->cgi_in_pipe[0] == -1 && pipe2(this->cgi_in_pipe, O_CLOEXEC) == -1)
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-    if (this->cgi_out_pipe[0] == -1 && pipe(this->cgi_out_pipe) == -1)
+    if (this->cgi_out_pipe[0] == -1 && pipe2(this->cgi_out_pipe, O_CLOEXEC) == -1)
         return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
 
     if (!cgi) {

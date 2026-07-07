@@ -45,6 +45,10 @@ Response::~Response(void)
 
 HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
 {
+    if (client->request == NULL) {
+        std::cerr << "Response::routeMethod: client request is NULL" << std::endl;
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+    }
     const std::string &uri = client->request->getRequestUriPath();
 
     if (isCgi(uri, conf.getCgi())) {
@@ -110,6 +114,10 @@ HttpParser::httpResult Response::checkMethod(void)
             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
         }
         return HttpParser::HTTP_RES_OK;
+    }
+    if (client->request == NULL) {
+        std::cerr << "Response::checkMethod: client request is NULL" << std::endl;
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
     HttpParser::requestType req_method = client->request->getRequestType();
     std::vector<std::string> allowed_methods = conf.getAcceptedMethods();

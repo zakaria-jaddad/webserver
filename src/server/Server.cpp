@@ -245,6 +245,11 @@ int Server::checkServerFd(epoll_event *events, int i)
                 close(clientSocket);
                 break;
             }
+            if (fcntl(clientSocket, F_SETFD, FD_CLOEXEC) == -1) {
+                std::cerr << "failed to set close-on-exec" << std::endl;
+                close(clientSocket);
+                break;
+            }
 
             int sndbuf = 256 * 1024;
             if (setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1) {
@@ -328,13 +333,13 @@ int Server::checkClientFd(epoll_event *events, int i)
     char req[READ_BYTES] = {0};
     int b;
 
-    for (std::deque<t_client>::iterator it = this->clients.begin(); it != this->clients.end();) {
+    for (std::list<t_client>::iterator it = this->clients.begin(); it != this->clients.end();) {
 
         if (events[i].data.fd == it->fd) {
 
             clientSocket = it->fd;
             try {
-                if (events[i].events == EPOLLIN) {
+                if (events[i].events & EPOLLIN) {
 
                     b = recv(clientSocket, req, sizeof(req) - 1, 0);
                     if (b <= 0) {
@@ -365,7 +370,7 @@ int Server::checkClientFd(epoll_event *events, int i)
                         switchEpollMode(clientSocket, EPOLLOUT);
                     }
                 }
-                else if (events[i].events == EPOLLOUT) {
+                else if (events[i].events & EPOLLOUT) {
                     // Process as many complete pipelined requests as possible in one
                     // EPOLLOUT wake-up before yielding back to epoll.
                     while (true) {
@@ -453,6 +458,9 @@ int Server::checkClientFd(epoll_event *events, int i)
             }
             catch (const std::runtime_error &e) {
                 std::cerr << "Exception : " << e.what() << std::endl;
+                closeSocket(&(*it));
+                clients.erase(it);
+                return 1;
             }
             break;
         }
@@ -475,7 +483,7 @@ int Server::startServer()
         return EXIT_FAILURE;
     }
 
-    epoll_fd = epoll_create1(0);
+    epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd == -1) {
         std::cerr << "Fatal: epoll_create1() Failed!" << std::endl;
         return EXIT_FAILURE;
@@ -499,7 +507,7 @@ int Server::startServer()
             return EXIT_FAILURE;
         }
         if (event_count == 0) {
-            for (std::deque<t_client>::iterator it = this->clients.begin();
+            for (std::list<t_client>::iterator it = this->clients.begin();
                  it != this->clients.end();) {
                 int isTimeout = checkClientTimeout(&(*it));
                 if (isTimeout) {

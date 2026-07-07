@@ -8,3 +8,13 @@
 
 - server_with_config fixture
     - Same lifecycle, but writes a temporary config file and starts the server with that config instead.
+
+- test_bulletproof.py
+    - Extra stress and edge-case coverage: concurrent CGI, upload integrity,
+      path traversal, malformed input, virtual hosts, chunked uploads, custom
+      error pages, and resilience checks.
+
+- manual_stress_test.sh
+    - Standalone curl/telnet script that exercises every mandatory subject and
+      evaluation requirement. Run it while the server is already started with
+      `./ft_webserver conf/test.conf &`.
