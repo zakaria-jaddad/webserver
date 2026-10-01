@@ -77,6 +77,7 @@ void Cgi::executor(void)
 
             execve(cgiPath.c_str(), const_cast<char *const *>(argv), env);
             perror("execve");
+            _exit(1);
         }
         else {
             close(in_fds[0]);

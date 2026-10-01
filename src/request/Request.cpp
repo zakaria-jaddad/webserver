@@ -847,12 +847,17 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
             return HTTP_RES_BAD_REQUEST;
         }
 
-        size_t contentLengthValue = std::atol(contentLength[0].c_str());
+        const std::string &rawContentLength = contentLength[0];
+        // Content-Length must be a non-negative decimal number: reject any
+        // value that is empty or contains a non-digit character.
+        for (std::string::size_type i = 0; i < rawContentLength.size(); i++) {
+            if (rawContentLength[i] < '0' || rawContentLength[i] > '9')
+                return HTTP_RES_BAD_REQUEST;
+        }
+
+        size_t contentLengthValue = std::atol(rawContentLength.c_str());
 
         this->_type = CONTENT_LENGTH;
-        /*if (contentLengthValue < 0) {
-            return HTTP_RES_LENGTH_REQUIRED;
-        }*/
         if (contentLengthValue == 0) {
 
             this->_state = BODY_COMPLETE; /* Since Body is 0 Nothing to read */

@@ -272,6 +272,7 @@ int Server::checkServerFd(epoll_event *events, int i)
             client.connection_time = now;
             client.last_activity = now;
             client.writeOffset = 0;
+            client.abortReading = 0;
             client.ip = ipstr;
             clients.push_back(client);
             break;
@@ -290,6 +291,7 @@ void Server::resetSocket(t_client *client)
     // Save previous Data since connection is always open
     client->request->setPendingData(pendingData);
     client->response = NULL;
+    client->abortReading = 0;
 }
 
 void Server::closeSocket(t_client *client)
@@ -356,6 +358,21 @@ int Server::checkClientFd(epoll_event *events, int i)
 
                     it->last_activity = time(NULL);
 
+                    // The request was already rejected (e.g. 413) and we are
+                    // waiting for the client to finish sending its body so the
+                    // error response can be delivered cleanly. Discard the rest
+                    // of the incoming data instead of parsing it. Keep draining
+                    // (without re-arming epoll) until a short read indicates the
+                    // client has stopped sending, then deliver the response.
+                    if (it->abortReading) {
+                        if (b < (int)sizeof(req) - 1) {
+                            switchEpollMode(clientSocket, EPOLLOUT);
+                            break;
+                        }
+                        // data discarded; wait for the next EPOLLIN event
+                        break;
+                    }
+
                     req[b] = 0;
                     std::string rawData(req, b);
 
@@ -366,6 +383,14 @@ int Server::checkClientFd(epoll_event *events, int i)
                     if (it->req_res != HttpParser::HTTP_RES_OK) {
                         if (it->config == NULL)
                             it->config = it->server[0];
+                        if (it->req_res == HttpParser::HTTP_RES_REQUEST_ENTITY_TOO_LARGE) {
+                            // Do not attempt to respond while the client is still
+                            // sending the oversized body; keep draining the socket
+                            // until the full body has been received, then let the
+                            // EPOLLOUT handler deliver the 413.
+                            it->abortReading = 1;
+                            break;
+                        }
                         switchEpollMode(clientSocket, EPOLLOUT);
                     }
                     else if (it->request->isComplete()) {
@@ -387,6 +412,12 @@ int Server::checkClientFd(epoll_event *events, int i)
                         if (it->req_res != HttpParser::HTTP_RES_OK) {
                             int serv_res = it->response->servePages(it->req_res, 1);
                             if (serv_res) {
+                                // sendResponse() returns -2 while the client is
+                                // still transmitting its body (abortReading): the
+                                // response is deferred, wait for the next write
+                                // readiness instead of busy-looping.
+                                if (it->abortReading)
+                                    break;
                                 std::cout << RED << "Connection Error, closing connection ..."
                                           << WHITE << std::endl;
                                 continue;

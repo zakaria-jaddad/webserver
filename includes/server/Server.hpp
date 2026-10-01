@@ -38,6 +38,12 @@ struct t_client {
     ssize_t writeOffset;
     std::string outBuffer;
 
+    // Set when the request was rejected (e.g. 413) while the client is still
+    // transmitting the body. Remaining body bytes are drained and discarded
+    // instead of being fed to the parser, so the raw incoming data never
+    // overflows the socket buffer and causes the kernel to send an RST.
+    int abortReading;
+
     ServerConfig *config;
     std::vector<ServerConfig *> server;
 
