@@ -1,130 +1,256 @@
 #include "../../includes/response/Response.hpp"
+#include <ostream>
+#include <stdexcept>
 #include <sys/stat.h>
+
+// std::string Response::craftHeaderStatus(std::string &header)
+//{
+//     std::string line = "HTTP/1.1";
+//
+//     size_t status_pos = header.find("status");
+//
+//     if (status_pos == std::string::npos)
+//         line += " 200 OK\r\n";
+//     else {
+//         size_t line_end = header.find("\r\n", status_pos);
+//         std::string status = header.substr(status_pos + 7, line_end - (status_pos + 7));
+//         line.append(status);
+//         header.erase(status_pos, line.size());
+//     }
+//
+//     return line;
+// }
 
 std::string Response::craftHeaderStatus(std::string &header)
 {
-    std::string line = "HTTP/1.1";
+    const std::string defaultStatus = "HTTP/1.1 200 OK\r\n";
 
-    size_t status_pos = header.find("status");
+    // CGI header names are case-insensitive, but most scripts emit "Status:"
+    size_t statusPos = header.find("Status:");
+    if (statusPos == std::string::npos)
+        return defaultStatus;
 
-    if (status_pos == std::string::npos)
-        line += " 200 OK\r\n";
-    else {
-        size_t line_end = header.find("\r\n", status_pos);
-        std::string status = header.substr(status_pos + 7, line_end - (status_pos + 7));
-        line.append(status);
-        header.erase(status_pos, line.size());
-    }
+    size_t valuePos = statusPos + strlen("Status:");
 
-    return line;
+    // Skip optional whitespace after the colon
+    while (valuePos < header.size() && (header[valuePos] == ' ' || header[valuePos] == '\t'))
+        ++valuePos;
+
+    size_t lineEnd = header.find("\r\n", valuePos);
+    if (lineEnd == std::string::npos)
+        lineEnd = header.size();
+
+    std::string status = header.substr(valuePos, lineEnd - valuePos);
+
+    // Remove the entire Status header, including the trailing CRLF if present
+    if (lineEnd + 2 <= header.size())
+        header.erase(statusPos, lineEnd + 2 - statusPos);
+    else
+        header.erase(statusPos);
+
+    return "HTTP/1.1 " + status + "\r\n";
 }
+
+// void Response::craftHeader(std::string &buff)
+//{
+//     std::string headers = buff;
+//     size_t clrf_pos = buff.find(DOUBLE_CRLF);
+//
+//     if (clrf_pos != std::string::npos) {
+//         headers = buff.substr(0, clrf_pos);
+//         buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
+//
+//         client->outBuffer.append(headers);
+//
+//         std::cout << "+++++++ header to send next ++++++++" << std::endl;
+//         std::cout << head_resp << std::endl;
+//
+//         client->outBuffer.append(CRLF);
+//         this->_phase = BODY;
+//     }
+//     else {
+//         client->outBuffer.append(headers);
+//
+//         std::cout << "+++++++ crlf not found header to send next ++++++++" << std::endl;
+//         std::cout << head_resp << std::endl;
+//
+//         buff.erase();
+//     }
+//
+//     if (this->_phase == BODY) {
+//         std::string line = craftHeaderStatus(headers);
+//         client->outBuffer.insert(0, line);
+//         client->outBuffer.append("Transfer-Encoding: chunked\r\n");
+//         client->outBuffer.append(DOUBLE_CRLF);
+//
+//         std::cout << "+++++++ header to send next ++++++++" << std::endl;
+//         std::cout << client->outBuffer << std::endl;
+//     }
+//
+//     std::cout << "crafted header" << std::endl;
+// }
 
 void Response::craftHeader(std::string &buff)
 {
-    std::string headers = buff;
-    size_t clrf_pos = buff.find(DOUBLE_CRLF);
+    cgiHeaderBuffer += buff;
 
-    if (clrf_pos != std::string::npos) {
-        headers = buff.substr(0, clrf_pos);
-        buff.erase(0, headers.size() + strlen(DOUBLE_CRLF));
+    size_t headerEnd = cgiHeaderBuffer.find(DOUBLE_CRLF);
+    if (headerEnd == std::string::npos)
+        return;
 
-        head_resp.append(headers);
-
-        // std::cout << "+++++++ header to send next ++++++++" << std::endl;
-        // std::cout << head_resp << std::endl;
-
-        head_resp.append(CRLF);
-        this->_phase = BODY;
+    std::string headers = cgiHeaderBuffer.substr(0, headerEnd);
+    if (!headers.empty() && headers.compare(headers.size() - 2, 2, "\r\n") != 0) {
+        headers += "\r\n";
     }
-    else {
-        head_resp.append(headers);
+    cgiHeaderBuffer.erase(0, headerEnd + strlen(DOUBLE_CRLF));
 
-        // std::cout << "+++++++ header to send next ++++++++" << std::endl;
-        // std::cout << head_resp << std::endl;
+    std::string statusLine = craftHeaderStatus(headers);
 
-        buff.erase();
-    }
+    client->outBuffer.clear();
+    client->outBuffer += statusLine;
+    client->outBuffer += headers;
+    client->outBuffer += "Transfer-Encoding: chunked\r\n";
+    if (this->closeConnection)
+        client->outBuffer += "Connection: close\r\n";
+    client->outBuffer += "\r\n";
 
-    if (this->_phase == BODY) {
-        std::string line = craftHeaderStatus(headers);
-        head_resp.insert(0, line);
-        head_resp.append("Transfer-Encoding: chunked\r\n");
-        head_resp.append(DOUBLE_CRLF);
+    // std::cout << GREEN << "===========crafted header===========" << WHITE << std::endl;
+    // std::cout << client->outBuffer << std::endl;
 
-        // std::cout << "+++++++ header to send next ++++++++" << std::endl;
-        // std::cout << head_resp << std::endl;
-    }
-
-    // std::cout << "crafted header" << std::endl;
+    _phase = BODY;
 }
 
-void Response::craftBody(std::string &buff)
+void Response::craftBody(std::string &data, size_t len)
 {
-    resp.append(buff);
-    buff.erase();
+    std::stringstream ss;
+    ss << std::hex << len;
 
-    // std::cout << "crafted body : " << std::endl;
-    // std::cout << resp << std::endl;
+    client->outBuffer += ss.str();
+    client->outBuffer += "\r\n";
+    client->outBuffer.append(data.c_str(), len);
+    client->outBuffer += "\r\n";
+
+    // std::cout << GREEN << "===========crafted body===========" << WHITE << std::endl;
+    // std::cout << client->outBuffer << std::endl;
 }
 
-HttpParser::httpResult Response::craftResponse(void)
+// void Response::craftBody(std::string &buff)
+//{
+//     resp.append(buff);
+//     resp.append(CRLF);
+//     buff.erase();
+//
+//     std::cout << "crafted body : " << std::endl;
+//     std::cout << resp << std::endl;
+// }
+
+HttpParser::httpResult Response::craftResponse()
 {
-    std::cout << "--------------start of crafting response----------------" << std::endl;
+    char buff[READ_BYTES];
 
-    char buff[10];
-    std::string val;
+    ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff));
 
-    while (this->_phase == HEADERS && !this->error) {
-        ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
-
-        if (bytes == 0) {
-            std::cout << "nothing else to read" << std::endl;
-            this->_phase = COMPLETE;
-            break;
-        }
-
-        if (bytes == -1) {
-            perror("read failed");
-            error = true;
-            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-        }
-
-        buff[bytes] = 0;
-
-        val = buff;
-
-        craftHeader(val);
+    if (bytes == -1) {
+        perror("read");
+        error = true;
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
     }
 
-    if (this->_phase == BODY) {
-        if (val.empty()) {
-            ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
-
-            if (bytes == 0) {
-                this->_phase = COMPLETE;
-                return HttpParser::HTTP_RES_OK;
-            }
-
-            if (bytes == -1) {
-                perror("read failed");
-                error = true;
-                return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-            }
-
-            buff[bytes] = 0;
-
-            val = buff;
-        }
-
-        chunk_size = val.length();
-
-        craftBody(val);
+    if (bytes == 0) {
+        client->outBuffer.append("0\r\n\r\n");
+        _phase = COMPLETE;
+        return HttpParser::HTTP_RES_OK;
     }
 
-    std::cout << "--------------end of crafting response----------------" << std::endl;
+    if (_phase == HEADERS) {
+        std::string hd(buff, bytes);
+        craftHeader(hd);
+
+        // Header may still be incomplete
+        if (_phase == HEADERS)
+            return HttpParser::HTTP_RES_OK;
+
+        // Header just completed.
+        // cgiHeaderBuffer now contains any body bytes that followed it.
+        if (!cgiHeaderBuffer.empty()) {
+            // std::cout << "Remaining after header:\n";
+            // std::cout.write(cgiHeaderBuffer.data(), cgiHeaderBuffer.size());
+            // std::cout << "\nsize = " << cgiHeaderBuffer.size() << std::endl;
+            chunk_size = cgiHeaderBuffer.size();
+            craftBody(cgiHeaderBuffer, chunk_size);
+            cgiHeaderBuffer.clear();
+        }
+
+        return HttpParser::HTTP_RES_OK;
+    }
+
+    // BODY
+    std::string body(buff, bytes);
+    craftBody(body, bytes);
 
     return HttpParser::HTTP_RES_OK;
 }
+
+// HttpParser::httpResult Response::craftResponse(void)
+//{
+//     std::cout << "--------------start of crafting response----------------" << std::endl;
+//
+//     char buff[READ_BYTES];
+//     std::string val;
+//
+//     while (this->_phase == HEADERS && !this->error) {
+//         ssize_t bytes = read(cgi_out_pipe[0], buff, sizeof(buff) - 1);
+//         std::cout << GREEN << "READING..." << WHITE << std::endl;
+//
+//         if (bytes == 0) {
+//             std::cout << "nothing else to read" << std::endl;
+//             this->_phase = COMPLETE;
+//             break;
+//         }
+//
+//         if (bytes == -1) {
+//             perror("read failed");
+//             error = true;
+//             return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+//         }
+//
+//         buff[bytes] = 0;
+//
+//         val = buff;
+//
+//         craftHeader(val);
+//     }
+//
+//     if (this->_phase == BODY) {
+//         ssize_t bytes;
+//         if (val.empty()) {
+//             bytes = read(cgi_out_pipe[0], buff, READ_BYTES);
+//
+//             if (bytes == 0) {
+//                 this->_phase = COMPLETE;
+//                 return HttpParser::HTTP_RES_OK;
+//             }
+//
+//             if (bytes == -1) {
+//                 perror("read failed");
+//                 error = true;
+//                 return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+//             }
+//
+//             // buff[bytes] = 0;
+//
+//             val.assign(buff, bytes);
+//         }
+//
+//         chunk_size = bytes;
+//
+//         craftBody(val);
+//     }
+//
+//     std::cout << "--------------end of crafting response----------------" << std::endl;
+//
+//     return HttpParser::HTTP_RES_OK;
+// }
 
 void printRaw(const std::string str)
 {
@@ -161,17 +287,21 @@ void printRaw(const std::string str)
     std::cout << std::endl;
 }
 
-int Response::sendResponse(const char *resp)
+ssize_t Response::sendResponse(const char *resp, size_t size)
 {
-    int bytes_sent = send(client->fd, resp, strlen(resp), 0);
-    if (bytes_sent == -1) { // check later this function's errors should be taken into consideration
-        printRaw(resp);
-        struct stat sb;
-        std::cerr << RED << strlen(resp) << client->fd << " " << fstat(client->fd, &sb)
-                  << std::endl;
-        std::cerr << "failed to send" << std::endl;
+    if (size == 0)
+        return 0;
+
+    ssize_t bytes_sent = send(client->fd, resp, size, MSG_NOSIGNAL);
+
+    if (bytes_sent == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return -2;
+
+        // std::cerr << "failed to send" << std::endl;
         this->error = 1;
-        return (-1);
+        throw std::runtime_error("Failed to send response: client closed the connection");
     }
-    return (bytes_sent);
+
+    return bytes_sent;
 }

@@ -1,11 +1,18 @@
 #include "../../includes/request/Request.hpp"
 #include <cstddef>
+#include <ios>
+#include <map>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 /* ===================================================================================== */
 /* ------------------------------ CONSTRUCTOR DESTRUCTOR ------------------------------- */
 /* ===================================================================================== */
 
-HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
+HttpParser::HttpParser(std::vector<ServerConfig *> &servers)
+    : _phase(REQUEST_LINE), _servers(servers), _body()
 {
     this->_requestURI.path = "";
     this->_requestURI.params.clear();
@@ -15,32 +22,9 @@ HttpParser::HttpParser(void) : _phase(REQUEST_LINE), _body()
     this->_requestVersion[0] = 0;
     this->_requestVersion[1] = 0;
     this->_requestType = UNKNOWN;
+
     this->_config = NULL;
-    this->_res = HTTP_RES_OK;
-    this->_requestLineBuffer = "";
-    this->_headerBuffer = "";
-    this->_pendingData = "";
-    this->_mimeToExt["image/png"] = ".png";
-    this->_mimeToExt["image/jpeg"] = ".jpg";
-    this->_mimeToExt["image/gif"] = ".gif";
-    this->_mimeToExt["text/plain"] = ".txt";
-    this->_mimeToExt["text/html"] = ".html";
-    this->_mimeToExt["application/json"] = ".json";
-    this->_mimeToExt["application/pdf"] = ".pdf";
-    this->_mimeToExt["application/octet-stream"] = ".bin";
-}
 
-HttpParser::HttpParser(ServerConfig *ServerConfig) : _phase(REQUEST_LINE), _body()
-{
-    this->_requestURI.path = "";
-    this->_requestURI.params.clear();
-    this->_requestURI.rawURI = "";
-    this->_requestURI.rawParams = "";
-
-    this->_requestVersion[0] = 0;
-    this->_requestVersion[1] = 0;
-    this->_requestType = UNKNOWN;
-    this->_config = ServerConfig;
     this->_res = HTTP_RES_OK;
     this->_requestLineBuffer = "";
     this->_headerBuffer = "";
@@ -62,7 +46,7 @@ HttpParser::requestType HttpParser::getRequestType() const { return this->_reque
 
 const int *HttpParser::getRequestVersion() const { return this->_requestVersion; }
 
-std::map<std::string, std::vector<std::string> > HttpParser::getHeaders() const
+const std::map<std::string, std::vector<std::string> > &HttpParser::getHeaders() const
 {
     return this->_headers;
 }
@@ -90,6 +74,12 @@ HttpParser::getBodyFormFields() const
 
 std::string HttpParser::getPendingData() const { return this->_pendingData; }
 
+std::string HttpParser::getRequestRawBodyFilePath() const { return this->_body.filePath; }
+
+size_t HttpParser::getBodySize() const { return this->_body._bytesReceived; }
+
+std::string HttpParser::getHostHeader() { return this->_headers["Host"][0]; }
+
 /* ---- SETTERS ----*/
 
 void HttpParser::setRes(httpResult res) { this->_res = res; }
@@ -100,6 +90,30 @@ bool HttpParser::isBodyComplete() { return this->_body._state == Body::BODY_COMP
 bool HttpParser::isProcessingBody()
 {
     return this->_phase == HttpParser::BODY && this->_body._state == Body::BODY_PROCESSING;
+}
+
+bool HttpParser::keepAlive() const
+{
+    std::map<std::string, std::vector<std::string> >::const_iterator it;
+    std::string connection;
+
+    it = this->_headers.find("Connection");
+    if (it != this->_headers.end() && !it->second.empty()) {
+        connection = it->second[0];
+        for (size_t i = 0; i < connection.size(); ++i)
+            connection[i] = static_cast<char>(tolower(connection[i]));
+    }
+
+    // HTTP/1.1 defaults to keep-alive; HTTP/1.0 (and unknown) default to close.
+    if (this->_requestVersion[0] == 1 && this->_requestVersion[1] == 1) {
+        if (connection == "close")
+            return false;
+        return true;
+    }
+
+    if (connection == "keep-alive")
+        return true;
+    return false;
 }
 
 /* ===================================================================================== */
@@ -115,7 +129,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
     rawData = this->_pendingData + rawData;
     this->_pendingData.clear();
 
-    /* NOTE: This should be refactor since i don't buffer the requestLine and headers */
     if (this->_phase == REQUEST_LINE) {
 
         this->_requestLineBuffer += rawData;
@@ -136,7 +149,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
         res = _parseRequestLine(requestLine);
 
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING request line, RESULT : " << res << std::endl;
             return res;
         }
 
@@ -162,7 +174,6 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = _generateHeadersMap(headerLines, this->_headers);
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING generate headers, RESULT : " << res << std::endl;
             return res;
         }
         this->_phase = BODY;
@@ -174,19 +185,32 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
             std::cout << "Start Parsing Headers" << std::endl;
             res = _parseRequestHeaderValue();
+
+            // Verify Host Header
+            std::vector<std::string> hostHeader = this->_headers["Host"];
+            if (hostHeader.size() != 1) {
+                return HTTP_RES_BAD_REQUEST;
+            }
             std::cout << "Finished Parsing Headers" << std::endl;
             if (res != HTTP_RES_OK) {
-                std::cout << "FROM HTTP PARSING body header value, RESULT : " << res << std::endl;
                 return res;
+            }
+
+            // yhossni trying some bs
+            if (this->_config == NULL)
+                this->_config = resolveServer(this->_servers, hostHeader[0]);
+
+            ResolvedConfig resolvedConfig(this->getRequestUriPath(), this->_config);
+            if (isMethodAllowed(resolvedConfig.getAcceptedMethods(), this->getRequestType()) ==
+                false) {
+                return HTTP_RES_METHOD_NOT_ALLOWED;
             }
 
             /* If request type other than POST ignore the body */
             if (this->_requestType != POST) {
                 // Save pending Data if pipelined request
-                _savePendingData(rawData);
+                setPendingData(rawData);
                 this->_phase = COMPLETE;
-                std::cout << "FROM HTTP PARSING ignoring body, RESULT : " << HTTP_RES_OK
-                          << std::endl;
                 return HTTP_RES_OK;
             }
 
@@ -195,19 +219,15 @@ HttpParser::httpResult HttpParser::parseHttpRequest(std::string rawData)
 
         res = this->_body.parseRequestBody(rawData);
         if (res != HTTP_RES_OK) {
-            std::cout << "FROM HTTP PARSING request body, RESULT : " << res << std::endl;
             return res;
         }
 
         if (this->_body._state == Body::BODY_COMPLETE) {
             // Body is done save remaining rawData for the next request
-            _savePendingData(rawData);
             this->_phase = COMPLETE;
         }
     }
 
-    std::cout << "FROM HTTP PARSING after finishing everything, RESULT : " << HTTP_RES_OK
-              << std::endl;
     return HTTP_RES_OK;
 };
 
@@ -339,8 +359,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
         if (this->_type == CONTENT_LENGTH) {
             std::cout << YELLOW << "Reading body using Content-Length" << WHITE << std::endl;
             size_t byteRemaining = this->_contentLength - this->_bytesReceived;
+
             if (rawDataSize > byteRemaining) {
-                this->file.write(rawData.c_str(), rawDataSize);
+                this->file.write(rawData.c_str(), byteRemaining);
                 this->_bytesReceived += byteRemaining;
 
                 // Save leftover rawData for next request if pipelined
@@ -353,16 +374,18 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                 this->file.flush();
                 this->file.seekg(0, std::ios::beg);
             }
+            else {
 
-            file.write(rawData.c_str(), rawDataSize);
-            this->_bytesReceived = this->_bytesReceived + rawDataSize;
-            if (this->_bytesReceived == this->_contentLength) {
+                file.write(rawData.c_str(), rawDataSize);
+                this->_bytesReceived = this->_bytesReceived + rawDataSize;
+                if (this->_bytesReceived == this->_contentLength) {
 
-                std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
-                          << std::endl;
-                this->_state = BODY_PROCESSING;
-                this->file.flush();
-                this->file.seekg(0, std::ios::beg);
+                    std::cout << GREEN << "Finished Reading body using Content-Length" << WHITE
+                              << std::endl;
+                    this->_state = BODY_PROCESSING;
+                    this->file.flush();
+                    this->file.seekg(0, std::ios::beg);
+                }
             }
         }
 
@@ -402,6 +425,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             this->_fileCleanUp();
                             return HTTP_RES_REQUEST_ENTITY_TOO_LARGE;
                         }
+                        this->_bytesReceived += this->currentChunkSize;
                     }
                     else {
                         this->rawChunkSize += data;
@@ -484,8 +508,14 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
     }
     if (this->_state == BODY_PROCESSING) {
 
-        if (this->_mediaType == "application/x-www-form-urlencoded") {
+        /* NOTE: When POST request rout is a script, body shouldn't be parsed */
+        if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi())) {
+            this->_state = BODY_COMPLETE;
+            this->file.close();
+            return HTTP_RES_OK;
+        }
 
+        if (this->_mediaType == "application/x-www-form-urlencoded") {
             std::map<std::string, std::string> params;
 
             std::string urlEncodedForm;
@@ -510,6 +540,7 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             _fileCleanUp();
             std::cout << "\033[33mapplication/x-www-form-urlencoded: Parsed\033[0m" << std::endl;
             this->_state = BODY_COMPLETE;
+            this->file.close();
             return HTTP_RES_OK;
         }
 
@@ -523,7 +554,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
             while (this->_mpState != MP_COMPLETE) {
 
                 if (!std::getline(this->file, line)) {
-                    std::cout << "bad request from here" << std::endl;
                     return HTTP_RES_BAD_REQUEST;
                 }
 
@@ -542,6 +572,8 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                     else if ("--" + this->_boundary + "--" == line) {
                         this->_mpState = MP_COMPLETE;
                         this->_state = BODY_COMPLETE;
+
+                        this->_fileCleanUp();
                         return HTTP_RES_OK;
                     }
                     continue;
@@ -623,7 +655,6 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                             this->_currentPart.file.close();
                         }
 
-                        // TODO: Check if the name already exist
                         this->_formFields[this->_currentPart.name].push_back(this->_currentPart);
 
                         /* if normal boundary found reset the state machine */
@@ -635,18 +666,18 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
                         }
                         /* if end boundary found set body complete */
                         this->_mpState = MP_COMPLETE;
+
+                        _fileCleanUp();
                         this->_state = BODY_COMPLETE;
 
                         return HTTP_RES_OK;
                     }
 
-                    // NOTE: What the hack is this
                     if (this->_mpCurrentLine.empty() == false) {
                         this->_currentPart.file.write(this->_mpCurrentLine.c_str(),
                                                       this->_mpCurrentLine.size());
                     }
 
-                    // NOTE: What the hack is this
                     this->_mpCurrentLine = line;
                     if (hadCr == true) {
                         this->_mpCurrentLine += "\r";
@@ -683,9 +714,9 @@ HttpParser::httpResult HttpParser::Body::parseRequestBody(std::string rawData)
 void HttpParser::Body::init(HttpParser *httpParser)
 {
     this->httpParser = httpParser;
-    this->_maxBodySize = this->httpParser->_config->getSize();
 
     this->conf = new ResolvedConfig(httpParser->getRequestUriPath(), httpParser->_config);
+    this->_maxBodySize = this->conf->getBodySize();
     _normalizePath();
 }
 
@@ -740,26 +771,37 @@ std::string HttpParser::Body::_resolveFilePath(std::string &upload_store)
 HttpParser::httpResult HttpParser::Body::_initParsingInfo()
 {
 
-    std::string uploadPath = this->conf->getUploadPath();
-
-    if (uploadPath.empty()) {
-        return HTTP_RES_METHOD_NOT_ALLOWED;
-    }
-
-    if (access(uploadPath.c_str(), R_OK) == -1) {
-        std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
-        return HTTP_RES_INTERNAL_SERVER_ERROR;
-    }
-
-    /* NOTE: Fixed a bug here When fileuPath is a directory */
-    std::string filePath = _resolveFilePath(uploadPath);
-    if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
-        std::stringstream ss;
+    /* NOTE: When POST request rout is a script, body shouldn't be parsed */
+    if (isCgi(httpParser->getRequestUriRawPath(), this->conf->getCgi()) == true) {
+        // don't validate path just create a random file
         srand(time(NULL));
-        ss << filePath << "upload_" << time(NULL) << "_" << rand();
-        filePath = ss.str();
+        std::stringstream ss;
+        ss << "/tmp/" << "upload_" << time(NULL) << "_" << rand();
+        this->filePath = ss.str();
     }
-    this->filePath = filePath;
+    else {
+        std::string uploadPath = this->conf->getUploadPath();
+        std::cout << RED << "Upload path : " << uploadPath << WHITE << std::endl;
+
+        if (uploadPath.empty()) {
+            return HTTP_RES_METHOD_NOT_ALLOWED;
+        }
+
+        if (access(uploadPath.c_str(), R_OK) == -1) {
+            std::cerr << RED << "Error: Unable to open file " << uploadPath << WHITE << std::endl;
+            return HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+
+        /* NOTE: Fixed a bug here When fileuPath is a directory */
+        std::string filePath = _resolveFilePath(uploadPath);
+        if (filePath.empty() == true || filePath[filePath.size() - 1] == '/') {
+            std::stringstream ss;
+            srand(time(NULL));
+            ss << filePath << "upload_" << time(NULL) << "_" << rand();
+            filePath = ss.str();
+        }
+        this->filePath = filePath;
+    }
 
     file.open(this->filePath.c_str(), std::ios::out | std::ios::in | std::ios::trunc);
     if (file.is_open() == false) {
@@ -805,13 +847,18 @@ HttpParser::httpResult HttpParser::Body::_initParsingInfo()
             return HTTP_RES_BAD_REQUEST;
         }
 
-        size_t contentLengthValue = std::atol(contentLength[0].c_str());
+        const std::string &rawContentLength = contentLength[0];
+        // Content-Length must be a non-negative decimal number: reject any
+        // value that is empty or contains a non-digit character.
+        for (std::string::size_type i = 0; i < rawContentLength.size(); i++) {
+            if (rawContentLength[i] < '0' || rawContentLength[i] > '9')
+                return HTTP_RES_BAD_REQUEST;
+        }
+
+        size_t contentLengthValue = std::atol(rawContentLength.c_str());
 
         this->_type = CONTENT_LENGTH;
-        if (contentLengthValue < 0) {
-            return HTTP_RES_LENGTH_REQUIRED;
-        }
-        else if (contentLengthValue == 0) {
+        if (contentLengthValue == 0) {
 
             this->_state = BODY_COMPLETE; /* Since Body is 0 Nothing to read */
             this->_contentLength = 0;

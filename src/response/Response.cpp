@@ -13,147 +13,113 @@ Response::Response(t_client *dep)
     this->timed_out = 0;
     this->start_time = time(NULL);
     this->cgi = NULL;
+    this->closeConnection = true;
+    if (dep->request != NULL && dep->request->isComplete())
+        this->closeConnection = !dep->request->keepAlive();
 
-    if (pipe(cgi_in_pipe) == -1)
-        error = true;
+    this->cgi_in_pipe[0] = -1;
+    this->cgi_in_pipe[1] = -1;
+    this->cgi_out_pipe[0] = -1;
+    this->cgi_out_pipe[1] = -1;
 
-    if (pipe(cgi_out_pipe) == -1)
-        error = true;
+    this->_pageFd = -1;
 }
 
-Response::~Response( void )
+Response::~Response(void)
 {
-	if (cgi)
-		delete cgi;
+    if (cgi)
+        delete cgi;
+
+    if (this->fileFD >= 0)
+        close(this->fileFD);
+
+    for (int i = 0; i < 2; ++i) {
+        if (this->cgi_in_pipe[i] >= 0)
+            close(this->cgi_in_pipe[i]);
+        if (this->cgi_out_pipe[i] >= 0)
+            close(this->cgi_out_pipe[i]);
+    }
+    if (this->_pageFd != -1)
+        close(this->_pageFd);
 }
 
-bool isCgi(const std::string& uri, std::pair<std::string, std::string> cgiInfo)
+HttpParser::httpResult Response::routeMethod(HttpParser::requestType req_method)
 {
-	bool cgi_configured = !cgiInfo.first.empty() &&
-												!cgiInfo.second.empty();
+    if (client->request == NULL) {
+        std::cerr << "Response::routeMethod: client request is NULL" << std::endl;
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+    }
+    const std::string &uri = client->request->getRequestUriPath();
 
-	if (!cgi_configured)
-		return false;
-	
-	bool is_php_request = false;
+    if (isCgi(uri, conf.getCgi())) {
+        // std::cout << time(NULL) - start_time << std::endl;
+        if ((time(NULL) - start_time) > CGI_TIMEOUT) {
+            this->timed_out = 1;
+            int childpid = cgi->getChild();
 
-	std::stringstream s(uri);
-	std::string elem;
-	std::vector<std::string> elements;
+            std::cout << "child to kill : " << childpid << std::endl;
 
-	while (getline(s, elem, '/')) {
-		if (elem.empty())
-			continue;
-		elements.push_back(elem);
-	}
+            kill(childpid, SIGKILL);
+            waitpid(childpid, NULL, 0);
+            return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
+        }
+        if (!this->exec_status) {
+            HttpParser::httpResult res = cgiExecution();
 
-	std::vector<std::string>::iterator it = elements.begin();
+            if (res != HttpParser::HTTP_RES_OK) {
+                return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+            }
+            return HttpParser::HTTP_RES_OK;
+        }
 
-	for (; it != elements.end(); it++)
-	{
-		if ((*it).find(".php") != std::string::npos)
-		{
-			is_php_request = true;
-			break;
-		}
-	}
+        if (this->_phase != COMPLETE) {
+            HttpParser::httpResult cr = craftResponse();
+            if (cr != HttpParser::HTTP_RES_OK) {
+                return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+            }
+        }
 
-	return is_php_request && cgi_configured;
-}
+        sendingCgiResponse();
 
-HttpParser::httpResult Response::routeMethod( HttpParser::requestType req_method)
-{
-	const std::string& uri = client->request->getRequestUriPath();
-
-	if (isCgi(uri, conf.getCgi()))
-	{
-		if ((time(NULL) - start_time) > CGI_TIMEOUT)
-    {
-			this->timed_out = 1;
-			int childpid = cgi->getChild();
-
-			std::cout << "child to kill : " << childpid << std::endl;
-
-			kill(childpid, SIGKILL);
-			waitpid(childpid, NULL, 0);
-			servePages(504);
-			return HttpParser::HTTP_RES_GATEWAY_TIMEOUT;
+        if (error) {
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+        // resp.clear();
     }
 
-		if (!this->exec_status)
-		{
-			HttpParser::httpResult res = cgiExecution();
+    else {
+        switch (req_method) {
+        case HttpParser::DELETE:
+            return (httpDelete());
+        case HttpParser::GET:
+            return (httpGet());
+        case HttpParser::POST:
+            return (httpPost());
+        default:
+            return HttpParser::HTTP_RES_METHOD_NOT_ALLOWED;
+        }
+    }
 
-			if (res != HttpParser::HTTP_RES_OK)
-			{
-				servePages(500);
-				return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-			}
-			return HttpParser::HTTP_RES_OK;
-		}
-
-		if (craftResponse() == HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR)
-		{
-			servePages(500);
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		
-		sendingCgiResponse();
-
-		if (error)
-		{
-			servePages(500);
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		
-		std::cout << "Done sending the response" << std::endl;
-		resp.clear();
-	}
-
-	else
-	{
-		switch (req_method) {
-			case HttpParser::DELETE:
-				return (httpDelete());
-			case HttpParser::GET:
-				return (httpGet());
-			case HttpParser::POST:
-				return (httpPost());
-			default:
-				servePages(405);
-		}
-	}
-
-	return HttpParser::HTTP_RES_OK;
+    return HttpParser::HTTP_RES_OK;
 }
-
 
 HttpParser::httpResult Response::checkMethod(void)
 {
-	// check if its needed 
-	// if (this->timed_out)
-	// 	return HttpParser::HTTP_RES_HTTP_VERSION_NOT_SUPPORTED;//placeholder
-
-	std::pair<int, std::string> redir = conf.getRedir();
-	if (!redir.second.empty())
-	{
-		if (servePages(redir.first, redir.second))
-		{
-			servePages(500);
-			return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-		}
-		return HttpParser::HTTP_RES_OK;
-	}
-	HttpParser::requestType req_method = client->request->getRequestType();
-	std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
-
-	if (!allowed_methods.empty() && std::find(allowed_methods.begin(), \
-																						allowed_methods.end(), \
-																						methodToString(req_method)) == allowed_methods.end())
-	{
-		servePages(500);
-		return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
-	}
-
-	return routeMethod(req_method);
+    std::pair<int, std::string> redir = conf.getRedir();
+    if (!redir.second.empty()) {
+        std::cout << YELLOW << "Redirecting : " << redir.first << " ==== " << redir.second << WHITE
+                  << std::endl;
+        if (servePages(redir.first, redir.second, 0)) {
+            std::cout << RED << "Error Redirecting" << WHITE << std::endl;
+            return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+        }
+        return HttpParser::HTTP_RES_OK;
+    }
+    if (client->request == NULL) {
+        std::cerr << "Response::checkMethod: client request is NULL" << std::endl;
+        return HttpParser::HTTP_RES_INTERNAL_SERVER_ERROR;
+    }
+    HttpParser::requestType req_method = client->request->getRequestType();
+    std::vector<std::string> allowed_methods = conf.getAcceptedMethods();
+    return routeMethod(req_method);
 }

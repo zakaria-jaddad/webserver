@@ -1,90 +1,108 @@
 #ifndef RESPONSE_HPP
-# define RESPONSE_HPP
+#define RESPONSE_HPP
 
-#include "../server/Server.hpp"
-#include "../request/Request.hpp"
-#include "ResolvedConfig.hpp"
 #include "../cgi/Cgi.hpp"
-#include <stdio.h>
+#include "../request/Request.hpp"
+#include "../server/Server.hpp"
+#include "../utils/utils.hpp"
+#include "ResolvedConfig.hpp"
 #include <algorithm>
+#include <stdio.h>
 
 #define CGI_TIMEOUT 10
 
 class Cgi;
 struct t_client;
 
-class Response{
+// mime
+struct MIME {
+  public:
+    MIME();
+    std::string getMIME(std::string extension);
+    std::map<std::string, std::string> _mime;
+};
 
-	typedef enum {
-		REQUEST_LINE,
-		HEADERS,
-		BODY,
-		COMPLETE,
-		ERROR,
-	} phase;
+class Response {
 
-	ResolvedConfig	conf;
-	std::string			normalizedPath;
-	std::string			resp;
-	std::string			head_resp;
-	t_client				*client;
-	bool						wait;
-	Cgi							*cgi;
-	int							cgi_in_pipe[2];
-	int							cgi_out_pipe[2];
-	phase						_phase;
-	int							fileFD;
-	size_t						chunk_size;
-	int							headerFlag;
-	bool						status;
-	bool						exec_status;
-	bool						error;
-	bool						timed_out;
+    typedef enum {
+        REQUEST_LINE,
+        HEADERS,
+        BODY,
+        COMPLETE,
+        ERROR,
+    } phase;
 
-	time_t 						start_time;
+    std::string cgiHeaderBuffer;
 
-public:
-	Response( t_client* client );
-	~Response( void );
+    ResolvedConfig conf;
+    std::string normalizedPath;
+    std::string resp;
+    std::string head_resp;
+    t_client *client;
+    bool wait;
+    Cgi *cgi;
+    int cgi_in_pipe[2];
+    int cgi_out_pipe[2];
+    phase _phase;
+    int fileFD;
+    size_t chunk_size;
+    int headerFlag;
+    bool status;
+    bool exec_status;
+    bool error;
+    bool timed_out;
+    bool closeConnection;
 
-	HttpParser::httpResult	checkMethod( void );
-	HttpParser::httpResult	routeMethod( HttpParser::requestType );
-	
-	void					normalizePath( void );
-  	
-	std::string resolveFilePath( std::string& );
-	int	sendResponse(const char *resp);
-//   int   createUploadFolder( std::string&, std::string& );
+    int _pageFd;
 
-  //static methods
-	HttpParser::httpResult	httpDelete( void );
-	HttpParser::httpResult	httpGet( void );
-	HttpParser::httpResult	httpPost( void );
+    time_t start_time;
 
-	std::string chooseIndex( std::string& );
-  void	sendHeader( int );
-  bool	isComplete( void );
-  bool	isError( void );
-  
-  HttpParser::httpResult craftResponse( void );
-  std::string craftHeaderStatus( std::string&  );
-  void	craftHeader( std::string& );
-  void 	craftBody( std::string& );
-  
-  HttpParser::httpResult	cgiExecution();
-  void		sendingCgiResponse();
-  
-  int 		servePages( int );
-  std::string getStatusMessage( int );
-  void		craftPageResponse( int, int );
-  
-  int 		servePages( int, std::string& );
-  void		craftPageResponse( int, std::string& );
-  void	sendHeader( int, std::string& );
+    std::string generateDirectoryListingHTML(const std::string &path,
+                                             const std::string &requestPath,
+                                             std::vector<std::string> entries);
 
-  void sendChunkSize( size_t );
-  void serveDirectoryContent( std::string& );
+  public:
+    Response(t_client *client);
+    ~Response(void);
 
+    HttpParser::httpResult checkMethod(void);
+    HttpParser::httpResult routeMethod(HttpParser::requestType);
+
+    std::string normalizePath(std::string &);
+
+    ssize_t sendResponse(const char *resp, size_t);
+    //   int   createUploadFolder( std::string&, std::string& );
+
+    // static methods
+    HttpParser::httpResult httpDelete(void);
+    HttpParser::httpResult httpGet(void);
+    HttpParser::httpResult httpPost(void);
+
+    std::string chooseIndex(std::string &);
+    void sendHeader(int, std::string, std::string, bool, bool);
+    bool isComplete(void);
+    bool isError(void);
+    bool shouldClose(void) const;
+
+    HttpParser::httpResult craftResponse(void);
+    std::string craftHeaderStatus(std::string &);
+    void craftHeader(std::string &);
+    void craftBody(std::string &);
+    void craftBody(std::string &data, size_t len);
+
+    HttpParser::httpResult cgiExecution();
+    void sendingCgiResponse();
+
+    int fallbackServe(int, bool);
+    int servePages(int, bool);
+    std::string getStatusMessage(int);
+    void craftPageResponse(int, int, bool);
+
+    int servePages(int, std::string &, bool);
+    void craftPageResponse(int, std::string &, bool);
+
+    void craftChunkSize(size_t);
+    void serveDirectoryContent(std::string &);
 };
 
 #endif

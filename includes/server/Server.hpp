@@ -7,11 +7,12 @@
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstring>
-#include <deque>
+#include <list>
 #include <fcntl.h>
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <string>
 #include <sys/epoll.h>
 #include <sys/socket.h>
@@ -19,7 +20,7 @@
 #include <vector>
 
 typedef struct epoll_event epoll_event_t;
-#define MAX_EVENTS 100
+#define MAX_EVENTS 1024
 #define REQUEST_TIMEOUT 30
 #define IDLE_TIMEOUT 60
 #define READ_BYTES 2048
@@ -29,12 +30,26 @@ class Response;
 struct t_client {
     int fd;
 
-    time_t	last_activity;
-	time_t	connection_time;
+    std::string ip;
+
+    time_t last_activity;
+    time_t connection_time;
+
+    ssize_t writeOffset;
+    std::string outBuffer;
+
+    // Set when the request was rejected (e.g. 413) while the client is still
+    // transmitting the body. Remaining body bytes are drained and discarded
+    // instead of being fed to the parser, so the raw incoming data never
+    // overflows the socket buffer and causes the kernel to send an RST.
+    int abortReading;
 
     ServerConfig *config;
-    HttpParser::httpResult req_res;// check later should be changed and included in the request & resp objects themselves
+    std::vector<ServerConfig *> server;
+
+    HttpParser::httpResult req_res;
     HttpParser::httpResult resp_res;
+
     HttpParser *request;
     Response *response;
     void printInfo() const
@@ -46,19 +61,21 @@ struct t_client {
     }
 };
 
+/*
+ * server class depends on 'config' class with the
+ * following getters: getListeningPairs() : get interface:port pairs on which the server will listen
+ * to.
+ */
 class Server {
-    /* server class depends on 'config' class with the following getters:
-            - getListeningPairs() //get interface:port pairs on which the server will listen to.
-                    (type of return : map of 'int key' (interface) and 'int value' (port) )
-    */
   private:
-    Config conf;
-    int epoll_fd;
-    // std::vector<int> serverFds;
-    std::map<int, ServerConfig *> vServers;
+    Config conf;  // Config info
+    int epoll_fd; // fd referring to the new epoll instance
+
+    std::map<int, std::vector<ServerConfig *> > vServers;
+
     // std::vector<int> clientFds;
     // std::map<int, HttpParser *> clientFds;
-    std::deque<t_client> clients;
+    std::list<t_client> clients;
 
   public:
     Server(std::string &file);
@@ -66,20 +83,20 @@ class Server {
     void setupServerFds();
     int addToEpoll(int fd, uint32_t flag);
     int switchEpollMode(int clientSocket, uint32_t flag);
-    int checkForServerFd(epoll_event *events, int i);
-    int checkForClientFd(epoll_event *events, int i);
+    int checkServerFd(epoll_event *events, int i);
+    int checkClientFd(epoll_event *events, int i);
     void resetSocket(t_client *client);
     void closeSocket(t_client *client);
 
-    int checkClientTimeout( t_client* );
+    int checkClientTimeout(t_client *);
 
     // int setup_epoll(config &conf);
     void printInfo() const
     {
         std::cout << "========== Server Info ==========" << std::endl;
-        std::cout << "epoll_fd: " << this->epoll_fd << endl;
+        std::cout << "epoll_fd: " << this->epoll_fd << std::endl;
         std::cout << "clients: " << std::endl;
-        for (std::deque<t_client>::const_iterator it = this->clients.begin();
+        for (std::list<t_client>::const_iterator it = this->clients.begin();
              it != this->clients.end(); it++) {
             std::cout << "t_client fd: " << it->fd << std::endl;
             std::cout << "t_client config address : " << it->config << std::endl;

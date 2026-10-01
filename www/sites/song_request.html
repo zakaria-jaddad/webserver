@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Request Box | Kessoku SERVER</title>
+    <link rel="icon" type="image/jpeg" href="./resources/bocchi_icon.jpg" />
+    <style>
+      /* ==========================================================================
+           1. CORE VARIABLES & DESIGN SYSTEM (MATCHED TO DESIGN DNA)
+           ========================================================================== */
+      :root {
+        --pink-bocchi: #ffb1cb;
+        --blue-kita: #82e3f5;
+        --yellow-nijika: #fff176;
+        --purple-ryo: #b39ddb;
+        --dark-punk: #121212;
+        --white-paper: #f7eed3;
+        --neon-magenta: #ff007f;
+        --tan-cardboard: #f7eed3;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--dark-punk);
+        font-family: "Courier New", Courier, monospace;
+        color: var(--white-paper);
+        min-height: 100vh;
+        padding: 2rem 1rem 6rem 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* ==========================================================================
+           2. GLOBAL VIEWPORT FIXED HALFTONE OVERLAY
+           ========================================================================== */
+      .hero-bg-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0.15;
+      }
+      .halftone-pattern {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(
+          var(--white-paper) 15%,
+          transparent 16%
+        );
+        background-size: 12px 12px;
+      }
+      .distressed-texture {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+          linear-gradient(
+            90deg,
+            rgba(255, 0, 0, 0.06),
+            rgba(0, 255, 255, 0.02),
+            rgba(0, 0, 255, 0.06)
+          );
+        background-size:
+          100% 4px,
+          6px 100%;
+      }
+
+      /* ==========================================================================
+           3. FIXED NAVIGATION TAPE STICKERS
+           ========================================================================== */
+      .zine-nav {
+        position: fixed;
+        top: 15%;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        z-index: 100;
+        transform: rotate(2deg);
+      }
+      @media (max-width: 768px) {
+        .zine-nav {
+          position: static;
+          transform: none;
+          padding: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          display: grid;
+          width: 100%;
+          margin-bottom: 2rem;
+        }
+      }
+      .nav-sticker {
+        color: var(--dark-punk);
+        font-weight: 900;
+        text-decoration: none;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        border: 2px solid var(--dark-punk);
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+        box-shadow: 4px 4px 0px var(--dark-punk);
+        text-align: center;
+      }
+      .tape-pink {
+        background-color: var(--pink-bocchi);
+        transform: rotate(-3deg);
+      }
+      .tape-yellow {
+        background-color: var(--yellow-nijika);
+        transform: rotate(2deg);
+      }
+      .tape-purple {
+        background-color: var(--purple-ryo);
+        transform: rotate(-1deg);
+      }
+      .tape-blue {
+        background-color: var(--blue-kita);
+        transform: rotate(4deg);
+      }
+      .tape-white {
+        background-color: var(--white-paper);
+        transform: rotate(-2deg);
+      }
+      .tape-magenta {
+        background-color: var(--neon-magenta);
+        color: white;
+        transform: rotate(1deg);
+      }
+      .tape-dark {
+        background-color: var(--dark-punk);
+        color: var(--yellow-nijika);
+        transform: rotate(-4deg);
+      }
+      .nav-sticker:hover {
+        transform: scale(1.1) rotate(0deg);
+        box-shadow: 6px 6px 0px var(--neon-magenta);
+      }
+
+      /* ==========================================================================
+           4. FORM PAGE CONTAINER & HEADER DESIGN
+           ========================================================================== */
+      .request-wrapper {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 650px;
+        margin-top: 4rem;
+      }
+
+      .request-container {
+        background: var(--white-paper);
+        color: var(--dark-punk);
+        padding: 2.5rem 2rem;
+        border: 5px solid var(--dark-punk);
+        box-shadow:
+          14px 14px 0px var(--neon-magenta),
+          -6px -6px 0px var(--blue-kita);
+        transform: rotate(-1deg);
+        max-width: 550px;
+        z-index: 10;
+        width: 100%;
+        position: relative;
+      }
+
+      .form-header-block {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      .ransom-badge {
+        background-color: var(--neon-magenta);
+        color: var(--dark-punk);
+        padding: 0.4rem 1rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        transform: rotate(-2deg) inline-block;
+        box-shadow: 4px 4px 0px var(--white-paper);
+        display: inline-block;
+        font-size: 1rem;
+      }
+
+      .form-title {
+        font-family: "Impact", "Arial Black", sans-serif;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        text-transform: uppercase;
+        line-height: 0.9;
+        margin: 1rem 0;
+        letter-spacing: -1px;
+      }
+      .form-title .line-left {
+        display: block;
+        color: var(--white-paper);
+        text-shadow: 4px 4px 0px var(--dark-punk);
+        transform: rotate(-1deg);
+      }
+      .form-title .line-right {
+        display: block;
+        color: var(--yellow-nijika);
+        text-shadow: 5px 5px 0px var(--dark-punk);
+        transform: rotate(2deg) scale(1.02);
+      }
+
+      /* ==========================================================================
+           5. THE COURIER PUNK RECORD FORM CONTAINER
+           ========================================================================== */
+      /* .zine-form-panel {
+            position: relative;
+            background-color: var(--white-paper);
+            border: 5px solid var(--dark-punk);
+            border-radius: 4px;
+            padding: 3rem 2.5rem 2.5rem 2.5rem;
+            box-shadow: 16px 20px 0px rgba(0, 0, 0, 0.95);
+            transform: rotate(-0.5deg);
+        } */
+
+      /* Masking Tape Structural Detail */
+      .form-top-tape {
+        position: absolute;
+        top: -24px;
+        left: 25%;
+        transform: rotate(-3deg);
+        width: 140px;
+        height: 35px;
+        background-color: rgba(230, 222, 190, 0.85);
+        border-left: 2px dashed rgba(0, 0, 0, 0.1);
+        border-right: 2px dashed rgba(0, 0, 0, 0.1);
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.08);
+        z-index: 20;
+      }
+
+      /* Form Sub-Grouping Fields */
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1.8rem;
+        color: var(--dark-punk);
+      }
+
+      .input-group label {
+        font-weight: 900;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      /* Raw industrial fields border variables */
+      .input-field {
+        width: 100%;
+        font-family: monospace;
+        font-size: 1.05rem;
+        font-weight: bold;
+        padding: 0.8rem;
+        background-color: #fafafa;
+        border: 3px solid var(--dark-punk);
+        border-radius: 0; /* Anti-aliased hard edges */
+        color: var(--dark-punk);
+        box-shadow: inset 3px 3px 0px rgba(0, 0, 0, 0.05);
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.1s ease,
+          background-color 0.1s ease;
+      }
+
+      .input-field:focus {
+        outline: none;
+        background-color: #fff;
+        transform: translate(-2px, -2px);
+        box-shadow: 5px 5px 0px var(--neon-magenta);
+      }
+
+      textarea.input-field {
+        resize: vertical;
+        min-height: 120px;
+      }
+
+      /* Custom File Upload Input wrapper to override standard browser file inputs */
+      .file-upload-wrapper {
+        position: relative;
+        width: 100%;
+        border: 3px dashed var(--dark-punk);
+        background-color: var(--tan-cardboard);
+        padding: 1rem;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+      .file-upload-wrapper:hover {
+        background-color: #f1e4bc;
+      }
+      .file-upload-wrapper input[type="file"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      /* ==========================================================================
+           6. SUBMIT BUTTON DESIGN (STRIKES BACK CRASH BUTTON)
+           ========================================================================== */
+      .submit-btn {
+        width: 100%;
+        font-family: monospace;
+        font-weight: 900;
+        font-size: 1.4rem;
+        text-transform: uppercase;
+        background-color: var(--dark-punk);
+        color: var(--yellow-nijika);
+        padding: 1rem;
+        border: 4px solid var(--dark-punk);
+        box-shadow: 6px 6px 0px var(--blue-kita);
+        cursor: pointer;
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.1s ease,
+          background-color 0.1s ease;
+        margin-top: 1rem;
+      }
+
+      .submit-btn:hover {
+        background-color: var(--neon-magenta);
+        color: var(--white-paper);
+        transform: translate(-2px, -2px);
+        box-shadow: 8px 8px 0px var(--dark-punk);
+      }
+
+      .submit-btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px var(--dark-punk);
+      }
+
+      .header-block {
+        margin-bottom: 2rem;
+      }
+
+      .header-block h1 {
+        font-size: 2.2rem;
+        line-height: 0.9;
+        font-weight: 900;
+        text-transform: uppercase;
+        background: var(--dark-punk);
+        color: #fff;
+        padding: 10px;
+        transform: rotate(-2deg);
+        display: inline-block;
+        box-shadow: 4px 4px 0px var(--pink-bocchi);
+      }
+
+      .subtitle {
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        font-weight: bold;
+        color: #444;
+        line-height: 1.4;
+      }
+      .boundary-line {
+        font-size: 0.75rem;
+        color: rgba(9, 9, 9, 0.4);
+        display: block;
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+        font-weight: bold;
+        border-bottom: 2px dashed rgba(9, 9, 9, 0.2);
+        padding-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hero-bg-overlay" aria-hidden="true">
+      <div class="halftone-pattern"></div>
+      <div class="distressed-texture"></div>
+    </div>
+
+    <nav class="zine-nav" aria-label="Main Navigation">
+      <a href="../index.html" class="nav-sticker tape-pink">🎸 Main Posting</a>
+      <a href="song_request.html" class="nav-sticker tape-yellow"
+        >📝 Song Requests</a
+      >
+      <a href="../cgi-bin/backstage.py" class="nav-sticker tape-purple"
+        >🎛 Backstage</a
+      >
+      <a href="../cgi-bin/equipment.php" class="nav-sticker tape-blue"
+        >📦 Equipment</a
+      >
+      <a href="../cgi-bin/session.py" class="nav-sticker tape-white">🍪 Café</a>
+      <a href="About_us.html" class="nav-sticker tape-dark">⚙ About us</a>
+    </nav>
+
+    <header class="form-header-block">
+      <div class="ransom-badge">STARRY INTERACTIVE DROPBOX</div>
+      <h1 class="form-title">
+        <span class="line-left">SONG REQUEST</span>
+        <span class="line-right">BENCHMARK</span>
+      </h1>
+    </header>
+    <main class="request-container">
+      <div class="header-block">
+        <span class="boundary-line"
+          >-- CONTENT-TYPE: multipart/form-data --</span
+        >
+        <h1>BE PART OF THE STORY</h1>
+        <p class="subtitle">
+          Drop your tracks below! Think you've got something worth playing at
+          our next live? Send us your music, artwork, or creative ideas and
+          become part of the next rehearsal.
+        </p>
+      </div>
+      <form
+        action="/cgi-bin/song_request.py"
+        method="POST"
+        enctype="multipart/form-data"
+        class="zine-form-panel"
+      >
+        <!-- <div class="form-top-tape"></div> -->
+
+        <div class="input-group">
+          <label for="fan_name">⚡ Fan Identity / Handle:</label>
+          <input
+            type="text"
+            id="fan_name"
+            name="fan_name"
+            class="input-field"
+            placeholder="e.g., Fan No. 1 & 2"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="song_title">🎵 Track Title:</label>
+          <input
+            type="text"
+            id="song_title"
+            name="song_title"
+            class="input-field"
+            placeholder="e.g., Guitar, Loneliness and Blue Planet"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="message">📝 Dedications / Messages To The Band:</label>
+          <textarea
+            id="message"
+            name="message"
+            class="input-field"
+            placeholder="Type a message or a frantic runtime text block log here..."
+          ></textarea>
+        </div>
+
+        <div class="input-group">
+          <label>💿 Audio Cover / Fan Art Upload:</label>
+          <div class="file-upload-wrapper">
+            <span>[ CHOOSE FILE TO CRASH BACKEND ]</span>
+            <input type="file" name="attachment" accept="image/*" />
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">
+          Send to STARRY Basement
+        </button>
+      </form>
+    </main>
+  </body>
+</html>

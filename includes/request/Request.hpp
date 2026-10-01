@@ -3,6 +3,7 @@
 
 #include "../config/Config.hpp"
 #include "../response/ResolvedConfig.hpp"
+#include "../utils/utils.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -89,7 +90,7 @@ class HttpParser {
 
   public:
     HttpParser(void);
-    HttpParser(ServerConfig *ServerConfig);
+    HttpParser(std::vector<ServerConfig *> &servers);
     ~HttpParser();
 
   public:
@@ -201,7 +202,7 @@ class HttpParser {
     /* ---- GETTERS ----*/
     requestType getRequestType() const;
     const int *getRequestVersion() const;
-    std::map<std::string, std::vector<std::string> > getHeaders() const;
+    const std::map<std::string, std::vector<std::string> > &getHeaders() const;
     httpResult getRes() const;
 
     std::string getRequestUriPath() const;
@@ -211,14 +212,20 @@ class HttpParser {
     ServerConfig *getServerConfig() const;
     const std::map<std::string, std::vector<FilePart> > &getBodyFormFields() const;
     std::string getPendingData() const;
+    std::string getRequestRawBodyFilePath() const;
+    size_t getBodySize() const;
+    std::string getHostHeader();
 
     /* ---- SETTERS ----*/
     void setRes(httpResult res);
+    void setPendingData(std::string &pendingData) { this->_pendingData = pendingData; }
 
     bool isComplete();
     bool isBodyComplete();
 
     bool isProcessingBody();
+
+    bool keepAlive() const;
 
     httpResult parseHttpRequest(std::string rawData);
 
@@ -229,12 +236,6 @@ class HttpParser {
     static std::string _urlDecode(std::string str);
     static void _replacePlusWithSpace(std::string &str);
     static void _parseQueryString(std::string &query, std::map<std::string, std::string> &store);
-    void _savePendingData(std::string &pendingData)
-    {
-        if (pendingData.empty() == false) {
-            this->_pendingData = pendingData;
-        }
-    }
 
     /*
      *
@@ -326,11 +327,11 @@ class HttpParser {
         // Declared size of the chunk currently being read. Used to resume reading when a chunk
         // spans multiple recv() calls
         long currentChunkSize;
-        // Number of bytes already read for the current chunk. Compared against currentChunkSize to
-        // verify completeness.
+        // Number of bytes already read for the current chunk. Compared against currentChunkSize
+        // to verify completeness.
         long currentChunkRead;
-        // Set to true when the terminating chunk (size 0) is received, signaling that the entire
-        // chunked body has been fully read.
+        // Set to true when the terminating chunk (size 0) is received, signaling that the
+        // entire chunked body has been fully read.
         bool currentChunkComplete;
         bool chunkSizeReceived;
         std::string rawChunkSize;
@@ -364,6 +365,7 @@ class HttpParser {
 
     int _requestVersion[2];
     ServerConfig *_config;
+    std::vector<ServerConfig *> _servers;
     std::map<std::string, std::vector<std::string> > _headers;
     Body _body;
     httpResult _res;

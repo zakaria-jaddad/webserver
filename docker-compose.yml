@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  webserv:
+    build: .
+    container_name: ft_webserver
+    # Keep container running
+    stdin_open: true
+    tty: true
+    # Mount your local code into the container
+    volumes:
+      - .:/webserv
+    # Map ports for testing (adjust as needed)
+    ports:
+      - "8080:8080"
+      - "2010:2010"
+      - "8081:8081"
+      - "9090:9090"
+    # Run bash by default
+    command: /bin/bash
